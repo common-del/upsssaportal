@@ -1,0 +1,48 @@
+{
+  "site": {
+    "name": "Uttar Pradesh School Standards Authority Portal",
+    "description": "Transparent school grading and accreditation system"
+  },
+  "nav": {
+    "home": "Home",
+    "switchLang": "हिंदी"
+  },
+  "home": {
+    "title": "Uttar Pradesh School Standards Authority Portal",
+    "subtitle": "Transparent school grading and accreditation system",
+    "publicInfo": "Public Information",
+    "publicDesc": "View school assessments, grades and public disclosure",
+    "systemLogin": "System Login",
+    "systemDesc": "SSSA administration and verifier access",
+    "schoolLogin": "School Login",
+    "schoolDesc": "School self-assessment and improvement portal"
+  },
+  "public": {
+    "title": "Public Information",
+    "body": "School assessments, grades, and public disclosure information will be available here."
+  },
+  "system": {
+    "title": "System Login",
+    "subtitle": "Select your role to continue",
+    "sssaLogin": "SSSA Admin Login",
+    "sssaDesc": "State-level administration and framework management",
+    "verifierLogin": "Verifier Login",
+    "verifierDesc": "School verification and assessment"
+  },
+  "sssa": {
+    "title": "SSSA Admin Portal",
+    "body": "Login functionality will be available in the next step."
+  },
+  "verifier": {
+    "title": "Verifier Portal",
+    "body": "Login functionality will be available in the next step."
+  },
+  "school": {
+    "title": "School Portal",
+    "body": "Login functionality will be available in the next step."
+  },
+  "common": {
+    "back": "Back",
+    "comingSoon": "Coming in the next step"
+  }
+}

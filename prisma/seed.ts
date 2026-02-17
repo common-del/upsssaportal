@@ -87,6 +87,16 @@ function buildSchools() {
   return schools;
 }
 
+/* ── Dispute Categories ────────────────────────────────── */
+const seedCategories = [
+  { code: 'CAT_FEE_FALSE', nameEn: 'False Fee Information', nameHi: 'गलत शुल्क जानकारी' },
+  { code: 'CAT_INFRA_FALSE', nameEn: 'False Infrastructure Claims', nameHi: 'गलत बुनियादी ढाँचा दावे' },
+  { code: 'CAT_SAFETY', nameEn: 'Safety Concern', nameHi: 'सुरक्षा चिंता' },
+  { code: 'CAT_GRADE_DISPUTE', nameEn: 'Grade / Score Dispute', nameHi: 'ग्रेड / अंक विवाद' },
+  { code: 'CAT_STAFF_CONDUCT', nameEn: 'Staff Conduct Issue', nameHi: 'कर्मचारी आचरण समस्या' },
+  { code: 'CAT_OTHER', nameEn: 'Other', nameHi: 'अन्य' },
+];
+
 /* ── Main ──────────────────────────────────────────────── */
 async function main() {
   console.log('Seeding users…');
@@ -136,6 +146,16 @@ async function main() {
       create: s,
     });
     console.log(`  upserted: ${s.udise} ${s.nameEn}`);
+  }
+
+  console.log('Seeding dispute categories…');
+  for (const c of seedCategories) {
+    await prisma.disputeCategory.upsert({
+      where: { code: c.code },
+      update: {},
+      create: c,
+    });
+    console.log(`  upserted: ${c.code} ${c.nameEn}`);
   }
 
   console.log('Done.');

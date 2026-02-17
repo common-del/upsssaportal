@@ -55,4 +55,40 @@ model School {
   updatedAt    DateTime @updatedAt
   district     District @relation(fields: [districtCode], references: [code])
   block        Block    @relation(fields: [blockCode], references: [code])
+  tickets      Ticket[]
+}
+
+model DisputeCategory {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  nameEn    String
+  nameHi    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id              String            @id @default(cuid())
+  schoolUdise     String
+  categoryCode    String
+  description     String
+  submitterName   String?
+  submitterMobile String
+  status          String            @default("NEW") // NEW | ASSIGNED_TO_SCHOOL | RESPONDED | RESOLVED | REJECTED
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  school          School            @relation(fields: [schoolUdise], references: [udise])
+  category        DisputeCategory   @relation(fields: [categoryCode], references: [code])
+  timeline        TicketTimeline[]
+}
+
+model TicketTimeline {
+  id        String   @id @default(cuid())
+  ticketId  String
+  actorType String   // PUBLIC | SCHOOL
+  message   String
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }

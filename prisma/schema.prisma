@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,4 +17,42 @@ model User {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model District {
+  id     String   @id @default(cuid())
+  code   String   @unique
+  nameEn String
+  nameHi String
+  blocks Block[]
+  schools School[]
+}
+
+model Block {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  districtCode String
+  nameEn       String
+  nameHi       String
+  district     District @relation(fields: [districtCode], references: [code])
+  schools      School[]
+}
+
+model School {
+  id           String   @id @default(cuid())
+  udise        String   @unique
+  nameEn       String
+  nameHi       String
+  category     String   // Primary | Upper Primary | Secondary
+  districtCode String
+  blockCode    String
+  addressEn    String?
+  addressHi    String?
+  publicPhone  String?
+  feesRangeMin Int?
+  feesRangeMax Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  district     District @relation(fields: [districtCode], references: [code])
+  block        Block    @relation(fields: [blockCode], references: [code])
 }

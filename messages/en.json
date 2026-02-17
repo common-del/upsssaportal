@@ -20,7 +20,13 @@
   },
   "public": {
     "title": "Public Information",
-    "body": "School assessments, grades, and public disclosure information will be available here."
+    "subtitle": "Access school data, assessments, and public disclosure",
+    "directory": "School Directory",
+    "directoryDesc": "Browse and search all schools in Uttar Pradesh",
+    "findSchools": "Find Schools",
+    "findSchoolsDesc": "Find the right school based on your criteria",
+    "feedback": "Dispute or Feedback",
+    "feedbackDesc": "Submit a grievance or feedback about a school"
   },
   "system": {
     "title": "System Login",
@@ -49,6 +55,52 @@
   "verifier": {
     "title": "Verifier Login",
     "body": "Enter your credentials to access the verifier portal."
+  },
+  "directory": {
+    "title": "School Directory",
+    "district": "District",
+    "block": "Block",
+    "category": "Category",
+    "search": "Search",
+    "searchPlaceholder": "Search by name or UDISE…",
+    "allDistricts": "All Districts",
+    "allBlocks": "All Blocks",
+    "allCategories": "All Categories",
+    "catPrimary": "Primary",
+    "catUpperPrimary": "Upper Primary",
+    "catSecondary": "Secondary",
+    "name": "School Name",
+    "udise": "UDISE",
+    "noResults": "No schools found matching your criteria.",
+    "showing": "Showing {from}–{to} of {total}",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {totalPages}"
+  },
+  "schoolProfile": {
+    "title": "School Profile",
+    "udise": "UDISE Code",
+    "category": "Category",
+    "district": "District",
+    "block": "Block",
+    "address": "Address",
+    "phone": "Public Phone",
+    "notAvailable": "Not available",
+    "results": "SSSA Assessment Results",
+    "resultsPlaceholder": "Assessment results will appear here after the first grading cycle.",
+    "ratings": "Parent Ratings",
+    "ratingsPlaceholder": "Parent ratings will be available after the first assessment cycle.",
+    "catPrimary": "Primary",
+    "catUpperPrimary": "Upper Primary",
+    "catSecondary": "Secondary"
+  },
+  "findSchools": {
+    "title": "Find Schools",
+    "placeholder": "Coming in a future step."
+  },
+  "feedbackPage": {
+    "title": "Dispute or Feedback",
+    "placeholder": "Coming in a future step."
   },
   "appSchool": {
     "title": "School Home",

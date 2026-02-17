@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 export default async function SssaHomePage() {
   const session = await auth();
   if (!session) redirect('/system/sssa');
+  if (session.user.role !== 'SSSA_ADMIN') redirect('/');
 
   const t = await getTranslations('appSssa');
 

@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 export default async function SchoolHomePage() {
   const session = await auth();
   if (!session) redirect('/school');
+  if (session.user.role !== 'SCHOOL') redirect('/');
 
   const t = await getTranslations('appSchool');
 

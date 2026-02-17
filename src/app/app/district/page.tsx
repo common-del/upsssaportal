@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 export default async function DistrictHomePage() {
   const session = await auth();
   if (!session) redirect('/system/sssa');
+  if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
 
   const t = await getTranslations('appDistrict');
 

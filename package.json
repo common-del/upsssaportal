@@ -42,6 +42,7 @@
     "prisma": "^6.3.1",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vercel": "^50.18.0"
   }
 }

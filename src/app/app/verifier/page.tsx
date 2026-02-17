@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 export default async function VerifierHomePage() {
   const session = await auth();
   if (!session) redirect('/system/verifier');
+  if (session.user.role !== 'VERIFIER') redirect('/');
 
   const t = await getTranslations('appVerifier');
 

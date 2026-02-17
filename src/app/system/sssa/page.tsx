@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
+import { LoginForm } from '@/components/auth/LoginForm';
 
-export default function SssaPage() {
+export default function SssaLoginPage() {
   const t = useTranslations('sssa');
   const tc = useTranslations('common');
 
@@ -19,7 +20,9 @@ export default function SssaPage() {
       <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">
         {t('title')}
       </h1>
-      <p className="mt-4 max-w-2xl text-text-secondary">{t('body')}</p>
+      <p className="mt-2 text-text-secondary">{t('body')}</p>
+
+      <LoginForm />
     </div>
   );
 }

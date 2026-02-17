@@ -5,7 +5,8 @@
   },
   "nav": {
     "home": "Home",
-    "switchLang": "हिंदी"
+    "switchLang": "हिंदी",
+    "signOut": "Sign Out"
   },
   "home": {
     "title": "Uttar Pradesh School Standards Authority Portal",
@@ -29,17 +30,51 @@
     "verifierLogin": "Verifier Login",
     "verifierDesc": "School verification and assessment"
   },
-  "sssa": {
-    "title": "SSSA Admin Portal",
-    "body": "Login functionality will be available in the next step."
-  },
-  "verifier": {
-    "title": "Verifier Portal",
-    "body": "Login functionality will be available in the next step."
+  "auth": {
+    "username": "Username",
+    "password": "Password",
+    "udiseCode": "UDISE Code",
+    "signIn": "Sign In",
+    "signingIn": "Signing in…",
+    "error": "Invalid username or password"
   },
   "school": {
-    "title": "School Portal",
-    "body": "Login functionality will be available in the next step."
+    "title": "School Login",
+    "body": "Enter your UDISE code and password to access the school portal."
+  },
+  "sssa": {
+    "title": "System Login",
+    "body": "For SSSA Admin and District Officials."
+  },
+  "verifier": {
+    "title": "Verifier Login",
+    "body": "Enter your credentials to access the verifier portal."
+  },
+  "appSchool": {
+    "title": "School Home",
+    "welcome": "Welcome, {username}",
+    "placeholder": "School dashboard will be available in the next step."
+  },
+  "appVerifier": {
+    "title": "Verifier Home",
+    "welcome": "Welcome, {username}",
+    "placeholder": "Verifier workspace will be available in the next step."
+  },
+  "appDistrict": {
+    "title": "District Home",
+    "welcome": "Welcome, {username}",
+    "district": "District: {code}",
+    "placeholder": "District dashboard will be available in the next step."
+  },
+  "appSssa": {
+    "title": "SSSA Admin Home",
+    "placeholder": "Admin console will be available in the next step."
+  },
+  "roles": {
+    "SSSA_ADMIN": "SSSA Admin",
+    "DISTRICT_OFFICIAL": "District",
+    "VERIFIER": "Verifier",
+    "SCHOOL": "School"
   },
   "common": {
     "back": "Back",

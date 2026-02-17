@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
+import { LoginForm } from '@/components/auth/LoginForm';
 
-export default function SchoolPage() {
+export default function SchoolLoginPage() {
   const t = useTranslations('school');
+  const ta = useTranslations('auth');
   const tc = useTranslations('common');
 
   return (
@@ -19,7 +21,12 @@ export default function SchoolPage() {
       <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">
         {t('title')}
       </h1>
-      <p className="mt-4 max-w-2xl text-text-secondary">{t('body')}</p>
+      <p className="mt-2 text-text-secondary">{t('body')}</p>
+
+      <LoginForm
+        usernameLabel={ta('udiseCode')}
+        usernamePlaceholder="11111111111"
+      />
     </div>
   );
 }

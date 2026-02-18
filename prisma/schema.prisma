@@ -104,14 +104,141 @@ model TicketTimeline {
 }
 
 model Cycle {
-  id        String         @id @default(cuid())
-  name      String         @unique
-  isActive  Boolean        @default(false)
-  startsAt  DateTime?
-  endsAt    DateTime?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  ratings   ParentRating[]
+  id         String         @id @default(cuid())
+  name       String         @unique
+  isActive   Boolean        @default(false)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  ratings    ParentRating[]
+  frameworks Framework[]
+}
+
+model Framework {
+  id            String            @id @default(cuid())
+  cycleId       String
+  status        String            @default("DRAFT") // DRAFT | PUBLISHED
+  version       Int               @default(1)
+  publishedAt   DateTime?
+  publishedBy   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  cycle         Cycle             @relation(fields: [cycleId], references: [id])
+  domains       SqaafDomain[]
+  subDomains    SubDomain[]
+  parameters    Parameter[]
+  rubricMappings RubricMapping[]
+  levels        FrameworkLevel[]
+  gradeBands    GradeBand[]
+
+  @@unique([cycleId])
+}
+
+model SqaafDomain {
+  id            String      @id @default(cuid())
+  frameworkId   String
+  code          String
+  titleEn       String
+  titleHi       String
+  order         Int
+  weightPercent Float?
+  isActive      Boolean     @default(true)
+  framework     Framework   @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  subDomains    SubDomain[]
+
+  @@unique([frameworkId, code])
+  @@unique([frameworkId, order])
+}
+
+model SubDomain {
+  id          String      @id @default(cuid())
+  frameworkId String
+  domainId    String
+  code        String
+  titleEn     String
+  titleHi     String
+  order       Int
+  isActive    Boolean     @default(true)
+  framework   Framework   @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  domain      SqaafDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  parameters  Parameter[]
+
+  @@unique([frameworkId, code])
+  @@unique([domainId, order])
+}
+
+model Parameter {
+  id               String            @id @default(cuid())
+  frameworkId      String
+  subDomainId      String
+  code             String
+  titleEn          String
+  titleHi          String
+  order            Int
+  applicability    Json              // ["PRIMARY","UPPER_PRIMARY","SECONDARY"]
+  inputType        String            @default("SINGLE_SELECT")
+  evidenceRequired Boolean           @default(false)
+  dataSources      Json              @default("[\"Manual\"]")
+  isActive         Boolean           @default(true)
+  framework        Framework         @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  subDomain        SubDomain         @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
+  options          ParameterOption[]
+  rubricMappings   RubricMapping[]
+
+  @@unique([frameworkId, code])
+  @@unique([subDomainId, order])
+}
+
+model ParameterOption {
+  id          String    @id @default(cuid())
+  parameterId String
+  key         String    // LEVEL_1, LEVEL_2, LEVEL_3
+  labelEn     String
+  labelHi     String
+  order       Int
+  isActive    Boolean   @default(true)
+  parameter   Parameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+
+  @@unique([parameterId, key])
+}
+
+model RubricMapping {
+  id          String    @id @default(cuid())
+  frameworkId String
+  parameterId String
+  optionKey   String    // LEVEL_1, LEVEL_2, LEVEL_3
+  score       Int
+  framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  parameter   Parameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+
+  @@unique([frameworkId, parameterId, optionKey])
+}
+
+model FrameworkLevel {
+  id          String    @id @default(cuid())
+  frameworkId String
+  key         String    // LEVEL_1, LEVEL_2, LEVEL_3
+  labelEn     String
+  labelHi     String
+  order       Int
+  framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@unique([frameworkId, key])
+}
+
+model GradeBand {
+  id          String    @id @default(cuid())
+  frameworkId String
+  key         String
+  labelEn     String
+  labelHi     String
+  minPercent  Float
+  maxPercent  Float
+  order       Int
+  framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@unique([frameworkId, key])
 }
 
 model RatingDimension {

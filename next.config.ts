@@ -3,6 +3,10 @@ import type { NextConfig } from 'next';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    '/app/sssa/frameworks': ['./data/sqaaf/**/*'],
+  },
+};
 
 export default withNextIntl(nextConfig);

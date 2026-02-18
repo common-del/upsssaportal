@@ -103,6 +103,32 @@ export default async function MonitoringSchoolDetailPage({
   const vMap: Record<string, { selectedOptionKey: string; notes: string | null }> = {};
   if (vSubmission) for (const r of vSubmission.responses) vMap[r.parameterId] = { selectedOptionKey: r.selectedOptionKey, notes: r.notes };
 
+  // Load evidence for both submissions
+  const saEvidenceMap: Record<string, { id: string; fileName: string; fileType: string; fileSize: number; blobUrl: string }[]> = {};
+  const vEvidenceMap: Record<string, { id: string; fileName: string; fileType: string; fileSize: number; blobUrl: string }[]> = {};
+  if (saSubmission) {
+    const links = await prisma.evidenceLink.findMany({
+      where: { kind: 'SELF_RESPONSE', saSubmissionId: saSubmission.id },
+      include: { asset: true },
+    });
+    for (const l of links) {
+      const pid = l.parameterId ?? '';
+      if (!saEvidenceMap[pid]) saEvidenceMap[pid] = [];
+      saEvidenceMap[pid].push({ id: l.asset.id, fileName: l.asset.fileName, fileType: l.asset.fileType, fileSize: l.asset.fileSize, blobUrl: l.asset.blobUrl });
+    }
+  }
+  if (vSubmission) {
+    const links = await prisma.evidenceLink.findMany({
+      where: { kind: 'VERIFICATION_RESPONSE', vSubmissionId: vSubmission.id },
+      include: { asset: true },
+    });
+    for (const l of links) {
+      const pid = l.parameterId ?? '';
+      if (!vEvidenceMap[pid]) vEvidenceMap[pid] = [];
+      vEvidenceMap[pid].push({ id: l.asset.id, fileName: l.asset.fileName, fileType: l.asset.fileType, fileSize: l.asset.fileSize, blobUrl: l.asset.blobUrl });
+    }
+  }
+
   // Serialize framework
   const serializedDomains = fullFramework?.domains.map((d) => ({
     id: d.id, code: d.code, titleEn: d.titleEn, titleHi: d.titleHi,
@@ -154,6 +180,8 @@ export default async function MonitoringSchoolDetailPage({
         vResponses={vMap}
         saStatus={saStatus}
         vStatus={vStatus}
+        saEvidence={saEvidenceMap}
+        vEvidence={vEvidenceMap}
       />
     </div>
   );

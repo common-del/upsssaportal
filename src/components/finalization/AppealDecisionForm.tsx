@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { decideAppeal } from '@/lib/actions/finalization';
+import EvidenceViewer, { type EvidenceFile } from '@/components/evidence/EvidenceViewer';
 
 type Item = {
   id: string; parameterId: string; code: string;
@@ -13,6 +14,7 @@ type Item = {
   schoolSelectedOptionKey: string; verifierSelectedOptionKey: string;
   schoolJustification: string | null; decision: string;
   options: { key: string; labelEn: string; labelHi: string }[];
+  evidence: EvidenceFile[];
 };
 
 export default function AppealDecisionForm({
@@ -77,6 +79,12 @@ export default function AppealDecisionForm({
           {item.schoolJustification && (
             <div className="mt-2 rounded-md bg-amber-50 p-2.5 text-xs text-amber-800">
               <span className="font-semibold">{t('schoolJustification')}:</span> {item.schoolJustification}
+            </div>
+          )}
+
+          {item.evidence.length > 0 && (
+            <div className="mt-2">
+              <EvidenceViewer files={item.evidence} label={t('appealEvidence')} />
             </div>
           )}
 

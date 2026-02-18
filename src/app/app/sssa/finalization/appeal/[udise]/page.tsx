@@ -36,6 +36,22 @@ export default async function AppealDecisionPage({ params }: { params: Promise<{
   });
   if (!appeal) notFound();
 
+  // Load evidence for each appeal item
+  const allItemIds = appeal.items.map((i) => i.id);
+  const evidenceLinks = allItemIds.length > 0
+    ? await prisma.evidenceLink.findMany({
+        where: { kind: 'APPEAL_ITEM', appealItemId: { in: allItemIds } },
+        include: { asset: true },
+        orderBy: { asset: { createdAt: 'asc' } },
+      })
+    : [];
+  const evidenceByItem: Record<string, { id: string; fileName: string; fileType: string; fileSize: number; blobUrl: string }[]> = {};
+  for (const link of evidenceLinks) {
+    const aid = link.appealItemId ?? '';
+    if (!evidenceByItem[aid]) evidenceByItem[aid] = [];
+    evidenceByItem[aid].push({ id: link.asset.id, fileName: link.asset.fileName, fileType: link.asset.fileType, fileSize: link.asset.fileSize, blobUrl: link.asset.blobUrl });
+  }
+
   const serializedItems = appeal.items.map((item) => ({
     id: item.id,
     parameterId: item.parameterId,
@@ -49,6 +65,7 @@ export default async function AppealDecisionPage({ params }: { params: Promise<{
     schoolJustification: item.schoolJustification,
     decision: item.decision,
     options: item.parameter.options,
+    evidence: evidenceByItem[item.id] ?? [],
   }));
 
   return (

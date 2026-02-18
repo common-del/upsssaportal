@@ -433,6 +433,7 @@
     "progress": "Progress",
     "statusSubmitted": "Submitted",
     "submittedBanner": "Your verification assessment has been submitted and locked.",
+    "evidenceReq": "Evidence required",
     "notesPlaceholder": "Verification notes…",
     "saveDraft": "Save Draft",
     "saving": "Saving…",
@@ -546,6 +547,18 @@
     "viewSchool": "View School Profile",
     "backToFeedback": "Back to Rate & Feedback"
   },
+  "evidence": {
+    "attach": "Attach file",
+    "uploading": "Uploading…",
+    "remove": "Remove",
+    "invalidType": "Only PDF, JPG, and PNG files are allowed.",
+    "tooLarge": "File too large. Maximum 10 MB.",
+    "maxFiles": "Maximum 3 files allowed per parameter.",
+    "uploadError": "Upload failed. Please try again.",
+    "deleteError": "Could not delete file.",
+    "hint": "PDF, JPG, PNG — max 10 MB, up to 3 files",
+    "noFiles": "No evidence files"
+  },
   "selfAssessment": {
     "title": "Self Assessment",
     "backToHome": "Back to School Home",
@@ -558,7 +571,7 @@
     "complete": "Complete",
     "selectLevel": "— Select level —",
     "notesPlaceholder": "Optional notes or observations…",
-    "evidenceLater": "Evidence upload coming later",
+    "evidenceReq": "Evidence required",
     "saveDraft": "Save Draft",
     "saving": "Saving…",
     "savedSuccess": "Draft saved!",
@@ -619,7 +632,8 @@
     "noVerifierResponses": "No verifier responses recorded yet.",
     "compTotal": "Total compared",
     "compMatch": "Matches",
-    "compDiff": "Differences"
+    "compDiff": "Differences",
+    "evidenceLabel": "Evidence"
   },
   "framework": {
     "title": "SQAAF Framework Builder",
@@ -734,7 +748,9 @@
     "lockedBanner": "Your appeal has been submitted and is under review. No further edits are possible.",
     "decided": "Your appeal has been decided by SSSA.",
     "decisionAccepted": "Decision: Your level accepted",
-    "decisionKept": "Decision: Verifier level kept"
+    "decisionKept": "Decision: Verifier level kept",
+    "evidenceReq": "Evidence required",
+    "saveBeforeEvidence": "Save draft first to attach evidence files."
   },
   "finalization": {
     "title": "Finalization & Results",
@@ -781,7 +797,8 @@
     "decisionSaved": "Appeal decisions saved.",
     "deciding": "Saving…",
     "submitDecisions": "Submit Decisions",
-    "alreadyDecided": "This appeal has already been decided."
+    "alreadyDecided": "This appeal has already been decided.",
+    "appealEvidence": "Appeal Evidence"
   },
   "userMgmt": {
     "title": "User Management",

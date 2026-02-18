@@ -3,8 +3,9 @@
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Save, Send, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, Send, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Paperclip } from 'lucide-react';
 import { saveResponses, submitSubmission } from '@/lib/actions/selfAssessment';
+import EvidenceUploader, { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
 
 type Option = { key: string; labelEn: string; labelHi: string };
 type Parameter = {
@@ -16,11 +17,13 @@ type Domain = { id: string; code: string; titleEn: string; titleHi: string; subD
 type Framework = { id: string; domains: Domain[] };
 type ResponseState = Record<string, { selectedOptionKey: string; notes: string | null }>;
 
+type EvidenceMap = Record<string, EvidenceFile[]>;
+
 export default function SelfAssessmentForm({
-  framework, submissionId, schoolUdise, existingResponses, totalApplicable, isSubmitted: initialSubmitted,
+  framework, submissionId, schoolUdise, userId, existingResponses, existingEvidence, totalApplicable, isSubmitted: initialSubmitted,
 }: {
-  framework: Framework; submissionId: string; schoolUdise: string;
-  existingResponses: ResponseState; totalApplicable: number; isSubmitted: boolean;
+  framework: Framework; submissionId: string; schoolUdise: string; userId: string;
+  existingResponses: ResponseState; existingEvidence: EvidenceMap; totalApplicable: number; isSubmitted: boolean;
 }) {
   const t = useTranslations('selfAssessment');
   const router = useRouter();
@@ -210,8 +213,8 @@ export default function SelfAssessmentForm({
                                 <p className="mt-0.5 text-xs text-text-secondary">{param.titleEn}</p>
                               </div>
                               {param.evidenceRequired && (
-                                <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                                  {t('evidenceLater')}
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                                  <Paperclip size={10} /> {t('evidenceReq')}
                                 </span>
                               )}
                             </div>
@@ -260,6 +263,16 @@ export default function SelfAssessmentForm({
                               rows={2}
                               className="mt-2 w-full rounded-md border border-border bg-white px-3 py-2 text-sm placeholder:text-text-secondary/50 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500 disabled:opacity-60"
                             />
+
+                            {param.evidenceRequired && (
+                              <EvidenceUploader
+                                files={existingEvidence[param.id] ?? []}
+                                userId={userId}
+                                kind="SELF_RESPONSE"
+                                opts={{ saSubmissionId: submissionId, parameterId: param.id }}
+                                disabled={isSubmitted}
+                              />
+                            )}
                           </div>
                         );
                       })}

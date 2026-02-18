@@ -7,6 +7,7 @@ import {
   getActiveFrameworkForSchool,
   getOrCreateSubmission,
 } from '@/lib/actions/selfAssessment';
+import { prisma } from '@/lib/db';
 import SelfAssessmentForm from '@/components/selfAssessment/SelfAssessmentForm';
 
 export default async function SelfAssessmentPage() {
@@ -39,6 +40,25 @@ export default async function SelfAssessmentPage() {
   const responseMap: Record<string, { selectedOptionKey: string; notes: string | null }> = {};
   for (const r of submission.responses) {
     responseMap[r.parameterId] = { selectedOptionKey: r.selectedOptionKey, notes: r.notes };
+  }
+
+  // Load evidence files grouped by parameterId
+  const evidenceLinks = await prisma.evidenceLink.findMany({
+    where: { kind: 'SELF_RESPONSE', saSubmissionId: submission.id },
+    include: { asset: true },
+    orderBy: { asset: { createdAt: 'asc' } },
+  });
+  const evidenceMap: Record<string, { id: string; fileName: string; fileType: string; fileSize: number; blobUrl: string }[]> = {};
+  for (const link of evidenceLinks) {
+    const pid = link.parameterId ?? '';
+    if (!evidenceMap[pid]) evidenceMap[pid] = [];
+    evidenceMap[pid].push({
+      id: link.asset.id,
+      fileName: link.asset.fileName,
+      fileType: link.asset.fileType,
+      fileSize: link.asset.fileSize,
+      blobUrl: link.asset.blobUrl,
+    });
   }
 
   // Serialize for client component
@@ -86,7 +106,9 @@ export default async function SelfAssessmentPage() {
         framework={serializedFramework}
         submissionId={submission.id}
         schoolUdise={schoolUdise}
+        userId={session.user.id!}
         existingResponses={responseMap}
+        existingEvidence={evidenceMap}
         totalApplicable={totalApplicable}
         isSubmitted={submission.status === 'SUBMITTED'}
       />

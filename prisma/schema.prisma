@@ -23,6 +23,7 @@ model User {
   auditLogs           AuditLog[]          @relation("AuditLogActor")
   verifierDistricts   VerifierDistrict[]  @relation("VerifierDistricts")
   appealDecisions     Appeal[]            @relation("AppealDecider")
+  uploadedEvidence    EvidenceAsset[]     @relation("UploadedEvidence")
 }
 
 model District {
@@ -210,6 +211,7 @@ model Parameter {
   saResponses        SelfAssessmentResponse[]
   verifierResponses  VerificationResponse[]
   appealItems        AppealItem[]
+  evidenceLinks      EvidenceLink[]  @relation("ParamEvidence")
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -279,7 +281,8 @@ model SelfAssessmentSubmission {
   cycle       Cycle                    @relation(fields: [cycleId], references: [id])
   school      School                   @relation(fields: [schoolUdise], references: [udise])
   framework   Framework                @relation(fields: [frameworkId], references: [id])
-  responses   SelfAssessmentResponse[]
+  responses      SelfAssessmentResponse[]
+  evidenceLinks  EvidenceLink[]  @relation("SAEvidence")
 
   @@unique([cycleId, schoolUdise])
 }
@@ -332,6 +335,7 @@ model VerificationSubmission {
   assignment     VerifierAssignment     @relation(fields: [assignmentId], references: [id])
   verifier       User                   @relation(fields: [verifierUserId], references: [id])
   responses      VerificationResponse[]
+  evidenceLinks  EvidenceLink[]  @relation("VEvidence")
 }
 
 model VerificationResponse {
@@ -399,6 +403,7 @@ model AppealItem {
   decidedAt               DateTime?
   appeal                  Appeal    @relation(fields: [appealId], references: [id], onDelete: Cascade)
   parameter               Parameter @relation(fields: [parameterId], references: [id])
+  evidenceLinks           EvidenceLink[]  @relation("AppealItemEvidence")
 
   @@unique([appealId, parameterId])
 }
@@ -420,6 +425,35 @@ model Result {
   framework           Framework @relation(fields: [frameworkId], references: [id])
 
   @@unique([cycleId, schoolUdise])
+}
+
+model EvidenceAsset {
+  id               String         @id @default(cuid())
+  blobUrl          String
+  fileName         String
+  fileType         String
+  fileSize         Int
+  uploadedByUserId String
+  createdAt        DateTime       @default(now())
+  uploadedBy       User           @relation("UploadedEvidence", fields: [uploadedByUserId], references: [id])
+  links            EvidenceLink[]
+}
+
+model EvidenceLink {
+  id                String                     @id @default(cuid())
+  assetId           String
+  kind              String                     // SELF_RESPONSE | VERIFICATION_RESPONSE | APPEAL_ITEM
+  saSubmissionId    String?
+  vSubmissionId     String?
+  parameterId       String?
+  appealItemId      String?
+  asset             EvidenceAsset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  saSubmission      SelfAssessmentSubmission?  @relation("SAEvidence", fields: [saSubmissionId], references: [id])
+  vSubmission       VerificationSubmission?    @relation("VEvidence", fields: [vSubmissionId], references: [id])
+  parameter         Parameter?                 @relation("ParamEvidence", fields: [parameterId], references: [id])
+  appealItem        AppealItem?                @relation("AppealItemEvidence", fields: [appealItemId], references: [id])
+
+  @@unique([assetId])
 }
 
 model RatingDimension {

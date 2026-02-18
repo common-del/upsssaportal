@@ -248,7 +248,7 @@ export async function submitVerification(
 ): Promise<{ success: boolean; errors?: { parameterCode: string; message: string }[]; message?: string }> {
   const submission = await prisma.verificationSubmission.findUnique({
     where: { id: submissionId },
-    include: { framework: { include: { parameters: { where: { isActive: true }, select: { id: true, code: true, applicability: true } } } } },
+    include: { framework: { include: { parameters: { where: { isActive: true }, select: { id: true, code: true, applicability: true, evidenceRequired: true } } } } },
   });
   if (!submission) return { success: false, message: 'Submission not found.' };
   if (submission.verifierUserId !== verifierUserId) return { success: false, message: 'Access denied.' };
@@ -267,11 +267,24 @@ export async function submitVerification(
     select: { parameterId: true },
   });
   const answeredIds = new Set(responses.map((r) => r.parameterId));
-  const missing = applicableParams.filter((p) => !answeredIds.has(p.id));
 
-  if (missing.length > 0) {
-    return { success: false, errors: missing.map((p) => ({ parameterCode: p.code, message: 'Response required' })) };
+  const errors: { parameterCode: string; message: string }[] = [];
+  const missing = applicableParams.filter((p) => !answeredIds.has(p.id));
+  for (const p of missing) errors.push({ parameterCode: p.code, message: 'Response required' });
+
+  const evidenceRequired = applicableParams.filter((p) => p.evidenceRequired);
+  if (evidenceRequired.length > 0) {
+    const evidenceLinks = await prisma.evidenceLink.findMany({
+      where: { kind: 'VERIFICATION_RESPONSE', vSubmissionId: submissionId },
+      select: { parameterId: true },
+    });
+    const hasEvidence = new Set(evidenceLinks.map((l) => l.parameterId));
+    for (const p of evidenceRequired) {
+      if (!hasEvidence.has(p.id)) errors.push({ parameterCode: p.code, message: 'Evidence required' });
+    }
   }
+
+  if (errors.length > 0) return { success: false, errors };
 
   await prisma.verificationSubmission.update({
     where: { id: submissionId },

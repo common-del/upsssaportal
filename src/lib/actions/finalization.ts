@@ -144,10 +144,27 @@ export async function submitAppeal(schoolUdise: string, cycleId: string) {
 
   const appeal = await prisma.appeal.findUnique({
     where: { cycleId_schoolUdise: { cycleId, schoolUdise } },
-    include: { items: true },
+    include: { items: { include: { parameter: { select: { evidenceRequired: true, code: true } } } } },
   });
   if (!appeal || appeal.status !== 'DRAFT') return { success: false, error: 'Appeal not in draft.' };
   if (appeal.items.length === 0) return { success: false, error: 'No appeal items.' };
+
+  // Check evidence for items where parameter.evidenceRequired
+  const itemsNeedingEvidence = appeal.items.filter((i) => i.parameter.evidenceRequired);
+  if (itemsNeedingEvidence.length > 0) {
+    const evidenceLinks = await prisma.evidenceLink.findMany({
+      where: { kind: 'APPEAL_ITEM', appealItemId: { in: itemsNeedingEvidence.map((i) => i.id) } },
+      select: { appealItemId: true },
+    });
+    const hasEvidence = new Set(evidenceLinks.map((l) => l.appealItemId));
+    const missing = itemsNeedingEvidence.filter((i) => !hasEvidence.has(i.id));
+    if (missing.length > 0) {
+      return {
+        success: false,
+        error: `Evidence required for: ${missing.map((m) => m.parameter.code).join(', ')}`,
+      };
+    }
+  }
 
   await prisma.appeal.update({
     where: { id: appeal.id },

@@ -433,6 +433,7 @@
     "progress": "प्रगति",
     "statusSubmitted": "जमा किया गया",
     "submittedBanner": "आपका सत्यापन मूल्यांकन जमा और लॉक हो गया है।",
+    "evidenceReq": "साक्ष्य आवश्यक",
     "notesPlaceholder": "सत्यापन टिप्पणियाँ…",
     "saveDraft": "ड्राफ़्ट सहेजें",
     "saving": "सहेजा जा रहा है…",
@@ -546,6 +547,18 @@
     "viewSchool": "विद्यालय प्रोफ़ाइल देखें",
     "backToFeedback": "रेटिंग एवं प्रतिक्रिया पर वापस"
   },
+  "evidence": {
+    "attach": "फ़ाइल संलग्न करें",
+    "uploading": "अपलोड हो रहा है…",
+    "remove": "हटाएँ",
+    "invalidType": "केवल PDF, JPG और PNG फ़ाइलें अनुमत हैं।",
+    "tooLarge": "फ़ाइल बहुत बड़ी है। अधिकतम 10 MB।",
+    "maxFiles": "प्रति पैरामीटर अधिकतम 3 फ़ाइलें अनुमत।",
+    "uploadError": "अपलोड विफल। कृपया पुनः प्रयास करें।",
+    "deleteError": "फ़ाइल हटाई नहीं जा सकी।",
+    "hint": "PDF, JPG, PNG — अधिकतम 10 MB, 3 फ़ाइलें तक",
+    "noFiles": "कोई साक्ष्य फ़ाइल नहीं"
+  },
   "selfAssessment": {
     "title": "स्व-मूल्यांकन",
     "backToHome": "विद्यालय होम पर वापस",
@@ -558,7 +571,7 @@
     "complete": "पूर्ण",
     "selectLevel": "— स्तर चुनें —",
     "notesPlaceholder": "वैकल्पिक टिप्पणी या अवलोकन…",
-    "evidenceLater": "साक्ष्य अपलोड बाद में आएगा",
+    "evidenceReq": "साक्ष्य आवश्यक",
     "saveDraft": "ड्राफ़्ट सहेजें",
     "saving": "सहेजा जा रहा है…",
     "savedSuccess": "ड्राफ़्ट सहेजा गया!",
@@ -619,7 +632,8 @@
     "noVerifierResponses": "अभी तक कोई सत्यापनकर्ता उत्तर दर्ज नहीं किया गया।",
     "compTotal": "कुल तुलना",
     "compMatch": "मेल",
-    "compDiff": "अंतर"
+    "compDiff": "अंतर",
+    "evidenceLabel": "साक्ष्य"
   },
   "framework": {
     "title": "SQAAF ढाँचा निर्माता",
@@ -734,7 +748,9 @@
     "lockedBanner": "आपकी अपील सबमिट कर दी गई है और समीक्षाधीन है। कोई और संपादन संभव नहीं है।",
     "decided": "आपकी अपील पर SSSA द्वारा निर्णय लिया गया है।",
     "decisionAccepted": "निर्णय: आपका स्तर स्वीकृत",
-    "decisionKept": "निर्णय: सत्यापनकर्ता का स्तर बरकरार"
+    "decisionKept": "निर्णय: सत्यापनकर्ता का स्तर बरकरार",
+    "evidenceReq": "साक्ष्य आवश्यक",
+    "saveBeforeEvidence": "साक्ष्य फ़ाइलें संलग्न करने के लिए पहले ड्राफ़्ट सहेजें।"
   },
   "finalization": {
     "title": "अंतिमीकरण और परिणाम",
@@ -781,7 +797,8 @@
     "decisionSaved": "अपील निर्णय सहेजे गए।",
     "deciding": "सहेजा जा रहा है…",
     "submitDecisions": "निर्णय सबमिट करें",
-    "alreadyDecided": "इस अपील पर पहले ही निर्णय लिया जा चुका है।"
+    "alreadyDecided": "इस अपील पर पहले ही निर्णय लिया जा चुका है।",
+    "appealEvidence": "अपील साक्ष्य"
   },
   "userMgmt": {
     "title": "उपयोगकर्ता प्रबंधन",

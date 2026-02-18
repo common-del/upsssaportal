@@ -3,8 +3,9 @@
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Save, Send, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, Send, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Paperclip } from 'lucide-react';
 import { saveVerificationResponses, submitVerification } from '@/lib/actions/verification';
+import EvidenceUploader, { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
 
 type Option = { key: string; labelEn: string; labelHi: string };
 type Parameter = { id: string; code: string; titleEn: string; titleHi: string; evidenceRequired: boolean; options: Option[] };
@@ -13,11 +14,13 @@ type Domain = { id: string; code: string; titleEn: string; titleHi: string; subD
 type Framework = { id: string; domains: Domain[] };
 type ResponseState = Record<string, { selectedOptionKey: string; notes: string | null }>;
 
+type EvidenceMap = Record<string, EvidenceFile[]>;
+
 export default function VerifierAssessmentForm({
-  framework, submissionId, verifierUserId, existingResponses, totalApplicable, isSubmitted: initialSubmitted,
+  framework, submissionId, verifierUserId, existingResponses, existingEvidence, totalApplicable, isSubmitted: initialSubmitted,
 }: {
   framework: Framework; submissionId: string; verifierUserId: string;
-  existingResponses: ResponseState; totalApplicable: number; isSubmitted: boolean;
+  existingResponses: ResponseState; existingEvidence: EvidenceMap; totalApplicable: number; isSubmitted: boolean;
 }) {
   const t = useTranslations('verifierAssessment');
   const router = useRouter();
@@ -139,8 +142,17 @@ export default function VerifierAssessmentForm({
                         const resp = responses[param.id];
                         return (
                           <div key={param.id} className={`rounded-lg border p-4 ${resp?.selectedOptionKey ? 'border-green-200 bg-green-50/30' : 'border-border bg-white'}`}>
-                            <p className="text-sm font-medium text-navy-900">{param.titleHi}</p>
-                            <p className="mt-0.5 text-xs text-text-secondary">{param.titleEn}</p>
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-medium text-navy-900">{param.titleHi}</p>
+                                <p className="mt-0.5 text-xs text-text-secondary">{param.titleEn}</p>
+                              </div>
+                              {param.evidenceRequired && (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                                  <Paperclip size={10} /> {t('evidenceReq')}
+                                </span>
+                              )}
+                            </div>
                             <div className="mt-3 space-y-2">
                               {param.options.map((opt) => {
                                 const isSelected = resp?.selectedOptionKey === opt.key;
@@ -159,6 +171,15 @@ export default function VerifierAssessmentForm({
                             <textarea value={resp?.notes ?? ''} onChange={(e) => setResponse(param.id, 'notes', e.target.value)}
                               disabled={isSubmitted} placeholder={t('notesPlaceholder')} maxLength={500} rows={2}
                               className="mt-2 w-full rounded-md border border-border bg-white px-3 py-2 text-sm placeholder:text-text-secondary/50 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60" />
+                            {param.evidenceRequired && (
+                              <EvidenceUploader
+                                files={existingEvidence[param.id] ?? []}
+                                userId={verifierUserId}
+                                kind="VERIFICATION_RESPONSE"
+                                opts={{ vSubmissionId: submissionId, parameterId: param.id }}
+                                disabled={isSubmitted}
+                              />
+                            )}
                           </div>
                         );
                       })}

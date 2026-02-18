@@ -3,17 +3,20 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ClipboardList, UserCheck, GitCompare } from 'lucide-react';
+import EvidenceViewer, { type EvidenceFile } from '@/components/evidence/EvidenceViewer';
 
 type Option = { key: string; labelEn: string; labelHi: string };
 type Parameter = { id: string; code: string; titleEn: string; titleHi: string; options: Option[] };
 type SubDomain = { id: string; titleEn: string; titleHi: string; parameters: Parameter[] };
 type Domain = { id: string; code: string; titleEn: string; titleHi: string; subDomains: SubDomain[] };
 type ResponseMap = Record<string, { selectedOptionKey: string; notes: string | null }>;
+type EvidenceMap = Record<string, EvidenceFile[]>;
 
 export default function MonitoringSchoolTabs({
-  domains, saResponses, vResponses, saStatus, vStatus,
+  domains, saResponses, vResponses, saStatus, vStatus, saEvidence, vEvidence,
 }: {
   domains: Domain[]; saResponses: ResponseMap; vResponses: ResponseMap; saStatus: string; vStatus: string;
+  saEvidence?: EvidenceMap; vEvidence?: EvidenceMap;
 }) {
   const t = useTranslations('monitoring');
   const [tab, setTab] = useState<'sa' | 'verification' | 'comparison'>('sa');
@@ -33,16 +36,16 @@ export default function MonitoringSchoolTabs({
       </div>
 
       <div className="mt-4">
-        {tab === 'sa' && <ResponseView domains={domains} responses={saResponses} status={saStatus} emptyMsg={t('noResponses')} />}
-        {tab === 'verification' && <ResponseView domains={domains} responses={vResponses} status={vStatus} emptyMsg={t('noVerifierResponses')} />}
-        {tab === 'comparison' && <ComparisonView domains={domains} saResponses={saResponses} vResponses={vResponses} />}
+        {tab === 'sa' && <ResponseView domains={domains} responses={saResponses} status={saStatus} emptyMsg={t('noResponses')} evidence={saEvidence} />}
+        {tab === 'verification' && <ResponseView domains={domains} responses={vResponses} status={vStatus} emptyMsg={t('noVerifierResponses')} evidence={vEvidence} />}
+        {tab === 'comparison' && <ComparisonView domains={domains} saResponses={saResponses} vResponses={vResponses} saEvidence={saEvidence} vEvidence={vEvidence} />}
       </div>
     </div>
   );
 }
 
-function ResponseView({ domains, responses, emptyMsg }: {
-  domains: Domain[]; responses: ResponseMap; status?: string; emptyMsg: string;
+function ResponseView({ domains, responses, emptyMsg, evidence }: {
+  domains: Domain[]; responses: ResponseMap; status?: string; emptyMsg: string; evidence?: EvidenceMap;
 }) {
   const t = useTranslations('monitoring');
   if (Object.keys(responses).length === 0) {
@@ -79,6 +82,9 @@ function ResponseView({ domains, responses, emptyMsg }: {
                             </p>
                             {selectedOpt && <p className="text-xs text-text-secondary">{selectedOpt.labelEn}</p>}
                             {resp.notes && <p className="mt-1 rounded bg-surface px-2 py-1 text-xs italic text-text-secondary">{resp.notes}</p>}
+                            {evidence && evidence[param.id] && evidence[param.id].length > 0 && (
+                              <EvidenceViewer files={evidence[param.id]} label={t('evidenceLabel')} />
+                            )}
                           </div>
                         ) : (
                           <p className="mt-1 text-xs italic text-text-secondary">— {t('notAnswered')} —</p>
@@ -96,8 +102,8 @@ function ResponseView({ domains, responses, emptyMsg }: {
   );
 }
 
-function ComparisonView({ domains, saResponses, vResponses }: {
-  domains: Domain[]; saResponses: ResponseMap; vResponses: ResponseMap;
+function ComparisonView({ domains, saResponses, vResponses, saEvidence, vEvidence }: {
+  domains: Domain[]; saResponses: ResponseMap; vResponses: ResponseMap; saEvidence?: EvidenceMap; vEvidence?: EvidenceMap;
 }) {
   const t = useTranslations('monitoring');
   let matches = 0;
@@ -168,6 +174,9 @@ function ComparisonView({ domains, saResponses, vResponses }: {
                                   <p className="mt-0.5 text-xs font-medium text-navy-900">{sa.selectedOptionKey.replace(/_/g, ' ')}</p>
                                   <p className="text-[11px] text-navy-800">{saOpt?.labelHi}</p>
                                   <p className="text-[11px] text-text-secondary">{saOpt?.labelEn}</p>
+                                  {saEvidence && saEvidence[param.id] && saEvidence[param.id].length > 0 && (
+                                    <EvidenceViewer files={saEvidence[param.id]} />
+                                  )}
                                 </>
                               ) : <p className="mt-0.5 text-xs italic text-text-secondary">—</p>}
                             </div>
@@ -178,6 +187,9 @@ function ComparisonView({ domains, saResponses, vResponses }: {
                                   <p className="mt-0.5 text-xs font-medium text-navy-900">{v.selectedOptionKey.replace(/_/g, ' ')}</p>
                                   <p className="text-[11px] text-navy-800">{vOpt?.labelHi}</p>
                                   <p className="text-[11px] text-text-secondary">{vOpt?.labelEn}</p>
+                                  {vEvidence && vEvidence[param.id] && vEvidence[param.id].length > 0 && (
+                                    <EvidenceViewer files={vEvidence[param.id]} />
+                                  )}
                                 </>
                               ) : <p className="mt-0.5 text-xs italic text-text-secondary">—</p>}
                             </div>

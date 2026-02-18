@@ -3,8 +3,9 @@
 import { useState, useTransition } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Lock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Lock, Paperclip } from 'lucide-react';
 import { saveAppealDraft, submitAppeal } from '@/lib/actions/finalization';
+import EvidenceUploader, { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
 
 type DiffItem = {
   parameterId: string;
@@ -18,12 +19,15 @@ type DiffItem = {
   options: { key: string; labelEn: string; labelHi: string }[];
   existingJustification: string;
   decision: string | null;
+  appealItemId: string | null;
+  evidenceRequired: boolean;
+  evidence: EvidenceFile[];
 };
 
 export default function AppealForm({
-  schoolUdise, cycleId, frameworkId, diffs, appealStatus, expired,
+  schoolUdise, userId, cycleId, frameworkId, diffs, appealStatus, expired,
 }: {
-  schoolUdise: string; cycleId: string; frameworkId: string;
+  schoolUdise: string; userId: string; cycleId: string; frameworkId: string;
   diffs: DiffItem[]; appealStatus: string | null; expired: boolean;
 }) {
   const t = useTranslations('appeal');
@@ -92,9 +96,18 @@ export default function AppealForm({
 
       {diffs.map((d) => (
         <div key={d.parameterId} className="rounded-xl border border-border bg-white p-4">
-          <div className="text-xs font-medium text-indigo-600">{label(d.domainTitleEn, d.domainTitleHi)}</div>
-          <p className="mt-1 text-sm font-semibold text-navy-900">{d.titleHi}</p>
-          <p className="text-xs text-text-secondary">{d.titleEn}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-xs font-medium text-indigo-600">{label(d.domainTitleEn, d.domainTitleHi)}</div>
+              <p className="mt-1 text-sm font-semibold text-navy-900">{d.titleHi}</p>
+              <p className="text-xs text-text-secondary">{d.titleEn}</p>
+            </div>
+            {d.evidenceRequired && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                <Paperclip size={10} /> {t('evidenceReq')}
+              </span>
+            )}
+          </div>
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <div className="rounded-md bg-surface p-2.5">
@@ -125,6 +138,20 @@ export default function AppealForm({
                 placeholder={t('justificationPh')}
               />
             </div>
+          )}
+
+          {d.evidenceRequired && d.appealItemId && (
+            <EvidenceUploader
+              files={d.evidence}
+              userId={userId}
+              kind="APPEAL_ITEM"
+              opts={{ appealItemId: d.appealItemId }}
+              disabled={isLocked}
+            />
+          )}
+
+          {d.evidenceRequired && !d.appealItemId && !isLocked && (
+            <p className="mt-2 text-[10px] text-amber-600 italic">{t('saveBeforeEvidence')}</p>
           )}
         </div>
       ))}

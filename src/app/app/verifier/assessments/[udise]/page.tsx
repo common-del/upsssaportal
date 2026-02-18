@@ -51,6 +51,18 @@ export default async function VerifierAssessmentPage({
     responseMap[r.parameterId] = { selectedOptionKey: r.selectedOptionKey, notes: r.notes };
   }
 
+  const evidenceLinks = await prisma.evidenceLink.findMany({
+    where: { kind: 'VERIFICATION_RESPONSE', vSubmissionId: submission.id },
+    include: { asset: true },
+    orderBy: { asset: { createdAt: 'asc' } },
+  });
+  const evidenceMap: Record<string, { id: string; fileName: string; fileType: string; fileSize: number; blobUrl: string }[]> = {};
+  for (const link of evidenceLinks) {
+    const pid = link.parameterId ?? '';
+    if (!evidenceMap[pid]) evidenceMap[pid] = [];
+    evidenceMap[pid].push({ id: link.asset.id, fileName: link.asset.fileName, fileType: link.asset.fileType, fileSize: link.asset.fileSize, blobUrl: link.asset.blobUrl });
+  }
+
   const serializedFramework = {
     id: framework.id,
     domains: framework.domains.map((d) => ({
@@ -82,6 +94,7 @@ export default async function VerifierAssessmentPage({
         submissionId={submission.id}
         verifierUserId={userId}
         existingResponses={responseMap}
+        existingEvidence={evidenceMap}
         totalApplicable={totalApplicable}
         isSubmitted={submission.status === 'SUBMITTED'}
       />

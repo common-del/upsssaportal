@@ -35,15 +35,44 @@ export default async function SchoolAppealsPage() {
   const existingItems = existingAppeal
     ? await prisma.appealItem.findMany({
         where: { appealId: existingAppeal.id },
-        select: { parameterId: true, schoolJustification: true, decision: true },
+        select: { id: true, parameterId: true, schoolJustification: true, decision: true },
       })
     : [];
 
-  const serializedDiffs = diffs.map((d) => ({
-    ...d,
-    existingJustification: existingItems.find((i) => i.parameterId === d.parameterId)?.schoolJustification ?? '',
-    decision: existingItems.find((i) => i.parameterId === d.parameterId)?.decision ?? null,
-  }));
+  // Load evidence per appeal item
+  const appealItemIds = existingItems.map((i) => i.id);
+  const appealEvidence = appealItemIds.length > 0
+    ? await prisma.evidenceLink.findMany({
+        where: { kind: 'APPEAL_ITEM', appealItemId: { in: appealItemIds } },
+        include: { asset: true },
+        orderBy: { asset: { createdAt: 'asc' } },
+      })
+    : [];
+  const evidenceByItem: Record<string, { id: string; fileName: string; fileType: string; fileSize: number; blobUrl: string }[]> = {};
+  for (const link of appealEvidence) {
+    const aid = link.appealItemId ?? '';
+    if (!evidenceByItem[aid]) evidenceByItem[aid] = [];
+    evidenceByItem[aid].push({ id: link.asset.id, fileName: link.asset.fileName, fileType: link.asset.fileType, fileSize: link.asset.fileSize, blobUrl: link.asset.blobUrl });
+  }
+
+  // Check which parameters require evidence
+  const paramIds = diffs.map((d) => d.parameterId);
+  const evidenceParams = paramIds.length > 0
+    ? await prisma.parameter.findMany({ where: { id: { in: paramIds } }, select: { id: true, evidenceRequired: true } })
+    : [];
+  const evidenceReqSet = new Set(evidenceParams.filter((p) => p.evidenceRequired).map((p) => p.id));
+
+  const serializedDiffs = diffs.map((d) => {
+    const item = existingItems.find((i) => i.parameterId === d.parameterId);
+    return {
+      ...d,
+      existingJustification: item?.schoolJustification ?? '',
+      decision: item?.decision ?? null,
+      appealItemId: item?.id ?? null,
+      evidenceRequired: evidenceReqSet.has(d.parameterId),
+      evidence: item ? (evidenceByItem[item.id] ?? []) : [],
+    };
+  });
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -62,6 +91,7 @@ export default async function SchoolAppealsPage() {
 
       <AppealForm
         schoolUdise={schoolUdise}
+        userId={session.user.id!}
         cycleId={cycle.id}
         frameworkId={framework.id}
         diffs={serializedDiffs}

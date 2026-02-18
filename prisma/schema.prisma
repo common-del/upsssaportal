@@ -22,6 +22,7 @@ model User {
   verifications       VerificationSubmission[]
   auditLogs           AuditLog[]          @relation("AuditLogActor")
   verifierDistricts   VerifierDistrict[]  @relation("VerifierDistricts")
+  appealDecisions     Appeal[]            @relation("AppealDecider")
 }
 
 model District {
@@ -65,6 +66,8 @@ model School {
   selfAssessments     SelfAssessmentSubmission[]
   verifierAssignments VerifierAssignment[]
   verifications       VerificationSubmission[]
+  appeals             Appeal[]
+  results             Result[]
 }
 
 model DisputeCategory {
@@ -112,18 +115,22 @@ model TicketTimeline {
 }
 
 model Cycle {
-  id         String         @id @default(cuid())
-  name       String         @unique
-  isActive   Boolean        @default(false)
-  startsAt   DateTime?
-  endsAt     DateTime?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id                  String         @id @default(cuid())
+  name                String         @unique
+  isActive            Boolean        @default(false)
+  startsAt            DateTime?
+  endsAt              DateTime?
+  resultsPublished    Boolean        @default(false)
+  resultsPublishedAt  DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
   ratings             ParentRating[]
   frameworks          Framework[]
   selfAssessments     SelfAssessmentSubmission[]
   verifierAssignments VerifierAssignment[]
   verifications       VerificationSubmission[]
+  appeals             Appeal[]
+  results             Result[]
 }
 
 model Framework {
@@ -144,6 +151,8 @@ model Framework {
   gradeBands      GradeBand[]
   selfAssessments SelfAssessmentSubmission[]
   verifications   VerificationSubmission[]
+  appeals         Appeal[]
+  results         Result[]
 
   @@unique([cycleId])
 }
@@ -200,6 +209,7 @@ model Parameter {
   rubricMappings   RubricMapping[]
   saResponses        SelfAssessmentResponse[]
   verifierResponses  VerificationResponse[]
+  appealItems        AppealItem[]
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -356,6 +366,60 @@ model VerifierDistrict {
   verifier       User   @relation("VerifierDistricts", fields: [verifierUserId], references: [id], onDelete: Cascade)
 
   @@unique([verifierUserId, districtCode])
+}
+
+model Appeal {
+  id              String       @id @default(cuid())
+  cycleId         String
+  schoolUdise     String
+  frameworkId     String
+  status          String       @default("DRAFT") // DRAFT | SUBMITTED | DECIDED
+  submittedAt     DateTime?
+  decidedAt       DateTime?
+  decidedByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  cycle           Cycle        @relation(fields: [cycleId], references: [id])
+  school          School       @relation(fields: [schoolUdise], references: [udise])
+  framework       Framework    @relation(fields: [frameworkId], references: [id])
+  decidedBy       User?        @relation("AppealDecider", fields: [decidedByUserId], references: [id])
+  items           AppealItem[]
+
+  @@unique([cycleId, schoolUdise])
+}
+
+model AppealItem {
+  id                      String    @id @default(cuid())
+  appealId                String
+  parameterId             String
+  schoolSelectedOptionKey String
+  verifierSelectedOptionKey String
+  schoolJustification     String?
+  decision                String    @default("PENDING") // PENDING | ACCEPT_SCHOOL | KEEP_VERIFIER
+  decidedAt               DateTime?
+  appeal                  Appeal    @relation(fields: [appealId], references: [id], onDelete: Cascade)
+  parameter               Parameter @relation(fields: [parameterId], references: [id])
+
+  @@unique([appealId, parameterId])
+}
+
+model Result {
+  id                  String    @id @default(cuid())
+  cycleId             String
+  schoolUdise         String
+  frameworkId         String
+  selfScorePercent    Float?
+  verifierScorePercent Float?
+  finalScorePercent   Float?
+  gradeBandCode       String?
+  publishedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  cycle               Cycle     @relation(fields: [cycleId], references: [id])
+  school              School    @relation(fields: [schoolUdise], references: [udise])
+  framework           Framework @relation(fields: [frameworkId], references: [id])
+
+  @@unique([cycleId, schoolUdise])
 }
 
 model RatingDimension {

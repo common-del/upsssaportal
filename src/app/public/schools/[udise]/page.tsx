@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Star } from 'lucide-react';
+import { ArrowLeft, Star, Award } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { getSchoolRatingAggregates, getActiveDimensions } from '@/lib/actions/rating';
@@ -66,16 +66,11 @@ export default async function SchoolProfilePage(props: {
         </dl>
       </div>
 
-      {/* SSSA Results placeholder */}
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold text-navy-900">{t('results')}</h2>
-        <p className="mt-2 rounded-lg border border-dashed border-border px-5 py-8 text-center text-sm text-text-secondary">
-          {t('resultsPlaceholder')}
-        </p>
-      </section>
+      {/* SSSA Accreditation Results */}
+      <AccreditationSection udise={udise} t={t} hi={hi} />
 
       {/* Parent Ratings */}
-      <section className="mt-8">
+      <section className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-navy-900">{t('ratings')}</h2>
           <Link href="/public/rate" className="text-sm font-medium text-navy-700 hover:text-navy-900 hover:underline">
@@ -126,5 +121,82 @@ export default async function SchoolProfilePage(props: {
         )}
       </section>
     </div>
+  );
+}
+
+async function AccreditationSection({ udise, t, hi }: { udise: string; t: (k: string) => string; hi: boolean }) {
+  const publishedCycle = await prisma.cycle.findFirst({
+    where: { resultsPublished: true },
+    orderBy: { resultsPublishedAt: 'desc' },
+    select: { id: true, name: true, resultsPublishedAt: true },
+  });
+
+  if (!publishedCycle) {
+    return (
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-navy-900">{t('results')}</h2>
+        <p className="mt-2 rounded-lg border border-dashed border-border px-5 py-8 text-center text-sm text-text-secondary">
+          {t('resultsPlaceholder')}
+        </p>
+      </section>
+    );
+  }
+
+  const result = await prisma.result.findUnique({
+    where: { cycleId_schoolUdise: { cycleId: publishedCycle.id, schoolUdise: udise } },
+  });
+
+  if (!result || !result.publishedAt) {
+    return (
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-navy-900">{t('results')}</h2>
+        <p className="mt-2 rounded-lg border border-dashed border-border px-5 py-8 text-center text-sm text-text-secondary">
+          {t('resultsPlaceholder')}
+        </p>
+      </section>
+    );
+  }
+
+  let gradeBandLabel: string | null = null;
+  if (result.gradeBandCode) {
+    const band = await prisma.gradeBand.findFirst({
+      where: { framework: { cycleId: publishedCycle.id }, key: result.gradeBandCode },
+      select: { labelEn: true, labelHi: true },
+    });
+    if (band) gradeBandLabel = hi ? band.labelHi : band.labelEn;
+  }
+
+  return (
+    <section className="mt-10">
+      <h2 className="text-lg font-semibold text-navy-900">{t('results')}</h2>
+      <div className="mt-4 rounded-lg border border-border bg-white p-6">
+        <div className="flex items-center gap-3">
+          <Award size={28} className="text-navy-700" />
+          <div>
+            <p className="text-sm text-text-secondary">{t('accreditationCycle')}: {publishedCycle.name}</p>
+            {gradeBandLabel && (
+              <p className="mt-1 text-2xl font-bold text-navy-900">{gradeBandLabel}</p>
+            )}
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-lg bg-surface px-4 py-3">
+            <p className="text-xs font-medium text-text-secondary">{t('finalScore')}</p>
+            <p className="mt-0.5 text-lg font-bold text-navy-900">{result.finalScorePercent != null ? `${result.finalScorePercent}%` : '—'}</p>
+          </div>
+          <div className="rounded-lg bg-surface px-4 py-3">
+            <p className="text-xs font-medium text-text-secondary">{t('selfScore')}</p>
+            <p className="mt-0.5 text-lg font-bold text-navy-900">{result.selfScorePercent != null ? `${result.selfScorePercent}%` : '—'}</p>
+          </div>
+          <div className="rounded-lg bg-surface px-4 py-3">
+            <p className="text-xs font-medium text-text-secondary">{t('verifierScore')}</p>
+            <p className="mt-0.5 text-lg font-bold text-navy-900">{result.verifierScorePercent != null ? `${result.verifierScorePercent}%` : '—'}</p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-text-secondary">
+          {t('publishedOn')}: {result.publishedAt.toLocaleDateString()}
+        </p>
+      </div>
+    </section>
   );
 }

@@ -2,9 +2,10 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Scale } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
+import { getAppealEligibility } from '@/lib/actions/finalization';
 
 const CATEGORY_TO_CODE: Record<string, string> = {
   Primary: 'PRIMARY',
@@ -113,6 +114,8 @@ export default async function VerifierFeedbackPage() {
         )}
       </div>
 
+      <AppealBanner cycleId={cycle.id} schoolUdise={schoolUdise} t={t} />
+
       <div className="mt-6 space-y-4">
         {fullFramework.domains.map((domain) => {
           const filteredSubs = domain.subDomains
@@ -187,6 +190,31 @@ export default async function VerifierFeedbackPage() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+async function AppealBanner({ cycleId, schoolUdise, t }: { cycleId: string; schoolUdise: string; t: (k: string) => string }) {
+  const elig = await getAppealEligibility(cycleId, schoolUdise);
+  if (!elig.eligible) return null;
+  const expired = 'expired' in elig ? elig.expired : false;
+  const deadline = 'deadline' in elig ? elig.deadline : null;
+  const existingAppeal = 'existingAppeal' in elig ? elig.existingAppeal : null;
+
+  if (existingAppeal?.status === 'DECIDED') return null;
+
+  return (
+    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
+        <Scale size={16} />
+        {existingAppeal ? t('appealInProgress') : t('appealEligible')}
+      </div>
+      {deadline && !expired && (
+        <p className="mt-1 text-xs text-amber-700">{t('appealDeadline')}: {deadline.toLocaleDateString()}</p>
+      )}
+      <Link href="/app/school/appeals" className="mt-2 inline-block text-sm font-medium text-amber-900 underline hover:text-amber-700">
+        {t('goToAppeal')} →
+      </Link>
     </div>
   );
 }

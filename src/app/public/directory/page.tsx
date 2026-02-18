@@ -50,9 +50,26 @@ export default async function DirectoryPage(props: {
     prisma.school.count({ where }),
   ]);
 
-  // Batch fetch ratings for this page (no N+1)
   const udises = schools.map((s) => s.udise);
   const ratingMap = await getBatchRatingAggregates(udises);
+
+  // Fetch published results for grade display
+  const publishedCycle = await prisma.cycle.findFirst({ where: { resultsPublished: true }, orderBy: { resultsPublishedAt: 'desc' } });
+  const resultMap = new Map<string, { gradeBandCode: string | null }>();
+  if (publishedCycle && udises.length > 0) {
+    const results = await prisma.result.findMany({
+      where: { cycleId: publishedCycle.id, schoolUdise: { in: udises }, publishedAt: { not: null } },
+      select: { schoolUdise: true, gradeBandCode: true },
+    });
+    for (const r of results) resultMap.set(r.schoolUdise, r);
+  }
+  const gradeBands = publishedCycle
+    ? await prisma.gradeBand.findMany({
+        where: { framework: { cycleId: publishedCycle.id } },
+        select: { key: true, labelEn: true, labelHi: true },
+      })
+    : [];
+  const bandLabelMap = new Map(gradeBands.map((b) => [b.key, hi ? b.labelHi : b.labelEn]));
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -100,6 +117,7 @@ export default async function DirectoryPage(props: {
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">{t('category')}</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">{t('district')}</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">{t('block')}</th>
+                <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('grade')}</th>
                 <th className="px-4 py-3 font-medium">{t('rating')}</th>
               </tr>
             </thead>
@@ -117,6 +135,15 @@ export default async function DirectoryPage(props: {
                     <td className="hidden px-4 py-3 sm:table-cell">{s.category}</td>
                     <td className="hidden px-4 py-3 md:table-cell">{hi ? s.district.nameHi : s.district.nameEn}</td>
                     <td className="hidden px-4 py-3 md:table-cell">{hi ? s.block.nameHi : s.block.nameEn}</td>
+                    <td className="hidden px-4 py-3 lg:table-cell">
+                      {(() => {
+                        const result = resultMap.get(s.udise);
+                        const gradeLabel = result?.gradeBandCode ? bandLabelMap.get(result.gradeBandCode) : null;
+                        return gradeLabel
+                          ? <span className="rounded-full bg-navy-50 px-2 py-0.5 text-xs font-semibold text-navy-700">{gradeLabel}</span>
+                          : <span className="text-xs text-text-secondary">—</span>;
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       {rating ? (
                         <span className="inline-flex items-center gap-1 text-sm">

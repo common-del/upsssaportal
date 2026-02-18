@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { MessageSquare, ClipboardList, UserCheck } from 'lucide-react';
+import { MessageSquare, ClipboardList, UserCheck, Scale } from 'lucide-react';
 import { prisma } from '@/lib/db';
 
 export default async function SchoolHomePage() {
@@ -72,6 +72,19 @@ export default async function SchoolHomePage() {
           <div>
             <p className="font-semibold text-navy-900">{t('verifierFeedbackLink')}</p>
             <p className="text-sm text-text-secondary">{t('verifierFeedbackDesc')}</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/app/school/appeals"
+          className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
+            <Scale size={20} className="text-amber-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-navy-900">{t('appealsLink')}</p>
+            <p className="text-sm text-text-secondary">{t('appealsDesc')}</p>
           </div>
         </Link>
 

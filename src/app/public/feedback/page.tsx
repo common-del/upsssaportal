@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, MessageSquarePlus, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Star, AlertTriangle, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
 export default async function FeedbackPage() {
@@ -7,7 +7,7 @@ export default async function FeedbackPage() {
   const tc = await getTranslations('common');
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
         href="/public"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
@@ -21,20 +21,22 @@ export default async function FeedbackPage() {
       </h1>
       <p className="mt-2 text-text-secondary">{t('subtitle')}</p>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2">
-        {/* Provide Feedback - coming later */}
-        <div className="rounded-xl border border-border bg-white p-6 text-center opacity-60">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface">
-            <MessageSquarePlus size={24} className="text-navy-700" />
+      <div className="mt-8 grid gap-6 sm:grid-cols-3">
+        {/* Rate a School */}
+        <Link
+          href="/public/rate"
+          className="rounded-xl border border-border bg-white p-6 text-center transition-shadow hover:shadow-md"
+        >
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-50">
+            <Star size={24} className="text-yellow-500" />
           </div>
           <h2 className="text-lg font-semibold text-navy-900">
-            {t('feedbackCard')}
+            {t('rateCard')}
           </h2>
           <p className="mt-2 text-sm text-text-secondary">
-            {t('feedbackCardDesc')}
+            {t('rateCardDesc')}
           </p>
-          <p className="mt-3 text-xs text-text-secondary">{tc('comingSoon')}</p>
-        </div>
+        </Link>
 
         {/* Raise a Dispute */}
         <Link
@@ -51,15 +53,21 @@ export default async function FeedbackPage() {
             {t('disputeCardDesc')}
           </p>
         </Link>
-      </div>
 
-      {/* Track link */}
-      <div className="mt-8 text-center">
+        {/* Track Dispute */}
         <Link
           href="/public/dispute/track"
-          className="text-sm font-medium text-navy-700 hover:text-navy-900 hover:underline"
+          className="rounded-xl border border-border bg-white p-6 text-center transition-shadow hover:shadow-md"
         >
-          {t('trackLink')}
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface">
+            <Search size={24} className="text-navy-700" />
+          </div>
+          <h2 className="text-lg font-semibold text-navy-900">
+            {t('trackCard')}
+          </h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            {t('trackCardDesc')}
+          </p>
         </Link>
       </div>
     </div>

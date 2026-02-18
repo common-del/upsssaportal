@@ -87,6 +87,18 @@ function buildSchools() {
   return schools;
 }
 
+/* ── Cycle ─────────────────────────────────────────────── */
+const seedCycle = { name: '2025-26', isActive: true };
+
+/* ── Rating Dimensions ────────────────────────────────── */
+const seedDimensions = [
+  { code: 'TEACHING', labelEn: 'Teaching Quality', labelHi: 'शिक्षण गुणवत्ता', order: 1 },
+  { code: 'INFRA', labelEn: 'Infrastructure', labelHi: 'बुनियादी ढाँचा', order: 2 },
+  { code: 'SAFETY', labelEn: 'Safety & Security', labelHi: 'सुरक्षा', order: 3 },
+  { code: 'HYGIENE', labelEn: 'Hygiene & Cleanliness', labelHi: 'स्वच्छता', order: 4 },
+  { code: 'ADMIN', labelEn: 'Administration', labelHi: 'प्रशासन', order: 5 },
+];
+
 /* ── Dispute Categories ────────────────────────────────── */
 const seedCategories = [
   { code: 'CAT_FEE_FALSE', nameEn: 'False Fee Information', nameHi: 'गलत शुल्क जानकारी' },
@@ -146,6 +158,24 @@ async function main() {
       create: s,
     });
     console.log(`  upserted: ${s.udise} ${s.nameEn}`);
+  }
+
+  console.log('Seeding cycle…');
+  await prisma.cycle.upsert({
+    where: { name: seedCycle.name },
+    update: {},
+    create: seedCycle,
+  });
+  console.log(`  upserted: ${seedCycle.name}`);
+
+  console.log('Seeding rating dimensions…');
+  for (const d of seedDimensions) {
+    await prisma.ratingDimension.upsert({
+      where: { code: d.code },
+      update: {},
+      create: d,
+    });
+    console.log(`  upserted: ${d.code} ${d.labelEn}`);
   }
 
   console.log('Seeding dispute categories…');

@@ -25,8 +25,8 @@
     "directoryDesc": "Browse and search all schools in Uttar Pradesh",
     "findSchools": "Find Schools",
     "findSchoolsDesc": "Find the right school based on your criteria",
-    "feedback": "Dispute or Feedback",
-    "feedbackDesc": "Submit a grievance or feedback about a school"
+    "feedback": "Rate, Dispute & Feedback",
+    "feedbackDesc": "Rate a school, submit a grievance, or share feedback"
   },
   "system": {
     "title": "System Login",
@@ -71,6 +71,7 @@
     "catSecondary": "Secondary",
     "name": "School Name",
     "udise": "UDISE",
+    "rating": "Rating",
     "noResults": "No schools found matching your criteria.",
     "showing": "Showing {from}–{to} of {total}",
     "prev": "Previous",
@@ -89,7 +90,9 @@
     "results": "SSSA Assessment Results",
     "resultsPlaceholder": "Assessment results will appear here after the first grading cycle.",
     "ratings": "Parent Ratings",
-    "ratingsPlaceholder": "Parent ratings will be available after the first assessment cycle.",
+    "rateThisSchool": "Rate this school →",
+    "ratingCount": "{count, plural, =0 {No ratings} one {# rating} other {# ratings}}",
+    "noRatings": "No parent ratings yet. Be the first to rate this school!",
     "catPrimary": "Primary",
     "catUpperPrimary": "Upper Primary",
     "catSecondary": "Secondary"
@@ -186,13 +189,14 @@
     "page": "Page {page} of {totalPages}"
   },
   "feedbackPage": {
-    "title": "Dispute or Feedback",
-    "subtitle": "Report an issue or share your feedback about a school",
-    "feedbackCard": "Provide Feedback",
-    "feedbackCardDesc": "Share general feedback about a school experience",
+    "title": "Rate, Dispute & Feedback",
+    "subtitle": "Rate a school, report an issue, or track your submissions",
+    "rateCard": "Rate a School",
+    "rateCardDesc": "Share your experience by rating a school across multiple dimensions",
     "disputeCard": "Raise a Dispute",
     "disputeCardDesc": "Report incorrect information or raise a formal complaint",
-    "trackLink": "Already submitted? Track your dispute →"
+    "trackCard": "Track Dispute",
+    "trackCardDesc": "Check the status of a previously submitted dispute"
   },
   "dispute": {
     "newTitle": "Raise a Dispute",
@@ -405,6 +409,40 @@
     "DISTRICT_OFFICIAL": "District",
     "VERIFIER": "Verifier",
     "SCHOOL": "School"
+  },
+  "rate": {
+    "title": "Rate a School",
+    "subtitle": "Share your experience by rating a school across multiple dimensions",
+    "cycleLabel": "Rating cycle",
+    "noCycle": "No active rating cycle is available right now. Please check back later.",
+    "step1Title": "Step 1: Select School",
+    "step1Desc": "Search for the school you want to rate.",
+    "step2Title": "Step 2: Verify Your Identity",
+    "step2Desc": "Enter your mobile number and verify with OTP.",
+    "step3Title": "Step 3: Rate the School",
+    "step3Desc": "Rate the school on each dimension from 1 to 5 stars.",
+    "schoolSearchPh": "Search by school name or UDISE code…",
+    "changeSchool": "Change school",
+    "mobileLabel": "Mobile Number",
+    "mobilePh": "10-digit mobile number",
+    "mobileRequired": "Please enter a valid 10-digit mobile number",
+    "sendOtp": "Send OTP",
+    "otpSentMsg": "Mock OTP sent! Use 123456 to verify.",
+    "otpLabel": "Enter OTP",
+    "otpPh": "123456",
+    "commentLabel": "Comment (optional)",
+    "commentPh": "Share any additional feedback…",
+    "next": "Next",
+    "back": "Back",
+    "submit": "Submit Rating",
+    "submitting": "Submitting…",
+    "invalidOtp": "Invalid OTP. Please use 123456 for the demo.",
+    "alreadyRated": "You have already rated this school this cycle.",
+    "submitError": "Something went wrong. Please try again.",
+    "successTitle": "Rating Submitted!",
+    "successDesc": "Thank you for rating this school. Your feedback helps other parents make informed decisions.",
+    "viewSchool": "View School Profile",
+    "backToFeedback": "Back to Rate & Feedback"
   },
   "common": {
     "back": "Back",

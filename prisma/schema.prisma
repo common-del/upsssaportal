@@ -53,9 +53,10 @@ model School {
   feesRangeMax Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  district     District @relation(fields: [districtCode], references: [code])
-  block        Block    @relation(fields: [blockCode], references: [code])
+  district     District       @relation(fields: [districtCode], references: [code])
+  block        Block          @relation(fields: [blockCode], references: [code])
   tickets      Ticket[]
+  ratings      ParentRating[]
 }
 
 model DisputeCategory {
@@ -100,4 +101,40 @@ model TicketTimeline {
   message   String
   createdAt DateTime @default(now())
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model Cycle {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  isActive  Boolean        @default(false)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  ratings   ParentRating[]
+}
+
+model RatingDimension {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  labelEn   String
+  labelHi   String
+  isActive  Boolean  @default(true)
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ParentRating {
+  id              String   @id @default(cuid())
+  cycleId         String
+  schoolUdise     String
+  submitterMobile String
+  ratingsJson     Json     // { TEACHING: 4, INFRA: 3, ... }
+  comment         String?
+  createdAt       DateTime @default(now())
+  cycle           Cycle    @relation(fields: [cycleId], references: [id])
+  school          School   @relation(fields: [schoolUdise], references: [udise])
+
+  @@unique([cycleId, schoolUdise, submitterMobile])
 }

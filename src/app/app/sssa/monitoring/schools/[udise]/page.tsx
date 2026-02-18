@@ -4,7 +4,8 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Clock } from 'lucide-react';
 import { prisma } from '@/lib/db';
-import { getBatchSelfAssessmentScores } from '@/lib/scoring';
+import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
+import MonitoringSchoolTabs from '@/components/monitoring/MonitoringSchoolTabs';
 
 const CATEGORY_TO_CODE: Record<string, string> = {
   Primary: 'PRIMARY',
@@ -33,7 +34,7 @@ export default async function MonitoringSchoolDetailPage({
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-8">
         <Link href="/app/sssa/monitoring" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
           <ArrowLeft size={16} /> {t('backToMonitoring')}
         </Link>
@@ -44,14 +45,19 @@ export default async function MonitoringSchoolDetailPage({
   }
 
   const framework = await prisma.framework.findUnique({ where: { cycleId: cycle.id } });
-  const submission = await prisma.selfAssessmentSubmission.findUnique({
-    where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise: udise } },
-    include: { responses: { select: { parameterId: true, selectedOptionKey: true, notes: true } } },
-  });
-
   const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
 
-  // Load framework structure
+  const [saSubmission, vSubmission] = await Promise.all([
+    prisma.selfAssessmentSubmission.findUnique({
+      where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise: udise } },
+      include: { responses: { select: { parameterId: true, selectedOptionKey: true, notes: true } } },
+    }),
+    prisma.verificationSubmission.findFirst({
+      where: { cycleId: cycle.id, schoolUdise: udise },
+      include: { responses: { select: { parameterId: true, selectedOptionKey: true, notes: true } } },
+    }),
+  ]);
+
   const fullFramework = framework
     ? await prisma.framework.findUnique({
         where: { id: framework.id },
@@ -77,25 +83,46 @@ export default async function MonitoringSchoolDetailPage({
       })
     : null;
 
-  const scores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, [udise]) : {};
-  const scoreResult = scores[udise];
+  const [saScores, vScores] = framework
+    ? await Promise.all([
+        getBatchSelfAssessmentScores(cycle.id, framework.id, [udise]),
+        getBatchVerificationScores(cycle.id, framework.id, [udise]),
+      ])
+    : [{}, {}];
 
-  const responseMap = new Map<string, { selectedOptionKey: string; notes: string | null }>();
-  if (submission) {
-    for (const r of submission.responses) {
-      responseMap.set(r.parameterId, { selectedOptionKey: r.selectedOptionKey, notes: r.notes });
-    }
-  }
+  const saScore = saScores[udise];
+  const vScore = vScores[udise];
 
-  const saStatus = !submission ? 'not_started' : submission.status === 'SUBMITTED' ? 'submitted' : 'draft';
+  const saStatus = !saSubmission ? 'not_started' : saSubmission.status === 'SUBMITTED' ? 'submitted' : 'draft';
+  const vStatus = !vSubmission ? 'not_started' : vSubmission.status === 'SUBMITTED' ? 'submitted' : 'draft';
+
+  // Serialize responses
+  const saMap: Record<string, { selectedOptionKey: string; notes: string | null }> = {};
+  if (saSubmission) for (const r of saSubmission.responses) saMap[r.parameterId] = { selectedOptionKey: r.selectedOptionKey, notes: r.notes };
+
+  const vMap: Record<string, { selectedOptionKey: string; notes: string | null }> = {};
+  if (vSubmission) for (const r of vSubmission.responses) vMap[r.parameterId] = { selectedOptionKey: r.selectedOptionKey, notes: r.notes };
+
+  // Serialize framework
+  const serializedDomains = fullFramework?.domains.map((d) => ({
+    id: d.id, code: d.code, titleEn: d.titleEn, titleHi: d.titleHi,
+    subDomains: d.subDomains.map((sd) => ({
+      id: sd.id, titleEn: sd.titleEn, titleHi: sd.titleHi,
+      parameters: sd.parameters
+        .filter((p) => (p.applicability as string[]).includes(categoryCode))
+        .map((p) => ({
+          id: p.id, code: p.code, titleEn: p.titleEn, titleHi: p.titleHi,
+          options: p.options.map((o) => ({ key: o.key, labelEn: o.labelEn, labelHi: o.labelHi })),
+        })),
+    })).filter((sd) => sd.parameters.length > 0),
+  })).filter((d) => d.subDomains.length > 0) ?? [];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-5xl px-4 py-8">
       <Link href="/app/sssa/monitoring?view=schools" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
         <ArrowLeft size={16} /> {t('backToMonitoring')}
       </Link>
 
-      {/* School header */}
       <div className="mb-6 rounded-xl border border-border bg-white p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -105,84 +132,41 @@ export default async function MonitoringSchoolDetailPage({
               UDISE: {school.udise} · {school.category} · {school.districtCode} / {school.blockCode}
             </p>
           </div>
-          <div className="text-right">
-            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-              saStatus === 'submitted' ? 'bg-green-100 text-green-700'
-              : saStatus === 'draft' ? 'bg-amber-100 text-amber-700'
-              : 'bg-surface text-text-secondary'
-            }`}>
-              {saStatus === 'submitted' ? <><CheckCircle2 size={14} /> {t('statusSubmitted')}</>
-               : saStatus === 'draft' ? <><Clock size={14} /> {t('statusDraft')}</>
-               : t('statusNotStarted')}
-            </span>
-            {scoreResult?.scorePercent !== null && scoreResult?.scorePercent !== undefined && (
-              <p className="mt-1 text-lg font-bold text-navy-700">{scoreResult.scorePercent}%</p>
-            )}
+          <div className="text-right space-y-1">
+            <div className="flex items-center gap-2 justify-end">
+              <StatusBadge status={saStatus} label={saStatus === 'submitted' ? t('statusSubmitted') : saStatus === 'draft' ? t('statusDraft') : t('statusNotStarted')} />
+            </div>
+            <div className="flex gap-4 text-xs">
+              {saScore?.scorePercent != null && (
+                <span className="text-navy-700">{t('saScoreLabel')}: <span className="font-bold text-lg">{saScore.scorePercent}%</span></span>
+              )}
+              {vScore?.scorePercent != null && (
+                <span className="text-indigo-700">{t('vScoreLabel')}: <span className="font-bold text-lg">{vScore.scorePercent}%</span></span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Responses */}
-      {!fullFramework || responseMap.size === 0 ? (
-        <div className="rounded-lg border border-border bg-white p-6 text-center text-text-secondary">
-          {t('noResponses')}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {fullFramework.domains.map((domain) => {
-            const filteredSubs = domain.subDomains
-              .map((sd) => ({
-                ...sd,
-                parameters: sd.parameters.filter((p) => (p.applicability as string[]).includes(categoryCode)),
-              }))
-              .filter((sd) => sd.parameters.length > 0);
-
-            if (filteredSubs.length === 0) return null;
-
-            return (
-              <div key={domain.id} className="rounded-xl border border-border bg-white">
-                <div className="border-b border-border px-5 py-3">
-                  <h2 className="text-sm font-semibold text-navy-900">{domain.titleHi}</h2>
-                  <p className="text-xs text-text-secondary">{domain.titleEn}</p>
-                </div>
-                <div className="px-5 pb-4">
-                  {filteredSubs.map((sd) => (
-                    <div key={sd.id} className="mt-3">
-                      <h3 className="mb-2 text-xs font-semibold text-navy-800">
-                        {sd.titleHi} <span className="font-normal text-text-secondary">/ {sd.titleEn}</span>
-                      </h3>
-                      <div className="space-y-2">
-                        {sd.parameters.map((param) => {
-                          const resp = responseMap.get(param.id);
-                          const selectedOpt = resp ? param.options.find((o) => o.key === resp.selectedOptionKey) : null;
-                          return (
-                            <div key={param.id} className={`rounded-lg border p-3 ${resp ? 'border-green-200 bg-green-50/30' : 'border-border'}`}>
-                              <p className="text-xs font-medium text-navy-900">{param.titleHi}</p>
-                              <p className="text-xs text-text-secondary">{param.titleEn}</p>
-                              {resp ? (
-                                <div className="mt-1.5">
-                                  <p className="text-xs">
-                                    <span className="font-medium text-navy-700">{resp.selectedOptionKey.replace('_', ' ')}:</span>{' '}
-                                    <span className="text-navy-900">{selectedOpt?.labelHi}</span>
-                                  </p>
-                                  {selectedOpt && <p className="text-xs text-text-secondary">{selectedOpt.labelEn}</p>}
-                                  {resp.notes && <p className="mt-1 rounded bg-surface px-2 py-1 text-xs italic text-text-secondary">{resp.notes}</p>}
-                                </div>
-                              ) : (
-                                <p className="mt-1 text-xs italic text-text-secondary">— {t('notAnswered')} —</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <MonitoringSchoolTabs
+        domains={serializedDomains}
+        saResponses={saMap}
+        vResponses={vMap}
+        saStatus={saStatus}
+        vStatus={vStatus}
+      />
     </div>
+  );
+}
+
+function StatusBadge({ status, label }: { status: string; label: string }) {
+  const cls = status === 'submitted' ? 'bg-green-100 text-green-700'
+    : status === 'draft' ? 'bg-amber-100 text-amber-700'
+    : 'bg-surface text-text-secondary';
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}>
+      {status === 'submitted' ? <CheckCircle2 size={14} /> : status === 'draft' ? <Clock size={14} /> : null}
+      {label}
+    </span>
   );
 }

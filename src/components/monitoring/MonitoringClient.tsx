@@ -8,12 +8,12 @@ import { useCallback } from 'react';
 
 type SchoolRow = {
   udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string;
-  category: string; saStatus: string; saScore: number | null; ratingAvg: number | null; ratingCount: number;
+  category: string; saStatus: string; saScore: number | null; verifierScore: number | null; ratingAvg: number | null; ratingCount: number;
 };
 
 type DistrictRow = {
   code: string; nameEn: string; nameHi: string; total: number; started: number;
-  submitted: number; avgScore: number | null; avgRating: number | null;
+  submitted: number; avgScore: number | null; avgVerifierScore: number | null; avgRating: number | null;
 };
 
 type FilterItem = { code: string; nameEn: string; nameHi: string };
@@ -166,7 +166,9 @@ export default function MonitoringClient({
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-right text-text-secondary">—</td>
+                      <td className="px-3 py-2.5 text-right font-medium">
+                        {s.verifierScore !== null ? `${s.verifierScore}%` : '—'}
+                      </td>
                       <td className="px-3 py-2.5 text-right text-text-secondary">—</td>
                     </tr>
                   ))
@@ -238,7 +240,7 @@ export default function MonitoringClient({
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-text-secondary">—</td>
+                    <td className="px-3 py-2.5 text-right font-medium">{d.avgVerifierScore !== null ? `${d.avgVerifierScore}%` : '—'}</td>
                     <td className="px-3 py-2.5 text-right text-text-secondary">—</td>
                   </tr>
                 );

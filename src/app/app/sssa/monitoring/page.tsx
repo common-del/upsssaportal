@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { ArrowLeft, School, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
-import { getBatchSelfAssessmentScores } from '@/lib/scoring';
+import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
 import { getBatchRatingAggregates } from '@/lib/actions/rating';
 import MonitoringClient from '@/components/monitoring/MonitoringClient';
+import { UserCheck } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -39,10 +40,11 @@ export default async function MonitoringPage({
   const framework = await prisma.framework.findUnique({ where: { cycleId: cycle.id } });
 
   // Funnel stats
-  const [totalSchools, started, submitted] = await Promise.all([
+  const [totalSchools, started, submitted, verifierSubmitted] = await Promise.all([
     prisma.school.count(),
     prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, startedAt: { not: null } } }),
     prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
+    prisma.verificationSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
   ]);
 
   // Determine view mode
@@ -62,12 +64,12 @@ export default async function MonitoringPage({
   ]);
 
   let schoolsData: {
-    rows: { udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string; category: string; saStatus: string; saScore: number | null; ratingAvg: number | null; ratingCount: number }[];
+    rows: { udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string; category: string; saStatus: string; saScore: number | null; verifierScore: number | null; ratingAvg: number | null; ratingCount: number }[];
     total: number;
   } = { rows: [], total: 0 };
 
   let districtData: {
-    code: string; nameEn: string; nameHi: string; total: number; started: number; submitted: number; avgScore: number | null; avgRating: number | null;
+    code: string; nameEn: string; nameHi: string; total: number; started: number; submitted: number; avgScore: number | null; avgVerifierScore: number | null; avgRating: number | null;
   }[] = [];
 
   if (view === 'schools') {
@@ -104,6 +106,7 @@ export default async function MonitoringPage({
 
     // Batch scores
     const scores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, udises) : {};
+    const vScores = framework ? await getBatchVerificationScores(cycle.id, framework.id, udises) : {};
 
     // Batch ratings
     const ratings = await getBatchRatingAggregates(udises);
@@ -116,12 +119,14 @@ export default async function MonitoringPage({
       else if (sub?.startedAt) saStatus = 'draft';
 
       const sc = scores[s.udise];
+      const vs = vScores[s.udise];
       const rt = ratings[s.udise];
 
       return {
         ...s,
         saStatus,
         saScore: sc?.scorePercent ?? null,
+        verifierScore: vs?.scorePercent ?? null,
         ratingAvg: rt?.avg ?? null,
         ratingCount: rt?.count ?? 0,
       };
@@ -153,17 +158,17 @@ export default async function MonitoringPage({
     // Batch all school udises for scores
     const allSchoolUdises = allSubs.map((s) => s.schoolUdise);
     const allScores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, allSchoolUdises) : {};
+    const allVScores = framework ? await getBatchVerificationScores(cycle.id, framework.id, allSchoolUdises) : {};
     const allRatings = await getBatchRatingAggregates(allSchoolUdises);
 
-    // Build district aggregates from school-level data
     const schoolsByDistrict = await prisma.school.findMany({
       select: { udise: true, districtCode: true },
     });
     const schoolDistrictMap = new Map(schoolsByDistrict.map((s) => [s.udise, s.districtCode]));
 
-    const districtAgg: Record<string, { started: number; submitted: number; scores: number[]; ratings: number[] }> = {};
+    const districtAgg: Record<string, { started: number; submitted: number; scores: number[]; vScores: number[]; ratings: number[] }> = {};
     for (const d of allDistricts) {
-      districtAgg[d.code] = { started: 0, submitted: 0, scores: [], ratings: [] };
+      districtAgg[d.code] = { started: 0, submitted: 0, scores: [], vScores: [], ratings: [] };
     }
 
     for (const sub of allSubs) {
@@ -180,6 +185,13 @@ export default async function MonitoringPage({
       }
     }
 
+    for (const [udise, vs] of Object.entries(allVScores)) {
+      if (vs.scorePercent !== null) {
+        const dc = schoolDistrictMap.get(udise);
+        if (dc && districtAgg[dc]) districtAgg[dc].vScores.push(vs.scorePercent);
+      }
+    }
+
     for (const [udise, rt] of Object.entries(allRatings)) {
       if (rt.avg > 0) {
         const dc = schoolDistrictMap.get(udise);
@@ -188,13 +200,14 @@ export default async function MonitoringPage({
     }
 
     districtData = allDistricts.map((d) => {
-      const agg = districtAgg[d.code] ?? { started: 0, submitted: 0, scores: [], ratings: [] };
+      const agg = districtAgg[d.code] ?? { started: 0, submitted: 0, scores: [], vScores: [], ratings: [] };
       return {
         ...d,
         total: countMap.get(d.code) ?? 0,
         started: agg.started,
         submitted: agg.submitted,
         avgScore: agg.scores.length > 0 ? Math.round(agg.scores.reduce((a, b) => a + b, 0) / agg.scores.length) : null,
+        avgVerifierScore: agg.vScores.length > 0 ? Math.round(agg.vScores.reduce((a, b) => a + b, 0) / agg.vScores.length) : null,
         avgRating: agg.ratings.length > 0 ? parseFloat((agg.ratings.reduce((a, b) => a + b, 0) / agg.ratings.length).toFixed(1)) : null,
       };
     });
@@ -202,6 +215,7 @@ export default async function MonitoringPage({
 
   const startedPct = totalSchools > 0 ? Math.round((started / totalSchools) * 100) : 0;
   const submittedPct = totalSchools > 0 ? Math.round((submitted / totalSchools) * 100) : 0;
+  const verifiedPct = totalSchools > 0 ? Math.round((verifierSubmitted / totalSchools) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -215,10 +229,11 @@ export default async function MonitoringPage({
       </p>
 
       {/* Funnel cards */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-4">
         <StatCard icon={<School size={22} />} bg="bg-navy-50" color="text-navy-700" label={t('totalSchools')} value={totalSchools} />
         <StatCard icon={<PlayCircle size={22} />} bg="bg-amber-50" color="text-amber-600" label={t('started')} value={started} pct={startedPct} />
         <StatCard icon={<CheckCircle2 size={22} />} bg="bg-green-50" color="text-green-600" label={t('submitted')} value={submitted} pct={submittedPct} />
+        <StatCard icon={<UserCheck size={22} />} bg="bg-indigo-50" color="text-indigo-600" label={t('verifierSubmitted')} value={verifierSubmitted} pct={verifiedPct} />
       </div>
 
       {/* Interactive table section */}

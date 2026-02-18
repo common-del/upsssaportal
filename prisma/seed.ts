@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const seedUsers = [
   { username: 'sssa', password: 'admin123', role: 'SSSA_ADMIN', districtCode: null },
   { username: '11111111111', password: 'school123', role: 'SCHOOL', districtCode: null },
-  { username: 'verifier1', password: 'verifier123', role: 'VERIFIER', districtCode: null },
+  { username: 'verifier1', password: 'verifier123', role: 'VERIFIER', districtCode: null, verifierCapacity: 50 },
   { username: 'district1', password: 'district123', role: 'DISTRICT_OFFICIAL', districtCode: 'D001' },
 ];
 
@@ -124,6 +124,7 @@ async function main() {
         passwordHash: await bcrypt.hash(u.password, 10),
         role: u.role,
         districtCode: u.districtCode,
+        ...('verifierCapacity' in u && u.verifierCapacity ? { verifierCapacity: u.verifierCapacity } : {}),
       },
     });
     console.log(`  created: ${u.username} (${u.role})`);

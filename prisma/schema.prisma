@@ -57,6 +57,7 @@ model School {
   block        Block          @relation(fields: [blockCode], references: [code])
   tickets      Ticket[]
   ratings      ParentRating[]
+  selfAssessments SelfAssessmentSubmission[]
 }
 
 model DisputeCategory {
@@ -111,8 +112,9 @@ model Cycle {
   endsAt     DateTime?
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
-  ratings    ParentRating[]
-  frameworks Framework[]
+  ratings         ParentRating[]
+  frameworks      Framework[]
+  selfAssessments SelfAssessmentSubmission[]
 }
 
 model Framework {
@@ -129,8 +131,9 @@ model Framework {
   subDomains    SubDomain[]
   parameters    Parameter[]
   rubricMappings RubricMapping[]
-  levels        FrameworkLevel[]
-  gradeBands    GradeBand[]
+  levels          FrameworkLevel[]
+  gradeBands      GradeBand[]
+  selfAssessments SelfAssessmentSubmission[]
 
   @@unique([cycleId])
 }
@@ -185,6 +188,7 @@ model Parameter {
   subDomain        SubDomain         @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
   options          ParameterOption[]
   rubricMappings   RubricMapping[]
+  saResponses      SelfAssessmentResponse[]
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -239,6 +243,38 @@ model GradeBand {
   framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
 
   @@unique([frameworkId, key])
+}
+
+model SelfAssessmentSubmission {
+  id          String                   @id @default(cuid())
+  cycleId     String
+  schoolUdise String
+  frameworkId String
+  status      String                   @default("DRAFT") // DRAFT | SUBMITTED
+  startedAt   DateTime?
+  submittedAt DateTime?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  cycle       Cycle                    @relation(fields: [cycleId], references: [id])
+  school      School                   @relation(fields: [schoolUdise], references: [udise])
+  framework   Framework                @relation(fields: [frameworkId], references: [id])
+  responses   SelfAssessmentResponse[]
+
+  @@unique([cycleId, schoolUdise])
+}
+
+model SelfAssessmentResponse {
+  id               String                    @id @default(cuid())
+  submissionId     String
+  parameterId      String
+  selectedOptionKey String                   // LEVEL_1 | LEVEL_2 | LEVEL_3
+  notes            String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  submission       SelfAssessmentSubmission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  parameter        Parameter                 @relation(fields: [parameterId], references: [id])
+
+  @@unique([submissionId, parameterId])
 }
 
 model RatingDimension {

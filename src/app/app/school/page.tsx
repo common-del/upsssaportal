@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, ClipboardList } from 'lucide-react';
 import { prisma } from '@/lib/db';
 
 export default async function SchoolHomePage() {
@@ -11,10 +11,25 @@ export default async function SchoolHomePage() {
   if (session.user.role !== 'SCHOOL') redirect('/');
 
   const t = await getTranslations('appSchool');
+  const schoolUdise = session.user.name!;
 
-  const ticketCount = await prisma.ticket.count({
-    where: { schoolUdise: session.user.name! },
-  });
+  const [ticketCount, saSubmission] = await Promise.all([
+    prisma.ticket.count({ where: { schoolUdise } }),
+    (async () => {
+      const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
+      if (!cycle) return null;
+      return prisma.selfAssessmentSubmission.findUnique({
+        where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise } },
+        include: { _count: { select: { responses: true } } },
+      });
+    })(),
+  ]);
+
+  const saStatus = saSubmission
+    ? saSubmission.status === 'SUBMITTED' ? 'submitted' : 'draft'
+    : 'not_started';
+
+  const saResponseCount = saSubmission?._count.responses ?? 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16">
@@ -26,6 +41,27 @@ export default async function SchoolHomePage() {
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/app/school/self-assessment"
+          className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md"
+        >
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+            saStatus === 'submitted' ? 'bg-green-50' : 'bg-navy-50'
+          }`}>
+            <ClipboardList size={20} className={saStatus === 'submitted' ? 'text-green-600' : 'text-navy-700'} />
+          </div>
+          <div>
+            <p className="font-semibold text-navy-900">{t('saLink')}</p>
+            <p className="text-sm text-text-secondary">
+              {saStatus === 'submitted'
+                ? t('saSubmitted')
+                : saStatus === 'draft'
+                  ? t('saDraft', { count: saResponseCount })
+                  : t('saNotStarted')}
+            </p>
+          </div>
+        </Link>
+
         <Link
           href="/app/school/tickets"
           className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md"
@@ -41,8 +77,6 @@ export default async function SchoolHomePage() {
           </div>
         </Link>
       </div>
-
-      <p className="mt-8 text-sm text-text-secondary">{t('placeholder')}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { MessageSquare, LayoutGrid } from 'lucide-react';
+import { MessageSquare, LayoutGrid, BarChart3 } from 'lucide-react';
 import { prisma } from '@/lib/db';
 
 export default async function SssaHomePage() {
@@ -26,6 +26,16 @@ export default async function SssaHomePage() {
           <div>
             <p className="font-semibold text-navy-900">{t('frameworkLink')}</p>
             <p className="text-sm text-text-secondary">{t('frameworkDesc')}</p>
+          </div>
+        </Link>
+
+        <Link href="/app/sssa/monitoring" className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
+            <BarChart3 size={20} className="text-green-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-navy-900">{t('monitoringLink')}</p>
+            <p className="text-sm text-text-secondary">{t('monitoringDesc')}</p>
           </div>
         </Link>
 

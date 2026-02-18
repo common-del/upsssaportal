@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import AssignForm from '@/components/verification/AssignForm';
 
@@ -35,6 +35,12 @@ export default async function VerifierAssignPage() {
             <span>{t('verifiers')}: <span className="font-semibold text-navy-900">{verifierCount}</span></span>
             <span>{t('assigned')}: <span className="font-semibold text-navy-900">{assignedCount}</span> / {totalSchools}</span>
           </div>
+          <Link
+            href="/app/sssa/users/verifiers-by-district"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            <BarChart3 size={16} /> {t('viewDistrictAllocation')}
+          </Link>
           <AssignForm
             cycleId={cycle.id}
             districts={districts}

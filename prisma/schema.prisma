@@ -20,6 +20,8 @@ model User {
   updatedAt        DateTime @updatedAt
   verifierAssignments VerifierAssignment[]
   verifications       VerificationSubmission[]
+  auditLogs           AuditLog[]          @relation("AuditLogActor")
+  verifierDistricts   VerifierDistrict[]  @relation("VerifierDistricts")
 }
 
 model District {
@@ -334,6 +336,26 @@ model VerificationResponse {
   parameter        Parameter               @relation(fields: [parameterId], references: [id])
 
   @@unique([submissionId, parameterId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User     @relation("AuditLogActor", fields: [actorUserId], references: [id])
+}
+
+model VerifierDistrict {
+  id             String @id @default(cuid())
+  verifierUserId String
+  districtCode   String
+  verifier       User   @relation("VerifierDistricts", fields: [verifierUserId], references: [id], onDelete: Cascade)
+
+  @@unique([verifierUserId, districtCode])
 }
 
 model RatingDimension {

@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Users } from 'lucide-react';
 import { prisma } from '@/lib/db';
 
 export default async function DistrictHomePage() {
@@ -24,6 +24,16 @@ export default async function DistrictHomePage() {
       <p className="mt-2 text-sm font-medium text-navy-700">{t('district', { code: districtCode || '—' })}</p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Link href="/app/district/users" className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-50">
+            <Users size={20} className="text-purple-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-navy-900">{t('usersLink')}</p>
+            <p className="text-sm text-text-secondary">{t('usersDesc')}</p>
+          </div>
+        </Link>
+
         <Link href="/app/district/tickets" className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
             <MessageSquare size={20} className="text-amber-600" />

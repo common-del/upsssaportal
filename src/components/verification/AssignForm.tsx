@@ -14,6 +14,7 @@ export default function AssignForm({ cycleId, districts }: { cycleId: string; di
   const router = useRouter();
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
   const [deadline, setDeadline] = useState('');
+  const [ignoreDistrictMapping, setIgnoreDistrictMapping] = useState(false);
   const [result, setResult] = useState<{ assigned: number; skipped: number; error?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -32,6 +33,7 @@ export default function AssignForm({ cycleId, districts }: { cycleId: string; di
         cycleId,
         districtCodes: selectedDistricts.length > 0 ? selectedDistricts : undefined,
         deadlineAt: deadline || undefined,
+        ignoreDistrictMapping,
       });
       setResult(res);
       router.refresh();
@@ -68,6 +70,19 @@ export default function AssignForm({ cycleId, districts }: { cycleId: string; di
           onChange={(e) => setDeadline(e.target.value)}
           className="mt-2 rounded-md border border-border bg-white px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
         />
+      </div>
+
+      <div className="rounded-xl border border-border bg-white p-5">
+        <label className="flex items-center gap-2 text-sm font-medium text-navy-900 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={ignoreDistrictMapping}
+            onChange={(e) => setIgnoreDistrictMapping(e.target.checked)}
+            className="rounded border-border text-navy-700 focus:ring-navy-500"
+          />
+          {t('ignoreDistrictMapping')}
+        </label>
+        <p className="mt-1 ml-6 text-xs text-text-secondary">{t('ignoreDistrictMappingHint')}</p>
       </div>
 
       <button

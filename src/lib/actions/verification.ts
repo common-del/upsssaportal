@@ -13,10 +13,12 @@ export async function assignVerifiersForCycle({
   cycleId,
   districtCodes,
   deadlineAt,
+  ignoreDistrictMapping,
 }: {
   cycleId: string;
   districtCodes?: string[];
   deadlineAt?: string;
+  ignoreDistrictMapping?: boolean;
 }): Promise<{ assigned: number; skipped: number; error?: string }> {
   const cycle = await prisma.cycle.findUnique({ where: { id: cycleId } });
   if (!cycle) return { assigned: 0, skipped: 0, error: 'Cycle not found.' };
@@ -28,7 +30,7 @@ export async function assignVerifiersForCycle({
 
   const schools = await prisma.school.findMany({
     where: schoolWhere,
-    select: { udise: true },
+    select: { udise: true, districtCode: true },
   });
 
   const existing = await prisma.verifierAssignment.findMany({
@@ -46,6 +48,19 @@ export async function assignVerifiersForCycle({
   });
   if (verifiers.length === 0) return { assigned: 0, skipped: 0, error: 'No active verifiers found.' };
 
+  // Build district mapping: verifierId -> set of allowed district codes
+  let verifierDistrictMap: Map<string, Set<string>> | null = null;
+  if (!ignoreDistrictMapping) {
+    const vds = await prisma.verifierDistrict.findMany({
+      select: { verifierUserId: true, districtCode: true },
+    });
+    verifierDistrictMap = new Map();
+    for (const vd of vds) {
+      if (!verifierDistrictMap.has(vd.verifierUserId)) verifierDistrictMap.set(vd.verifierUserId, new Set());
+      verifierDistrictMap.get(vd.verifierUserId)!.add(vd.districtCode);
+    }
+  }
+
   const assignmentCounts = await prisma.verifierAssignment.groupBy({
     by: ['verifierUserId'],
     where: { cycleId },
@@ -61,6 +76,12 @@ export async function assignVerifiersForCycle({
     let bestRemaining = -1;
 
     for (const v of verifiers) {
+      // District mapping filter
+      if (verifierDistrictMap) {
+        const allowed = verifierDistrictMap.get(v.id);
+        if (!allowed || !allowed.has(school.districtCode)) continue;
+      }
+
       const current = countMap.get(v.id) ?? 0;
       const capacity = v.verifierCapacity ?? 50;
       const remaining = capacity - current;
@@ -71,7 +92,7 @@ export async function assignVerifiersForCycle({
       }
     }
 
-    if (!bestVerifier) break;
+    if (!bestVerifier) continue;
 
     await prisma.verifierAssignment.create({
       data: {

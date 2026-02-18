@@ -1,6 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
+import { MessageSquare } from 'lucide-react';
+import { prisma } from '@/lib/db';
 
 export default async function SssaHomePage() {
   const session = await auth();
@@ -9,12 +12,25 @@ export default async function SssaHomePage() {
 
   const t = await getTranslations('appSssa');
 
+  const ticketCount = await prisma.ticket.count();
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-16">
-      <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">
-        {t('title')}
-      </h1>
-      <p className="mt-6 text-sm text-text-secondary">{t('placeholder')}</p>
+      <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">{t('title')}</h1>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Link href="/app/sssa/tickets" className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
+            <MessageSquare size={20} className="text-amber-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-navy-900">{t('ticketsLink')}</p>
+            <p className="text-sm text-text-secondary">{t('ticketsCount', { count: ticketCount })}</p>
+          </div>
+        </Link>
+      </div>
+
+      <p className="mt-8 text-sm text-text-secondary">{t('placeholder')}</p>
     </div>
   );
 }

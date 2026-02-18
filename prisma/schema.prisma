@@ -73,10 +73,17 @@ model Ticket {
   id              String            @id @default(cuid())
   schoolUdise     String
   categoryCode    String
+  districtCode    String            @default("")
   description     String
   submitterName   String?
   submitterMobile String
-  status          String            @default("NEW") // NEW | ASSIGNED_TO_SCHOOL | RESPONDED | RESOLVED | REJECTED
+  status          String            @default("ASSIGNED_TO_SCHOOL")
+  handlerLevel    String            @default("SCHOOL") // SCHOOL | BLOCK | DISTRICT | STATE
+  nextDueAt       DateTime?
+  lastEscalatedAt DateTime?
+  resolvedAt      DateTime?
+  rejectedAt      DateTime?
+  closedReason    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   school          School            @relation(fields: [schoolUdise], references: [udise])
@@ -87,7 +94,9 @@ model Ticket {
 model TicketTimeline {
   id        String   @id @default(cuid())
   ticketId  String
-  actorType String   // PUBLIC | SCHOOL
+  actorType String   // PUBLIC | SCHOOL | SYSTEM
+  actorRole String?  // SCHOOL | DISTRICT_OFFICIAL | SSSA_ADMIN | SYSTEM
+  eventType String   @default("NOTE") // CREATED | SCHOOL_RESPONDED | ESCALATED | RESOLVED | REJECTED | NOTE
   message   String
   createdAt DateTime @default(now())
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)

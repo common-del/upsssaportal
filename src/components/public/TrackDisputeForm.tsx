@@ -8,6 +8,8 @@ import { trackTicket } from '@/lib/actions/dispute';
 interface TimelineEntry {
   id: string;
   actorType: string;
+  actorRole: string | null;
+  eventType: string;
   message: string;
   createdAt: string;
 }
@@ -15,6 +17,8 @@ interface TimelineEntry {
 interface TicketData {
   id: string;
   status: string;
+  handlerLevel: string;
+  nextDueAt: string | null;
   description: string;
   createdAt: string;
   school: { nameEn: string; nameHi: string; udise: string };
@@ -28,11 +32,22 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  NEW: 'bg-blue-100 text-blue-800',
-  ASSIGNED_TO_SCHOOL: 'bg-amber-100 text-amber-800',
+  ASSIGNED_TO_SCHOOL: 'bg-blue-100 text-blue-800',
   RESPONDED: 'bg-emerald-100 text-emerald-800',
+  ASSIGNED_TO_BLOCK: 'bg-amber-100 text-amber-800',
+  ASSIGNED_TO_DISTRICT: 'bg-orange-100 text-orange-800',
+  ASSIGNED_TO_STATE: 'bg-purple-100 text-purple-800',
   RESOLVED: 'bg-green-100 text-green-800',
   REJECTED: 'bg-red-100 text-red-800',
+};
+
+const EVENT_COLORS: Record<string, string> = {
+  CREATED: 'bg-gray-100 text-gray-700',
+  SCHOOL_RESPONDED: 'bg-blue-50 text-blue-700',
+  ESCALATED: 'bg-amber-50 text-amber-700',
+  RESOLVED: 'bg-green-50 text-green-700',
+  REJECTED: 'bg-red-50 text-red-700',
+  NOTE: 'bg-indigo-50 text-indigo-700',
 };
 
 export function TrackDisputeForm({ locale, prefillTicketId }: Props) {
@@ -62,10 +77,10 @@ export function TrackDisputeForm({ locale, prefillTicketId }: Props) {
         setError(t('notFound'));
         return;
       }
-      // Serialize dates for client
       setTicket({
         ...result.ticket,
         createdAt: result.ticket.createdAt.toISOString(),
+        nextDueAt: result.ticket.nextDueAt?.toISOString() ?? null,
         timeline: result.ticket.timeline.map((entry) => ({
           ...entry,
           createdAt: entry.createdAt.toISOString(),
@@ -88,48 +103,25 @@ export function TrackDisputeForm({ locale, prefillTicketId }: Props) {
           <label className="text-sm font-medium text-text-secondary">
             {t('ticketIdLabel')} <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            value={ticketId}
-            onChange={(e) => setTicketId(e.target.value)}
-            placeholder={t('ticketIdPh')}
-            className={`mt-1.5 ${selectClass}`}
-          />
+          <input type="text" value={ticketId} onChange={(e) => setTicketId(e.target.value)} placeholder={t('ticketIdPh')} className={`mt-1.5 ${selectClass}`} />
         </div>
         <div>
           <label className="text-sm font-medium text-text-secondary">
             {t('mobileLabel')} <span className="text-red-500">*</span>
           </label>
-          <input
-            type="tel"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            placeholder={t('mobilePh')}
-            maxLength={10}
-            className={`mt-1.5 ${selectClass}`}
-          />
+          <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder={t('mobilePh')} maxLength={10} className={`mt-1.5 ${selectClass}`} />
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleTrack}
-        disabled={isPending}
-        className="inline-flex items-center gap-2 rounded-lg bg-navy-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-800 disabled:opacity-50"
-      >
+      <button type="button" onClick={handleTrack} disabled={isPending} className="inline-flex items-center gap-2 rounded-lg bg-navy-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-800 disabled:opacity-50">
         {isPending ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
         {isPending ? t('searching') : t('trackBtn')}
       </button>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {ticket && (
         <div className="space-y-4 rounded-lg border border-border bg-white p-5">
-          {/* Ticket header */}
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-xs text-text-secondary">{t('ticketIdLabel')}</p>
@@ -140,47 +132,29 @@ export function TrackDisputeForm({ locale, prefillTicketId }: Props) {
             </span>
           </div>
 
-          {/* Ticket details */}
           <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <span className="text-text-secondary">{t('schoolLabel')}: </span>
-              <span className="font-medium">{hi ? ticket.school.nameHi : ticket.school.nameEn}</span>
-            </div>
-            <div>
-              <span className="text-text-secondary">{t('categoryLabel')}: </span>
-              <span className="font-medium">{hi ? ticket.category.nameHi : ticket.category.nameEn}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-text-secondary">{t('descriptionLabel')}: </span>
-              <span>{ticket.description}</span>
-            </div>
-            <div>
-              <span className="text-text-secondary">{t('createdAt')}: </span>
-              <span>{formatDate(ticket.createdAt)}</span>
-            </div>
+            <div><span className="text-text-secondary">{t('schoolLabel')}: </span><span className="font-medium">{hi ? ticket.school.nameHi : ticket.school.nameEn}</span></div>
+            <div><span className="text-text-secondary">{t('categoryLabel')}: </span><span className="font-medium">{hi ? ticket.category.nameHi : ticket.category.nameEn}</span></div>
+            <div><span className="text-text-secondary">{t('handlerLevel')}: </span><span className="font-medium">{t(`level_${ticket.handlerLevel}`)}</span></div>
+            <div><span className="text-text-secondary">{t('createdAt')}: </span><span>{formatDate(ticket.createdAt)}</span></div>
+            {ticket.nextDueAt && (
+              <div><span className="text-text-secondary">{t('nextDue')}: </span><span className={new Date() > new Date(ticket.nextDueAt) ? 'font-medium text-red-600' : ''}>{formatDate(ticket.nextDueAt)}</span></div>
+            )}
+            <div className="sm:col-span-2"><span className="text-text-secondary">{t('descriptionLabel')}: </span><span>{ticket.description}</span></div>
           </div>
 
-          {/* Timeline */}
           <div className="border-t border-border pt-4">
             <h3 className="mb-3 text-sm font-semibold text-navy-900">{t('timeline')}</h3>
             <div className="space-y-3">
               {ticket.timeline.map((entry) => (
                 <div key={entry.id} className="flex gap-3">
-                  <div className="mt-0.5">
-                    <Clock size={14} className="text-text-secondary" />
-                  </div>
+                  <div className="mt-0.5"><Clock size={14} className="text-text-secondary" /></div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${
-                        entry.actorType === 'SCHOOL'
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {t(`actor_${entry.actorType}`)}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${EVENT_COLORS[entry.eventType] || 'bg-gray-100 text-gray-700'}`}>
+                        {t(`event_${entry.eventType}`)}
                       </span>
-                      <span className="text-xs text-text-secondary">
-                        {formatDate(entry.createdAt)}
-                      </span>
+                      <span className="text-xs text-text-secondary">{formatDate(entry.createdAt)}</span>
                     </div>
                     <p className="mt-1 text-sm">{entry.message}</p>
                   </div>

@@ -505,14 +505,14 @@
     "finalizationDesc": "Appeals, final scores, grade assignment, and result publication",
     "usersLink": "User Management",
     "usersDesc": "Create, manage, and configure users and verifier assignments",
-    "pilotImportLink": "Pilot Data Import",
-    "pilotImportDesc": "Import pilot responses Excel into the active assessment cycle",
+    "pilotImportLink": "Import Self Assessment Data (Excel)",
+    "pilotImportDesc": "Import responses from Excel into the active assessment cycle",
     "placeholder": "Admin console will be available in the next step."
   },
   "pilotImport": {
-    "title": "Pilot Data Import",
-    "subtitle": "Import pilot responses from Excel into the active cycle as Self Assessment submissions. Districts, Blocks, and Schools will be created as needed.",
-    "validate": "Validate Pilot File",
+    "title": "Import Self Assessment Data",
+    "subtitle": "Import responses from an Excel file into the active cycle as Self Assessment submissions. Districts, Blocks, and Schools will be created as needed.",
+    "validate": "Validate File",
     "validating": "Validating…",
     "sheet": "Sheet",
     "rows": "Data Rows",
@@ -537,7 +537,11 @@
     "draft": "Draft",
     "skipped": "Skipped (Already Imported)",
     "warnings": "Warnings",
-    "errorsLabel": "Errors"
+    "errorsLabel": "Errors",
+    "successHandoff": "Imported submissions will appear under Monitoring and Finalization for the active cycle.",
+    "goToMonitoring": "Go to Monitoring",
+    "goToFinalization": "Go to Finalization",
+    "fileNotFound": "Data file not found in the deployed build. Ensure data/pilot/ is committed and outputFileTracingIncludes includes data/pilot/**/* in next.config.ts."
   },
   "roles": {
     "SSSA_ADMIN": "SSSA Admin",
@@ -665,7 +669,11 @@
     "compTotal": "Total compared",
     "compMatch": "Matches",
     "compDiff": "Differences",
-    "evidenceLabel": "Evidence"
+    "evidenceLabel": "Evidence",
+    "cycleBanner": "Active cycle has {total} schools, {started} started, {submitted} submitted.",
+    "saFilterAll": "Has SA Submission: All",
+    "saFilterWith": "Only with submission",
+    "saFilterWithout": "Only without submission"
   },
   "framework": {
     "title": "SQAAF Framework Builder",
@@ -830,7 +838,9 @@
     "deciding": "Saving…",
     "submitDecisions": "Submit Decisions",
     "alreadyDecided": "This appeal has already been decided.",
-    "appealEvidence": "Appeal Evidence"
+    "appealEvidence": "Appeal Evidence",
+    "cycleBanner": "Active cycle: {total} schools, {sa} with SA submitted, {verified} with verification.",
+    "computeHelper": "Compute will generate results for schools with submitted assessments. If verifier is missing, self assessment is used as the final score."
   },
   "userMgmt": {
     "title": "User Management",

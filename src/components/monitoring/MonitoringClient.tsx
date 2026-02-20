@@ -20,7 +20,7 @@ type FilterItem = { code: string; nameEn: string; nameHi: string };
 
 export default function MonitoringClient({
   view, schoolsData, districtData, districts, blocks,
-  filterDistrict, filterBlock, filterStatus, searchQ,
+  filterDistrict, filterBlock, filterStatus, filterSa, searchQ,
   page, pageSize, totalSchools,
 }: {
   view: string;
@@ -28,7 +28,7 @@ export default function MonitoringClient({
   districtData: DistrictRow[];
   districts: FilterItem[];
   blocks: FilterItem[];
-  filterDistrict: string; filterBlock: string; filterStatus: string; searchQ: string;
+  filterDistrict: string; filterBlock: string; filterStatus: string; filterSa: string; searchQ: string;
   page: number; pageSize: number; totalSchools: number;
 }) {
   const t = useTranslations('monitoring');
@@ -110,6 +110,11 @@ export default function MonitoringClient({
               <option value="not_started">{t('statusNotStarted')}</option>
               <option value="draft">{t('statusDraft')}</option>
               <option value="submitted">{t('statusSubmitted')}</option>
+            </select>
+            <select value={filterSa} onChange={(e) => setParam('sa', e.target.value)} className={selectClass}>
+              <option value="">{t('saFilterAll')}</option>
+              <option value="with">{t('saFilterWith')}</option>
+              <option value="without">{t('saFilterWithout')}</option>
             </select>
             <input
               type="text"

@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { prisma } from '@/lib/db';
 
-const PILOT_FILE = path.join(process.cwd(), 'data', 'pilot', 'SQAAF Pilot Responses UP Feb.xlsx');
+const PILOT_FILE = path.resolve(process.cwd(), 'data', 'pilot', 'SQAAF Pilot Responses UP Feb.xlsx');
 const PREFERRED_SHEET = 'Form Responses 1';
 
 // ─── Column helpers ───
@@ -80,7 +80,11 @@ function splitBilingual(raw: string): { en: string; hi: string } {
 // ─── Read Excel ───
 
 function readSheet() {
-  if (!fs.existsSync(PILOT_FILE)) throw new Error(`Pilot file not found: ${PILOT_FILE}`);
+  if (!fs.existsSync(PILOT_FILE)) {
+    throw new Error(
+      `File not found at ${PILOT_FILE}. Ensure data/pilot/SQAAF Pilot Responses UP Feb.xlsx is committed and outputFileTracingIncludes includes data/pilot/**/* in next.config.ts.`,
+    );
+  }
   const workbook = XLSX.readFile(PILOT_FILE);
   const sheetName = workbook.SheetNames.includes(PREFERRED_SHEET)
     ? PREFERRED_SHEET

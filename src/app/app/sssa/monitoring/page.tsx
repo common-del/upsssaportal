@@ -53,6 +53,7 @@ export default async function MonitoringPage({
   const filterDistrict = sp.district ?? '';
   const filterBlock = sp.block ?? '';
   const filterStatus = sp.status ?? '';
+  const filterSa = sp.sa ?? '';
   const searchQ = sp.q ?? '';
 
   // Fetch districts and blocks for filters
@@ -125,7 +126,7 @@ export default async function MonitoringPage({
       return {
         ...s,
         saStatus,
-        saScore: sc?.scorePercent ?? null,
+        saScore: saStatus === 'submitted' ? (sc?.scorePercent ?? null) : null,
         verifierScore: vs?.scorePercent ?? null,
         ratingAvg: rt?.avg ?? null,
         ratingCount: rt?.count ?? 0,
@@ -135,8 +136,13 @@ export default async function MonitoringPage({
     if (filterStatus) {
       rows = rows.filter((r) => r.saStatus === filterStatus);
     }
+    if (filterSa === 'with') {
+      rows = rows.filter((r) => r.saStatus !== 'not_started');
+    } else if (filterSa === 'without') {
+      rows = rows.filter((r) => r.saStatus === 'not_started');
+    }
 
-    schoolsData = { rows, total: filterStatus ? rows.length : total };
+    schoolsData = { rows, total: (filterStatus || filterSa) ? rows.length : total };
   } else {
     // District view: aggregate
     const allDistricts = await prisma.district.findMany({
@@ -228,8 +234,13 @@ export default async function MonitoringPage({
         {t('cycle')}: <span className="font-semibold text-navy-900">{cycle.name}</span>
       </p>
 
+      {/* Cycle summary banner */}
+      <div className="mt-4 rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-sm text-navy-800">
+        {t('cycleBanner', { total: totalSchools, started, submitted })}
+      </div>
+
       {/* Funnel cards */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-4">
+      <div className="mt-4 grid gap-4 sm:grid-cols-4">
         <StatCard icon={<School size={22} />} bg="bg-navy-50" color="text-navy-700" label={t('totalSchools')} value={totalSchools} />
         <StatCard icon={<PlayCircle size={22} />} bg="bg-amber-50" color="text-amber-600" label={t('started')} value={started} pct={startedPct} />
         <StatCard icon={<CheckCircle2 size={22} />} bg="bg-green-50" color="text-green-600" label={t('submitted')} value={submitted} pct={submittedPct} />
@@ -246,6 +257,7 @@ export default async function MonitoringPage({
         filterDistrict={filterDistrict}
         filterBlock={filterBlock}
         filterStatus={filterStatus}
+        filterSa={filterSa}
         searchQ={searchQ}
         page={page}
         pageSize={PAGE_SIZE}

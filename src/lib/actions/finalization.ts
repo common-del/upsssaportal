@@ -271,21 +271,26 @@ export async function computeAndStoreResult(cycleId: string, schoolUdise: string
   // SA score
   const saMap = new Map<string, string>();
   if (saSubmission) for (const r of saSubmission.responses) saMap.set(r.parameterId, r.selectedOptionKey);
-  const selfScorePercent = computeScore(saMap);
+  const selfScorePercent = saSubmission ? computeScore(saMap) : null;
 
-  // Verifier score
+  // Verifier score — null when no verifier submission
   const vMap = new Map<string, string>();
   if (vSubmission) for (const r of vSubmission.responses) vMap.set(r.parameterId, r.selectedOptionKey);
-  const verifierScorePercent = computeScore(vMap);
+  const verifierScorePercent = vSubmission ? computeScore(vMap) : null;
 
-  // Final = verifier + appeal overrides
-  const finalMap = new Map(vMap);
-  if (appeal) {
-    for (const item of appeal.items) {
-      finalMap.set(item.parameterId, item.schoolSelectedOptionKey);
+  // Final = verifier + appeal overrides, or SA if no verifier (pilot mode)
+  let finalMap: Map<string, string>;
+  if (vSubmission) {
+    finalMap = new Map(vMap);
+    if (appeal) {
+      for (const item of appeal.items) {
+        finalMap.set(item.parameterId, item.schoolSelectedOptionKey);
+      }
     }
+  } else {
+    finalMap = new Map(saMap);
   }
-  const finalScorePercent = finalMap.size > 0 ? computeScore(finalMap) : selfScorePercent;
+  const finalScorePercent = (saSubmission || vSubmission) ? computeScore(finalMap) : null;
 
   // Grade band
   let gradeBandCode: string | null = null;
@@ -316,10 +321,15 @@ export async function finalizeAllResults(cycleId: string) {
   const framework = await prisma.framework.findUnique({ where: { cycleId }, select: { id: true, status: true } });
   if (!framework || framework.status !== 'PUBLISHED') return { success: false, error: 'No published framework.' };
 
-  const schools = await prisma.school.findMany({ select: { udise: true } });
+  // Only compute for schools that have at least an SA submission
+  const submissions = await prisma.selfAssessmentSubmission.findMany({
+    where: { cycleId },
+    select: { schoolUdise: true },
+  });
+  const udises = [...new Set(submissions.map((s) => s.schoolUdise))];
   let computed = 0;
-  for (const s of schools) {
-    await computeAndStoreResult(cycleId, s.udise, framework.id);
+  for (const udise of udises) {
+    await computeAndStoreResult(cycleId, udise, framework.id);
     computed++;
   }
 
@@ -354,8 +364,10 @@ export async function publishResults(cycleId: string) {
 
 // ─── Get Finalization Summary for SSSA ───
 
-export async function getFinalizationSummary(cycleId: string, _frameworkId: string) {
-  const [schools, results, appeals, vSubmissions] = await Promise.all([
+export async function getFinalizationSummary(cycleId: string, frameworkId: string) {
+  const { getBatchSelfAssessmentScores, getBatchVerificationScores } = await import('@/lib/scoring');
+
+  const [schools, results, appeals, vSubmissions, saSubmissions] = await Promise.all([
     prisma.school.findMany({ select: { udise: true, nameEn: true, nameHi: true, districtCode: true, category: true } }),
     prisma.result.findMany({ where: { cycleId } }),
     prisma.appeal.findMany({ where: { cycleId }, select: { schoolUdise: true, status: true, items: { select: { decision: true } } } }),
@@ -363,25 +375,37 @@ export async function getFinalizationSummary(cycleId: string, _frameworkId: stri
       where: { cycleId, status: 'SUBMITTED' },
       select: { schoolUdise: true },
     }),
+    prisma.selfAssessmentSubmission.findMany({
+      where: { cycleId, status: 'SUBMITTED' },
+      select: { schoolUdise: true },
+    }),
+  ]);
+
+  const udises = schools.map((s) => s.udise);
+  const [saScores, vScores] = await Promise.all([
+    getBatchSelfAssessmentScores(cycleId, frameworkId, udises),
+    getBatchVerificationScores(cycleId, frameworkId, udises),
   ]);
 
   const resultMap = new Map(results.map((r) => [r.schoolUdise, r]));
   const appealMap = new Map(appeals.map((a) => [a.schoolUdise, a]));
   const verifiedSet = new Set(vSubmissions.map((v) => v.schoolUdise));
+  const submittedSaSet = new Set(saSubmissions.map((s) => s.schoolUdise));
 
   const rows = schools.map((s) => {
     const result = resultMap.get(s.udise);
     const appeal = appealMap.get(s.udise);
+    const saLive = submittedSaSet.has(s.udise) ? (saScores[s.udise]?.scorePercent ?? null) : null;
+    const vLive = verifiedSet.has(s.udise) ? (vScores[s.udise]?.scorePercent ?? null) : null;
     return {
       udise: s.udise,
       nameEn: s.nameEn,
       nameHi: s.nameHi,
       districtCode: s.districtCode,
       verified: verifiedSet.has(s.udise),
-      selfScore: result?.selfScorePercent ?? null,
-      verifierScore: result?.verifierScorePercent ?? null,
-      delta: result?.selfScorePercent != null && result?.verifierScorePercent != null
-        ? Math.abs(result.selfScorePercent - result.verifierScorePercent) : null,
+      selfScore: saLive,
+      verifierScore: vLive,
+      delta: saLive != null && vLive != null ? Math.abs(saLive - vLive) : null,
       appealStatus: appeal?.status ?? null,
       finalScore: result?.finalScorePercent ?? null,
       gradeBand: result?.gradeBandCode ?? null,

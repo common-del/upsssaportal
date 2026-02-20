@@ -38,6 +38,10 @@ export default async function FinalizationPage() {
   const gradeBands = await prisma.gradeBand.findMany({ where: { frameworkId: framework.id }, orderBy: { order: 'asc' } });
   const rows = await getFinalizationSummary(cycle.id, framework.id);
 
+  const totalSchools = rows.length;
+  const withSa = rows.filter((r) => r.selfScore != null).length;
+  const withVerifier = rows.filter((r) => r.verified).length;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <Link href="/app/sssa" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
@@ -47,6 +51,11 @@ export default async function FinalizationPage() {
       <div className="mt-2 flex flex-wrap gap-4 text-sm text-text-secondary">
         <span>{t('cycle')}: <span className="font-semibold text-navy-900">{cycle.name}</span></span>
         <span>{t('published')}: <span className={`font-semibold ${cycle.resultsPublished ? 'text-green-600' : 'text-amber-600'}`}>{cycle.resultsPublished ? t('yes') : t('no')}</span></span>
+      </div>
+
+      {/* Cycle summary banner */}
+      <div className="mt-4 rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-sm text-navy-800">
+        {t('cycleBanner', { total: totalSchools, sa: withSa, verified: withVerifier })}
       </div>
 
       <FinalizationClient

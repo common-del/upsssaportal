@@ -100,6 +100,10 @@ export default function FinalizationClient({
         </div>
       </div>
 
+      {!isPublished && (
+        <p className="mt-2 text-xs text-text-secondary">{t('computeHelper')}</p>
+      )}
+
       {msg && <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{msg}</div>}
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-white">

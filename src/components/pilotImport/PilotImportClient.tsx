@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { validatePilotFile, runPilotImport } from '@/lib/actions/pilotImport';
 import type { ValidationResult, ImportResult } from '@/lib/actions/pilotImport';
-import { FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function PilotImportClient() {
   const t = useTranslations('pilotImport');
@@ -182,6 +183,23 @@ export default function PilotImportClient() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Post-import handoff */}
+          {importResult.success && (
+            <div className="mt-5 rounded-lg border border-green-200 bg-green-50 p-4">
+              <p className="text-sm text-green-800">{t('successHandoff')}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Link href="/app/sssa/monitoring"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-navy-700 px-4 py-2 text-sm font-medium text-white hover:bg-navy-800">
+                  {t('goToMonitoring')} <ArrowRight size={14} />
+                </Link>
+                <Link href="/app/sssa/finalization"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                  {t('goToFinalization')} <ArrowRight size={14} />
+                </Link>
+              </div>
             </div>
           )}
         </div>

@@ -6,7 +6,6 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/app/sssa/frameworks': ['./data/sqaaf/**/*'],
-    '/app/sssa/pilot-import': ['./data/pilot/**/*'],
   },
 };
 

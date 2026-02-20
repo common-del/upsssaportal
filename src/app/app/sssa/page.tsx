@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { MessageSquare, LayoutGrid, BarChart3, UserCheck, Users, Trophy } from 'lucide-react';
+import { MessageSquare, LayoutGrid, BarChart3, UserCheck, Users, Trophy, FileSpreadsheet } from 'lucide-react';
 import { prisma } from '@/lib/db';
 
 export default async function SssaHomePage() {
@@ -66,6 +66,16 @@ export default async function SssaHomePage() {
           <div>
             <p className="font-semibold text-navy-900">{t('usersLink')}</p>
             <p className="text-sm text-text-secondary">{t('usersDesc')}</p>
+          </div>
+        </Link>
+
+        <Link href="/app/sssa/pilot-import" className="flex items-center gap-4 rounded-xl border border-border bg-white p-5 transition-shadow hover:shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-50">
+            <FileSpreadsheet size={20} className="text-cyan-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-navy-900">{t('pilotImportLink')}</p>
+            <p className="text-sm text-text-secondary">{t('pilotImportDesc')}</p>
           </div>
         </Link>
 

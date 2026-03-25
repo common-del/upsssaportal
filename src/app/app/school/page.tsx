@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { MessageSquare, ClipboardList, UserCheck, Scale } from 'lucide-react';
 import { prisma } from '@/lib/db';
+import DownloadSchoolReportButton from '@/components/reports/DownloadSchoolReportButton';
 
 export default async function SchoolHomePage() {
   const session = await auth();
@@ -13,7 +14,7 @@ export default async function SchoolHomePage() {
   const t = await getTranslations('appSchool');
   const schoolUdise = session.user.name!;
 
-  const [ticketCount, saSubmission] = await Promise.all([
+  const [ticketCount, saSubmission, school, report] = await Promise.all([
     prisma.ticket.count({ where: { schoolUdise } }),
     (async () => {
       const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
@@ -22,6 +23,42 @@ export default async function SchoolHomePage() {
         where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise } },
         include: { _count: { select: { responses: true } } },
       });
+    })(),
+    prisma.school.findUnique({
+      where: { udise: schoolUdise },
+      select: {
+        udise: true,
+        nameEn: true,
+        nameHi: true,
+        category: true,
+        block: { select: { nameEn: true, nameHi: true } },
+        district: { select: { nameEn: true, nameHi: true } },
+      },
+    }),
+    (async () => {
+      const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
+      if (!cycle) return null;
+      const framework = await prisma.framework.findUnique({ where: { cycleId: cycle.id }, select: { id: true } });
+      if (!framework) return { resultsPublished: cycle.resultsPublished, gradeLabelEn: null, gradeLabelHi: null };
+
+      const [result, gradeBands] = await Promise.all([
+        prisma.result.findUnique({
+          where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise } },
+          select: { gradeBandCode: true },
+        }),
+        prisma.gradeBand.findMany({
+          where: { frameworkId: framework.id },
+          orderBy: { order: 'asc' },
+          select: { key: true, labelEn: true, labelHi: true },
+        }),
+      ]);
+
+      const band = result?.gradeBandCode ? gradeBands.find((b) => b.key === result.gradeBandCode) : null;
+      return {
+        resultsPublished: cycle.resultsPublished,
+        gradeLabelEn: band?.labelEn ?? (result?.gradeBandCode ?? null),
+        gradeLabelHi: band?.labelHi ?? (result?.gradeBandCode ?? null),
+      };
     })(),
   ]);
 
@@ -39,6 +76,43 @@ export default async function SchoolHomePage() {
       <p className="mt-2 text-text-secondary">
         {t('welcome', { username: session.user.name })}
       </p>
+
+      {school && (
+        <div className="mt-6 rounded-xl border border-border bg-white p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-navy-900">
+                {school.nameEn} <span className="font-mono text-sm text-text-secondary">({school.udise})</span>
+              </h2>
+              <div className="mt-2 grid gap-2 text-sm text-text-secondary sm:grid-cols-2">
+                <div>
+                  <span className="font-medium text-navy-900">Location:</span>{' '}
+                  {(school.block?.nameEn || '—')}{school.district?.nameEn ? `, ${school.district.nameEn}` : ''}
+                </div>
+                <div>
+                  <span className="font-medium text-navy-900">Type:</span> {school.category}
+                </div>
+                <div>
+                  <span className="font-medium text-navy-900">Grade obtained:</span>{' '}
+                  {report?.resultsPublished && report.gradeLabelEn ? (
+                    <span className="rounded-full bg-navy-50 px-2 py-0.5 text-[11px] font-semibold text-navy-700">
+                      {report.gradeLabelEn}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+                      Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              <DownloadSchoolReportButton />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link

@@ -34,6 +34,7 @@ export default function SelfAssessmentForm({
   const [isSubmitted, setIsSubmitted] = useState(initialSubmitted);
   const [activeDomainIdx, setActiveDomainIdx] = useState(0);
   const mainRef = useRef<HTMLDivElement>(null);
+  const [showEvidencePlaceholder, setShowEvidencePlaceholder] = useState<Record<string, boolean>>({});
 
   const answeredCount = Object.values(responses).filter((r) => r.selectedOptionKey).length;
   const progressPct = totalApplicable > 0 ? Math.round((answeredCount / totalApplicable) * 100) : 0;
@@ -253,6 +254,28 @@ export default function SelfAssessmentForm({
                                 );
                               })}
                             </div>
+
+                            {!param.evidenceRequired && (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  disabled={isSubmitted}
+                                  onClick={() => {
+                                    setShowEvidencePlaceholder((prev) => ({ ...prev, [param.id]: true }));
+                                    alert('Evidence upload coming soon.');
+                                  }}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-navy-700 transition hover:bg-surface disabled:opacity-50"
+                                >
+                                  <Paperclip size={14} /> Upload Evidence
+                                </button>
+                                {showEvidencePlaceholder[param.id] && (
+                                  <div className="mt-2">
+                                    <input type="file" disabled className="block w-full cursor-not-allowed rounded-md border border-border bg-surface px-3 py-2 text-sm opacity-70" />
+                                    <p className="mt-1 text-[11px] text-text-secondary">Evidence upload coming soon.</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                             <textarea
                               value={resp?.notes ?? ''}

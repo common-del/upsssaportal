@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Calculator, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import { finalizeAllResults, publishResults } from '@/lib/actions/finalization';
+import DownloadSchoolReportButton from '@/components/reports/DownloadSchoolReportButton';
 
 type Row = {
   udise: string; nameEn: string; nameHi: string; districtCode: string;
@@ -155,6 +156,9 @@ export default function FinalizationClient({
                     <Link href={`/app/sssa/finalization/appeal/${r.udise}`}
                       className="text-indigo-600 hover:text-indigo-800 font-medium">{t('decideAppeal')}</Link>
                   )}
+                  <div className="mt-1">
+                    <DownloadSchoolReportButton udise={r.udise} variant="link" />
+                  </div>
                 </td>
               </tr>
             ))}

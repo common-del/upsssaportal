@@ -17,7 +17,6 @@ export default async function FrameworksPage() {
     orderBy: { createdAt: 'desc' },
     include: {
       frameworks: {
-        take: 1,
         include: {
           _count: { select: { domains: true } },
           parameters: { where: { isActive: true }, select: { applicability: true } },

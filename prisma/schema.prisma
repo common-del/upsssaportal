@@ -3,36 +3,36 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id               String   @id @default(cuid())
-  username         String   @unique
-  passwordHash     String
-  name             String?
-  role             String   // SSSA_ADMIN | SCHOOL | VERIFIER | DISTRICT_OFFICIAL
-  districtCode     String?
-  verifierCapacity Int?
-  active           Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  verifierAssignments VerifierAssignment[]
+  id                  String                   @id @default(cuid())
+  username            String                   @unique
+  passwordHash        String
+  name                String?
+  role                String
+  districtCode        String?
+  verifierCapacity    Int?
+  active              Boolean                  @default(true)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  appealDecisions     Appeal[]                 @relation("AppealDecider")
+  auditLogs           AuditLog[]               @relation("AuditLogActor")
+  uploadedEvidence    EvidenceAsset[]          @relation("UploadedEvidence")
   verifications       VerificationSubmission[]
-  auditLogs           AuditLog[]          @relation("AuditLogActor")
-  verifierDistricts   VerifierDistrict[]  @relation("VerifierDistricts")
-  appealDecisions     Appeal[]            @relation("AppealDecider")
-  uploadedEvidence    EvidenceAsset[]     @relation("UploadedEvidence")
+  verifierAssignments VerifierAssignment[]
+  verifierDistricts   VerifierDistrict[]       @relation("VerifierDistricts")
 }
 
 model District {
-  id     String   @id @default(cuid())
-  code   String   @unique
-  nameEn String
-  nameHi String
-  blocks Block[]
+  id      String   @id @default(cuid())
+  code    String   @unique
+  nameEn  String
+  nameHi  String
+  blocks  Block[]
   schools School[]
 }
 
@@ -47,29 +47,29 @@ model Block {
 }
 
 model School {
-  id           String   @id @default(cuid())
-  udise        String   @unique
-  nameEn       String
-  nameHi       String
-  category     String   // Primary | Upper Primary | Secondary
-  districtCode String
-  blockCode    String
-  addressEn    String?
-  addressHi    String?
-  publicPhone  String?
-  feesRangeMin Int?
-  feesRangeMax Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  district     District       @relation(fields: [districtCode], references: [code])
-  block        Block          @relation(fields: [blockCode], references: [code])
-  tickets      Ticket[]
-  ratings      ParentRating[]
-  selfAssessments     SelfAssessmentSubmission[]
-  verifierAssignments VerifierAssignment[]
-  verifications       VerificationSubmission[]
+  id                  String                     @id @default(cuid())
+  udise               String                     @unique
+  nameEn              String
+  nameHi              String
+  category            String
+  districtCode        String
+  blockCode           String
+  addressEn           String?
+  addressHi           String?
+  publicPhone         String?
+  feesRangeMin        Int?
+  feesRangeMax        Int?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
   appeals             Appeal[]
+  ratings             ParentRating[]
   results             Result[]
+  block               Block                      @relation(fields: [blockCode], references: [code])
+  district            District                   @relation(fields: [districtCode], references: [code])
+  selfAssessments     SelfAssessmentSubmission[]
+  tickets             Ticket[]
+  verifications       VerificationSubmission[]
+  verifierAssignments VerifierAssignment[]
 }
 
 model DisputeCategory {
@@ -84,79 +84,77 @@ model DisputeCategory {
 }
 
 model Ticket {
-  id              String            @id @default(cuid())
+  id              String           @id @default(cuid())
   schoolUdise     String
   categoryCode    String
-  districtCode    String            @default("")
+  districtCode    String           @default("")
   description     String
   submitterName   String?
   submitterMobile String
-  status          String            @default("ASSIGNED_TO_SCHOOL")
-  handlerLevel    String            @default("SCHOOL") // SCHOOL | BLOCK | DISTRICT | STATE
+  status          String           @default("ASSIGNED_TO_SCHOOL")
+  handlerLevel    String           @default("SCHOOL")
   nextDueAt       DateTime?
   lastEscalatedAt DateTime?
   resolvedAt      DateTime?
   rejectedAt      DateTime?
   closedReason    String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  school          School            @relation(fields: [schoolUdise], references: [udise])
-  category        DisputeCategory   @relation(fields: [categoryCode], references: [code])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  category        DisputeCategory  @relation(fields: [categoryCode], references: [code])
+  school          School           @relation(fields: [schoolUdise], references: [udise])
   timeline        TicketTimeline[]
 }
 
 model TicketTimeline {
   id        String   @id @default(cuid())
   ticketId  String
-  actorType String   // PUBLIC | SCHOOL | SYSTEM
-  actorRole String?  // SCHOOL | DISTRICT_OFFICIAL | SSSA_ADMIN | SYSTEM
-  eventType String   @default("NOTE") // CREATED | SCHOOL_RESPONDED | ESCALATED | RESOLVED | REJECTED | NOTE
+  actorType String
+  actorRole String?
+  eventType String   @default("NOTE")
   message   String
   createdAt DateTime @default(now())
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 model Cycle {
-  id                  String         @id @default(cuid())
-  name                String         @unique
-  isActive            Boolean        @default(false)
+  id                  String                     @id @default(cuid())
+  name                String                     @unique
+  isActive            Boolean                    @default(false)
   startsAt            DateTime?
   endsAt              DateTime?
-  resultsPublished    Boolean        @default(false)
+  resultsPublished    Boolean                    @default(false)
   resultsPublishedAt  DateTime?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  ratings             ParentRating[]
-  frameworks          Framework[]
-  selfAssessments     SelfAssessmentSubmission[]
-  verifierAssignments VerifierAssignment[]
-  verifications       VerificationSubmission[]
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
   appeals             Appeal[]
+  frameworks          Framework?
+  ratings             ParentRating[]
   results             Result[]
+  selfAssessments     SelfAssessmentSubmission[]
+  verifications       VerificationSubmission[]
+  verifierAssignments VerifierAssignment[]
 }
 
 model Framework {
-  id            String            @id @default(cuid())
-  cycleId       String
-  status        String            @default("DRAFT") // DRAFT | PUBLISHED
-  version       Int               @default(1)
-  publishedAt   DateTime?
-  publishedBy   String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  cycle         Cycle             @relation(fields: [cycleId], references: [id])
-  domains       SqaafDomain[]
-  subDomains    SubDomain[]
-  parameters    Parameter[]
-  rubricMappings RubricMapping[]
+  id              String                     @id @default(cuid())
+  cycleId         String                     @unique
+  status          String                     @default("DRAFT")
+  version         Int                        @default(1)
+  publishedAt     DateTime?
+  publishedBy     String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  appeals         Appeal[]
+  cycle           Cycle                      @relation(fields: [cycleId], references: [id])
   levels          FrameworkLevel[]
   gradeBands      GradeBand[]
-  selfAssessments SelfAssessmentSubmission[]
-  verifications   VerificationSubmission[]
-  appeals         Appeal[]
+  parameters      Parameter[]
   results         Result[]
-
-  @@unique([cycleId])
+  rubricMappings  RubricMapping[]
+  selfAssessments SelfAssessmentSubmission[]
+  domains         SqaafDomain[]
+  subDomains      SubDomain[]
+  verifications   VerificationSubmission[]
 }
 
 model SqaafDomain {
@@ -184,35 +182,35 @@ model SubDomain {
   titleHi     String
   order       Int
   isActive    Boolean     @default(true)
-  framework   Framework   @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
-  domain      SqaafDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
   parameters  Parameter[]
+  domain      SqaafDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  framework   Framework   @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
 
   @@unique([frameworkId, code])
   @@unique([domainId, order])
 }
 
 model Parameter {
-  id               String            @id @default(cuid())
-  frameworkId      String
-  subDomainId      String
-  code             String
-  titleEn          String
-  titleHi          String
-  order            Int
-  applicability    Json              // ["PRIMARY","UPPER_PRIMARY","SECONDARY"]
-  inputType        String            @default("SINGLE_SELECT")
-  evidenceRequired Boolean           @default(false)
-  dataSources      Json              @default("[\"Manual\"]")
-  isActive         Boolean           @default(true)
-  framework        Framework         @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
-  subDomain        SubDomain         @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
-  options          ParameterOption[]
-  rubricMappings   RubricMapping[]
-  saResponses        SelfAssessmentResponse[]
-  verifierResponses  VerificationResponse[]
-  appealItems        AppealItem[]
-  evidenceLinks      EvidenceLink[]  @relation("ParamEvidence")
+  id                String                   @id @default(cuid())
+  frameworkId       String
+  subDomainId       String
+  code              String
+  titleEn           String
+  titleHi           String
+  order             Int
+  applicability     Json
+  inputType         String                   @default("SINGLE_SELECT")
+  evidenceRequired  Boolean                  @default(false)
+  dataSources       Json                     @default("[\"Manual\"]")
+  isActive          Boolean                  @default(true)
+  appealItems       AppealItem[]
+  evidenceLinks     EvidenceLink[]           @relation("ParamEvidence")
+  framework         Framework                @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  subDomain         SubDomain                @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
+  options           ParameterOption[]
+  rubricMappings    RubricMapping[]
+  saResponses       SelfAssessmentResponse[]
+  verifierResponses VerificationResponse[]
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -221,7 +219,7 @@ model Parameter {
 model ParameterOption {
   id          String    @id @default(cuid())
   parameterId String
-  key         String    // LEVEL_1, LEVEL_2, LEVEL_3
+  key         String
   labelEn     String
   labelHi     String
   order       Int
@@ -235,7 +233,7 @@ model RubricMapping {
   id          String    @id @default(cuid())
   frameworkId String
   parameterId String
-  optionKey   String    // LEVEL_1, LEVEL_2, LEVEL_3
+  optionKey   String
   score       Int
   framework   Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   parameter   Parameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
@@ -246,7 +244,7 @@ model RubricMapping {
 model FrameworkLevel {
   id          String    @id @default(cuid())
   frameworkId String
-  key         String    // LEVEL_1, LEVEL_2, LEVEL_3
+  key         String
   labelEn     String
   labelHi     String
   order       Int
@@ -270,50 +268,50 @@ model GradeBand {
 }
 
 model SelfAssessmentSubmission {
-  id          String                   @id @default(cuid())
-  cycleId     String
-  schoolUdise String
-  frameworkId String
-  status      String                   @default("DRAFT") // DRAFT | SUBMITTED
-  startedAt   DateTime?
-  submittedAt DateTime?
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
-  cycle       Cycle                    @relation(fields: [cycleId], references: [id])
-  school      School                   @relation(fields: [schoolUdise], references: [udise])
-  framework   Framework                @relation(fields: [frameworkId], references: [id])
-  responses      SelfAssessmentResponse[]
-  evidenceLinks  EvidenceLink[]  @relation("SAEvidence")
+  id            String                   @id @default(cuid())
+  cycleId       String
+  schoolUdise   String
+  frameworkId   String
+  status        String                   @default("DRAFT")
+  startedAt     DateTime?
+  submittedAt   DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  evidenceLinks EvidenceLink[]           @relation("SAEvidence")
+  responses     SelfAssessmentResponse[]
+  cycle         Cycle                    @relation(fields: [cycleId], references: [id])
+  framework     Framework                @relation(fields: [frameworkId], references: [id])
+  school        School                   @relation(fields: [schoolUdise], references: [udise])
 
   @@unique([cycleId, schoolUdise])
 }
 
 model SelfAssessmentResponse {
-  id               String                    @id @default(cuid())
-  submissionId     String
-  parameterId      String
-  selectedOptionKey String                   // LEVEL_1 | LEVEL_2 | LEVEL_3
-  notes            String?
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  submission       SelfAssessmentSubmission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  parameter        Parameter                 @relation(fields: [parameterId], references: [id])
+  id                String                   @id @default(cuid())
+  submissionId      String
+  parameterId       String
+  selectedOptionKey String
+  notes             String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  parameter         Parameter                @relation(fields: [parameterId], references: [id])
+  submission        SelfAssessmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@unique([submissionId, parameterId])
 }
 
 model VerifierAssignment {
-  id             String    @id @default(cuid())
+  id             String                  @id @default(cuid())
   cycleId        String
   schoolUdise    String
   verifierUserId String
   deadlineAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  cycle          Cycle     @relation(fields: [cycleId], references: [id])
-  school         School    @relation(fields: [schoolUdise], references: [udise])
-  verifier       User      @relation(fields: [verifierUserId], references: [id])
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
   submission     VerificationSubmission?
+  cycle          Cycle                   @relation(fields: [cycleId], references: [id])
+  school         School                  @relation(fields: [schoolUdise], references: [udise])
+  verifier       User                    @relation(fields: [verifierUserId], references: [id])
 
   @@unique([cycleId, schoolUdise])
 }
@@ -325,30 +323,30 @@ model VerificationSubmission {
   frameworkId    String
   assignmentId   String                 @unique
   verifierUserId String
-  status         String                 @default("DRAFT") // DRAFT | SUBMITTED
+  status         String                 @default("DRAFT")
   startedAt      DateTime?
   submittedAt    DateTime?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
-  cycle          Cycle                  @relation(fields: [cycleId], references: [id])
-  school         School                 @relation(fields: [schoolUdise], references: [udise])
-  framework      Framework              @relation(fields: [frameworkId], references: [id])
-  assignment     VerifierAssignment     @relation(fields: [assignmentId], references: [id])
-  verifier       User                   @relation(fields: [verifierUserId], references: [id])
+  evidenceLinks  EvidenceLink[]         @relation("VEvidence")
   responses      VerificationResponse[]
-  evidenceLinks  EvidenceLink[]  @relation("VEvidence")
+  assignment     VerifierAssignment     @relation(fields: [assignmentId], references: [id])
+  cycle          Cycle                  @relation(fields: [cycleId], references: [id])
+  framework      Framework              @relation(fields: [frameworkId], references: [id])
+  school         School                 @relation(fields: [schoolUdise], references: [udise])
+  verifier       User                   @relation(fields: [verifierUserId], references: [id])
 }
 
 model VerificationResponse {
-  id               String                  @id @default(cuid())
-  submissionId     String
-  parameterId      String
+  id                String                 @id @default(cuid())
+  submissionId      String
+  parameterId       String
   selectedOptionKey String
-  notes            String?
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  submission       VerificationSubmission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  parameter        Parameter               @relation(fields: [parameterId], references: [id])
+  notes             String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  parameter         Parameter              @relation(fields: [parameterId], references: [id])
+  submission        VerificationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@unique([submissionId, parameterId])
 }
@@ -378,83 +376,81 @@ model Appeal {
   cycleId         String
   schoolUdise     String
   frameworkId     String
-  status          String       @default("DRAFT") // DRAFT | SUBMITTED | DECIDED
+  status          String       @default("DRAFT")
   submittedAt     DateTime?
   decidedAt       DateTime?
   decidedByUserId String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   cycle           Cycle        @relation(fields: [cycleId], references: [id])
-  school          School       @relation(fields: [schoolUdise], references: [udise])
-  framework       Framework    @relation(fields: [frameworkId], references: [id])
   decidedBy       User?        @relation("AppealDecider", fields: [decidedByUserId], references: [id])
+  framework       Framework    @relation(fields: [frameworkId], references: [id])
+  school          School       @relation(fields: [schoolUdise], references: [udise])
   items           AppealItem[]
 
   @@unique([cycleId, schoolUdise])
 }
 
 model AppealItem {
-  id                      String    @id @default(cuid())
-  appealId                String
-  parameterId             String
-  schoolSelectedOptionKey String
+  id                        String         @id @default(cuid())
+  appealId                  String
+  parameterId               String
+  schoolSelectedOptionKey   String
   verifierSelectedOptionKey String
-  schoolJustification     String?
-  decision                String    @default("PENDING") // PENDING | ACCEPT_SCHOOL | KEEP_VERIFIER
-  decidedAt               DateTime?
-  appeal                  Appeal    @relation(fields: [appealId], references: [id], onDelete: Cascade)
-  parameter               Parameter @relation(fields: [parameterId], references: [id])
-  evidenceLinks           EvidenceLink[]  @relation("AppealItemEvidence")
+  schoolJustification       String?
+  decision                  String         @default("PENDING")
+  decidedAt                 DateTime?
+  appeal                    Appeal         @relation(fields: [appealId], references: [id], onDelete: Cascade)
+  parameter                 Parameter      @relation(fields: [parameterId], references: [id])
+  evidenceLinks             EvidenceLink[] @relation("AppealItemEvidence")
 
   @@unique([appealId, parameterId])
 }
 
 model Result {
-  id                  String    @id @default(cuid())
-  cycleId             String
-  schoolUdise         String
-  frameworkId         String
-  selfScorePercent    Float?
+  id                   String    @id @default(cuid())
+  cycleId              String
+  schoolUdise          String
+  frameworkId          String
+  selfScorePercent     Float?
   verifierScorePercent Float?
-  finalScorePercent   Float?
-  gradeBandCode       String?
-  publishedAt         DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  cycle               Cycle     @relation(fields: [cycleId], references: [id])
-  school              School    @relation(fields: [schoolUdise], references: [udise])
-  framework           Framework @relation(fields: [frameworkId], references: [id])
+  finalScorePercent    Float?
+  gradeBandCode        String?
+  publishedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  cycle                Cycle     @relation(fields: [cycleId], references: [id])
+  framework            Framework @relation(fields: [frameworkId], references: [id])
+  school               School    @relation(fields: [schoolUdise], references: [udise])
 
   @@unique([cycleId, schoolUdise])
 }
 
 model EvidenceAsset {
-  id               String         @id @default(cuid())
+  id               String        @id @default(cuid())
   blobUrl          String
   fileName         String
   fileType         String
   fileSize         Int
   uploadedByUserId String
-  createdAt        DateTime       @default(now())
-  uploadedBy       User           @relation("UploadedEvidence", fields: [uploadedByUserId], references: [id])
-  links            EvidenceLink[]
+  createdAt        DateTime      @default(now())
+  uploadedBy       User          @relation("UploadedEvidence", fields: [uploadedByUserId], references: [id])
+  links            EvidenceLink?
 }
 
 model EvidenceLink {
-  id                String                     @id @default(cuid())
-  assetId           String
-  kind              String                     // SELF_RESPONSE | VERIFICATION_RESPONSE | APPEAL_ITEM
-  saSubmissionId    String?
-  vSubmissionId     String?
-  parameterId       String?
-  appealItemId      String?
-  asset             EvidenceAsset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  saSubmission      SelfAssessmentSubmission?  @relation("SAEvidence", fields: [saSubmissionId], references: [id])
-  vSubmission       VerificationSubmission?    @relation("VEvidence", fields: [vSubmissionId], references: [id])
-  parameter         Parameter?                 @relation("ParamEvidence", fields: [parameterId], references: [id])
-  appealItem        AppealItem?                @relation("AppealItemEvidence", fields: [appealItemId], references: [id])
-
-  @@unique([assetId])
+  id             String                    @id @default(cuid())
+  assetId        String                    @unique
+  kind           String
+  saSubmissionId String?
+  vSubmissionId  String?
+  parameterId    String?
+  appealItemId   String?
+  appealItem     AppealItem?               @relation("AppealItemEvidence", fields: [appealItemId], references: [id])
+  asset          EvidenceAsset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  parameter      Parameter?                @relation("ParamEvidence", fields: [parameterId], references: [id])
+  saSubmission   SelfAssessmentSubmission? @relation("SAEvidence", fields: [saSubmissionId], references: [id])
+  vSubmission    VerificationSubmission?   @relation("VEvidence", fields: [vSubmissionId], references: [id])
 }
 
 model RatingDimension {
@@ -473,7 +469,7 @@ model ParentRating {
   cycleId         String
   schoolUdise     String
   submitterMobile String
-  ratingsJson     Json     // { TEACHING: 4, INFRA: 3, ... }
+  ratingsJson     Json
   comment         String?
   createdAt       DateTime @default(now())
   cycle           Cycle    @relation(fields: [cycleId], references: [id])

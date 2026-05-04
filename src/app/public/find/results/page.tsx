@@ -260,7 +260,6 @@ export default async function FindResultsPage(props: {
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('colPhone')}</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('colFees')}</th>
                 <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('colGrade')}</th>
-                <th className="hidden px-4 py-3 font-medium xl:table-cell">{t('colRating')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -292,9 +291,6 @@ export default async function FindResultsPage(props: {
                   </td>
                   <td className="hidden px-4 py-3 text-text-secondary xl:table-cell">
                     {t('gradePlaceholder')}
-                  </td>
-                  <td className="hidden px-4 py-3 text-text-secondary xl:table-cell">
-                    {t('ratingPlaceholder')}
                   </td>
                 </tr>
               ))}

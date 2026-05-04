@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Star, AlertTriangle, Search } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
 export default async function FeedbackPage() {
@@ -21,23 +21,7 @@ export default async function FeedbackPage() {
       </h1>
       <p className="mt-2 text-text-secondary">{t('subtitle')}</p>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-3">
-        {/* Rate a School */}
-        <Link
-          href="/public/rate"
-          className="rounded-xl border border-border bg-white p-6 text-center transition-shadow hover:shadow-md"
-        >
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-50">
-            <Star size={24} className="text-yellow-500" />
-          </div>
-          <h2 className="text-lg font-semibold text-navy-900">
-            {t('rateCard')}
-          </h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            {t('rateCardDesc')}
-          </p>
-        </Link>
-
+      <div className="mt-8 grid gap-6 sm:grid-cols-2">
         {/* Raise a Dispute */}
         <Link
           href="/public/dispute/new"

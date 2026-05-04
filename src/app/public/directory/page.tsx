@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import { ArrowLeft, Star } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
-import { getBatchRatingAggregates } from '@/lib/actions/rating';
 import type { Prisma } from '@prisma/client';
 
 const PAGE_SIZE = 20;
@@ -51,7 +50,6 @@ export default async function DirectoryPage(props: {
   ]);
 
   const udises = schools.map((s) => s.udise);
-  const ratingMap = await getBatchRatingAggregates(udises);
 
   // Fetch published results for grade display
   const publishedCycle = await prisma.cycle.findFirst({ where: { resultsPublished: true }, orderBy: { resultsPublishedAt: 'desc' } });
@@ -118,13 +116,10 @@ export default async function DirectoryPage(props: {
                 <th className="hidden px-4 py-3 font-medium md:table-cell">{t('district')}</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">{t('block')}</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('grade')}</th>
-                <th className="px-4 py-3 font-medium">{t('rating')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {schools.map((s) => {
-                const rating = ratingMap[s.udise];
-                return (
+              {schools.map((s) => (
                   <tr key={s.id} className="hover:bg-surface/60">
                     <td className="px-4 py-3">
                       <Link href={`/public/schools/${s.udise}`} className="font-medium text-navy-700 hover:text-navy-900 hover:underline">
@@ -144,20 +139,8 @@ export default async function DirectoryPage(props: {
                           : <span className="text-xs text-text-secondary">—</span>;
                       })()}
                     </td>
-                    <td className="px-4 py-3">
-                      {rating ? (
-                        <span className="inline-flex items-center gap-1 text-sm">
-                          <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium">{rating.avg}</span>
-                          <span className="text-xs text-text-secondary">({rating.count})</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-text-secondary">—</span>
-                      )}
-                    </td>
                   </tr>
-                );
-              })}
+                ))}
             </tbody>
           </table>
         </div>

@@ -29,8 +29,8 @@ export async function GET(request: Request) {
   // `renderToBuffer` is typed to accept a react-pdf `<Document />` element.
   // Our `SchoolReportPdf` returns that `<Document />`, but TS can't prove it through the component boundary,
   // so we cast without changing runtime behavior.
-  const pdfBuffer = await renderToBuffer(React.createElement(SchoolReportPdf, { data, locale }) as any);
-  const pdfBytes = new Uint8Array(pdfBuffer);
+  const pdf = await renderToBuffer(React.createElement(SchoolReportPdf, { data, locale }) as any);
+  const pdfBytes = new Uint8Array(pdf);
 
   return new NextResponse(pdfBytes, {
     headers: {

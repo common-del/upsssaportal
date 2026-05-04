@@ -26,21 +26,22 @@ export default async function FrameworksPage() {
   });
 
   const cyclesData = cycles.map((c) => {
-    const fw = c.frameworks?.[0] ?? null;
+    const fw = c.frameworks ?? null;
     let frameworkData = null;
-    if (fw) {
+    const f = fw?.[0] ?? null;
+    if (f) {
       const typeCounts = { PRIMARY: 0, UPPER_PRIMARY: 0, SECONDARY: 0 };
-      for (const p of fw.parameters) {
+      for (const p of f.parameters) {
         const app = p.applicability as string[];
         if (app.includes('PRIMARY')) typeCounts.PRIMARY++;
         if (app.includes('UPPER_PRIMARY')) typeCounts.UPPER_PRIMARY++;
         if (app.includes('SECONDARY')) typeCounts.SECONDARY++;
       }
       frameworkData = {
-        id: fw.id,
-        status: fw.status,
-        version: fw.version,
-        domainCount: fw._count.domains,
+        id: f.id,
+        status: f.status,
+        version: f.version,
+        domainCount: f._count.domains,
         typeCounts,
       };
     }

@@ -26,7 +26,7 @@ export default async function FrameworksPage() {
   });
 
   const cyclesData = cycles.map((c) => {
-    const fw = c.frameworks[0] ?? null;
+    const fw = c.frameworks?.[0] ?? null;
     let frameworkData = null;
     if (fw) {
       const typeCounts = { PRIMARY: 0, UPPER_PRIMARY: 0, SECONDARY: 0 };

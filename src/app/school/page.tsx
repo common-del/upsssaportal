@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { DEMO_CREDENTIAL_PROVIDER_IDS } from '@/lib/demoCredentials';
 
 export default function SchoolLoginPage() {
   const t = useTranslations('school');
@@ -24,6 +25,7 @@ export default function SchoolLoginPage() {
       <p className="mt-2 text-text-secondary">{t('body')}</p>
 
       <LoginForm
+        credentialsProviderId={DEMO_CREDENTIAL_PROVIDER_IDS.SCHOOL}
         usernameLabel={ta('udiseCode')}
         usernamePlaceholder="11111111111"
       />

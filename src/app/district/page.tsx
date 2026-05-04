@@ -4,14 +4,14 @@ import { ArrowLeft } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { DEMO_CREDENTIAL_PROVIDER_IDS } from '@/lib/demoCredentials';
 
-export default function SssaLoginPage() {
-  const t = useTranslations('sssa');
+export default function DistrictLoginPage() {
+  const t = useTranslations('districtLogin');
   const tc = useTranslations('common');
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16">
       <Link
-        href="/system"
+        href="/"
         className="mb-8 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
       >
         <ArrowLeft size={16} />
@@ -23,7 +23,7 @@ export default function SssaLoginPage() {
       </h1>
       <p className="mt-2 text-text-secondary">{t('body')}</p>
 
-      <LoginForm credentialsProviderId={DEMO_CREDENTIAL_PROVIDER_IDS.SSSA} />
+      <LoginForm credentialsProviderId={DEMO_CREDENTIAL_PROVIDER_IDS.DISTRICT} />
     </div>
   );
 }

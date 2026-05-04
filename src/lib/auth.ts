@@ -1,38 +1,60 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
+
+async function authorizeDemoFirstUser(roles: string[]) {
+  const { prisma } = await import('./db');
+  const user = await prisma.user.findFirst({
+    where: { active: true, role: { in: roles } },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (!user) return null;
+  return {
+    id: user.id,
+    name: user.username,
+    role: user.role,
+    districtCode: user.districtCode,
+  };
+}
+
+const demoCredentialsFields = {
+  username: { label: 'Username', type: 'text' },
+  password: { label: 'Password', type: 'password' },
+};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({
-      credentials: {
-        username: { label: 'Username', type: 'text' },
-        password: { label: 'Password', type: 'password' },
+      id: 'credentials-sssa',
+      name: 'SSSA System',
+      credentials: demoCredentialsFields,
+      async authorize() {
+        return authorizeDemoFirstUser(['SSSA_ADMIN', 'admin']);
       },
-      async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) return null;
-
-        const { prisma } = await import('./db');
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username as string },
-        });
-
-        if (!user || !user.active) return null;
-
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash,
-        );
-        if (!valid) return null;
-
-        return {
-          id: user.id,
-          name: user.username,
-          role: user.role,
-          districtCode: user.districtCode,
-        };
+    }),
+    Credentials({
+      id: 'credentials-school',
+      name: 'School',
+      credentials: demoCredentialsFields,
+      async authorize() {
+        return authorizeDemoFirstUser(['SCHOOL_USER', 'SCHOOL']);
+      },
+    }),
+    Credentials({
+      id: 'credentials-verifier',
+      name: 'Verifier',
+      credentials: demoCredentialsFields,
+      async authorize() {
+        return authorizeDemoFirstUser(['VERIFIER']);
+      },
+    }),
+    Credentials({
+      id: 'credentials-district',
+      name: 'District',
+      credentials: demoCredentialsFields,
+      async authorize() {
+        return authorizeDemoFirstUser(['DISTRICT_ADMIN', 'DISTRICT_OFFICIAL']);
       },
     }),
   ],

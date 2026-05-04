@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { DEMO_CREDENTIAL_PROVIDER_IDS } from '@/lib/demoCredentials';
 
 export default function VerifierLoginPage() {
   const t = useTranslations('verifier');
@@ -22,7 +23,7 @@ export default function VerifierLoginPage() {
       </h1>
       <p className="mt-2 text-text-secondary">{t('body')}</p>
 
-      <LoginForm />
+      <LoginForm credentialsProviderId={DEMO_CREDENTIAL_PROVIDER_IDS.VERIFIER} />
     </div>
   );
 }

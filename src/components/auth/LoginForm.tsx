@@ -4,24 +4,37 @@ import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import {
+  DEMO_LOGIN_PREFILL,
+  type DemoCredentialProviderId,
+} from '@/lib/demoCredentials';
 
 const roleRedirectMap: Record<string, string> = {
   SCHOOL: '/app/school',
+  SCHOOL_USER: '/app/school',
   VERIFIER: '/app/verifier',
   DISTRICT_OFFICIAL: '/app/district',
+  DISTRICT_ADMIN: '/app/district',
   SSSA_ADMIN: '/app/sssa',
+  admin: '/app/sssa',
 };
 
 interface LoginFormProps {
+  credentialsProviderId: DemoCredentialProviderId;
   usernameLabel?: string;
   usernamePlaceholder?: string;
 }
 
-export function LoginForm({ usernameLabel, usernamePlaceholder }: LoginFormProps) {
+export function LoginForm({
+  credentialsProviderId,
+  usernameLabel,
+  usernamePlaceholder,
+}: LoginFormProps) {
   const t = useTranslations('auth');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const prefill = DEMO_LOGIN_PREFILL[credentialsProviderId];
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,7 +42,7 @@ export function LoginForm({ usernameLabel, usernamePlaceholder }: LoginFormProps
     setLoading(true);
 
     const fd = new FormData(e.currentTarget);
-    const result = await signIn('credentials', {
+    const result = await signIn(credentialsProviderId, {
       username: fd.get('username'),
       password: fd.get('password'),
       redirect: false,
@@ -58,7 +71,7 @@ export function LoginForm({ usernameLabel, usernamePlaceholder }: LoginFormProps
           id="username"
           name="username"
           type="text"
-          required
+          defaultValue={prefill.username}
           placeholder={usernamePlaceholder}
           autoComplete="username"
           className="mt-1 block w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-navy-600 focus:outline-none focus:ring-1 focus:ring-navy-600"
@@ -73,7 +86,7 @@ export function LoginForm({ usernameLabel, usernamePlaceholder }: LoginFormProps
           id="password"
           name="password"
           type="password"
-          required
+          defaultValue={prefill.password}
           autoComplete="current-password"
           className="mt-1 block w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-text-primary focus:border-navy-600 focus:outline-none focus:ring-1 focus:ring-navy-600"
         />

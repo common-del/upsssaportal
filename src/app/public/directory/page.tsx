@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
+import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import type { Prisma } from '@prisma/client';
 
 const PAGE_SIZE = 20;
@@ -14,6 +15,7 @@ export default async function DirectoryPage(props: {
   const t = await getTranslations('directory');
   const tc = await getTranslations('common');
   const locale = await getLocale();
+  const hi = locale === 'hi';
 
   const district = (searchParams.district as string) || '';
   const block = (searchParams.block as string) || '';
@@ -49,26 +51,6 @@ export default async function DirectoryPage(props: {
     prisma.school.count({ where }),
   ]);
 
-  const udises = schools.map((s) => s.udise);
-
-  // Fetch published results for grade display
-  const publishedCycle = await prisma.cycle.findFirst({ where: { resultsPublished: true }, orderBy: { resultsPublishedAt: 'desc' } });
-  const resultMap = new Map<string, { gradeBandCode: string | null }>();
-  if (publishedCycle && udises.length > 0) {
-    const results = await prisma.result.findMany({
-      where: { cycleId: publishedCycle.id, schoolUdise: { in: udises }, publishedAt: { not: null } },
-      select: { schoolUdise: true, gradeBandCode: true },
-    });
-    for (const r of results) resultMap.set(r.schoolUdise, r);
-  }
-  const gradeBands = publishedCycle
-    ? await prisma.gradeBand.findMany({
-        where: { framework: { cycleId: publishedCycle.id } },
-        select: { key: true, labelEn: true, labelHi: true },
-      })
-    : [];
-  const bandLabelMap = new Map(gradeBands.map((b) => [b.key, hi ? b.labelHi : b.labelEn]));
-
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const to = Math.min(page * PAGE_SIZE, total);
@@ -84,10 +66,8 @@ export default async function DirectoryPage(props: {
     return `/public/directory${qs ? `?${qs}` : ''}`;
   }
 
-  const hi = locale === 'hi';
-
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <Link href="/public" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
         <ArrowLeft size={16} /> {tc('back')}
       </Link>
@@ -107,40 +87,79 @@ export default async function DirectoryPage(props: {
 
       {total > 0 && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-surface text-xs uppercase text-text-secondary">
               <tr>
                 <th className="px-4 py-3 font-medium">{t('name')}</th>
                 <th className="px-4 py-3 font-medium">{t('udise')}</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">{t('category')}</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">{t('district')}</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">{t('block')}</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('grade')}</th>
+                <th className="px-4 py-3 font-medium">{t('block')}</th>
+                <th className="px-4 py-3 font-medium">Level</th>
+                <th className="px-4 py-3 font-medium">Fee</th>
+                <th className="px-4 py-3 font-medium">Accreditation</th>
+                <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {schools.map((s) => (
+              {schools.map((s) => {
+                const extra = deriveResultFields(s.udise);
+                return (
                   <tr key={s.id} className="hover:bg-surface/60">
                     <td className="px-4 py-3">
-                      <Link href={`/public/schools/${s.udise}`} className="font-medium text-navy-700 hover:text-navy-900 hover:underline">
+                      <Link
+                        href={`/public/schools/${s.udise}`}
+                        className="font-medium text-navy-700 hover:text-navy-900 hover:underline"
+                      >
                         {hi ? s.nameHi : s.nameEn}
                       </Link>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">{s.udise}</td>
                     <td className="hidden px-4 py-3 sm:table-cell">{s.category}</td>
-                    <td className="hidden px-4 py-3 md:table-cell">{hi ? s.district.nameHi : s.district.nameEn}</td>
-                    <td className="hidden px-4 py-3 md:table-cell">{hi ? s.block.nameHi : s.block.nameEn}</td>
-                    <td className="hidden px-4 py-3 lg:table-cell">
-                      {(() => {
-                        const result = resultMap.get(s.udise);
-                        const gradeLabel = result?.gradeBandCode ? bandLabelMap.get(result.gradeBandCode) : null;
-                        return gradeLabel
-                          ? <span className="rounded-full bg-navy-50 px-2 py-0.5 text-xs font-semibold text-navy-700">{gradeLabel}</span>
-                          : <span className="text-xs text-text-secondary">—</span>;
-                      })()}
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {hi ? s.district.nameHi : s.district.nameEn}
+                    </td>
+                    <td className="px-4 py-3">{hi ? s.block.nameHi : s.block.nameEn}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[extra.performanceLevel]}`}
+                      >
+                        {extra.performanceLevel}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {extra.feeDisclosed ? (
+                        <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                          Disclosed
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                          Not Disclosed
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {extra.accreditation === 'SQAAF Verified' ? (
+                        <span className="rounded-full bg-[#1B2A6B] px-2.5 py-0.5 text-xs font-medium text-white">
+                          SQAAF Verified
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                          Pending
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Link
+                        href={`/public/schools/${s.udise}`}
+                        className="text-sm font-medium text-[#1B2A6B] hover:underline"
+                      >
+                        View Details →
+                      </Link>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -148,9 +167,27 @@ export default async function DirectoryPage(props: {
 
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between text-sm">
-          {page > 1 ? <Link href={pageHref(page - 1)} className="rounded-lg border border-border px-4 py-2 text-navy-700 transition-colors hover:bg-surface">{t('prev')}</Link> : <span />}
+          {page > 1 ? (
+            <Link
+              href={pageHref(page - 1)}
+              className="rounded-lg border border-border px-4 py-2 text-navy-700 transition-colors hover:bg-surface"
+            >
+              {t('prev')}
+            </Link>
+          ) : (
+            <span />
+          )}
           <span className="text-text-secondary">{t('page', { page, totalPages })}</span>
-          {page < totalPages ? <Link href={pageHref(page + 1)} className="rounded-lg border border-border px-4 py-2 text-navy-700 transition-colors hover:bg-surface">{t('next')}</Link> : <span />}
+          {page < totalPages ? (
+            <Link
+              href={pageHref(page + 1)}
+              className="rounded-lg border border-border px-4 py-2 text-navy-700 transition-colors hover:bg-surface"
+            >
+              {t('next')}
+            </Link>
+          ) : (
+            <span />
+          )}
         </div>
       )}
     </div>

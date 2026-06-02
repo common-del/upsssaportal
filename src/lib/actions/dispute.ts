@@ -143,7 +143,7 @@ export async function createTicket(data: {
 
   const school = await prisma.school.findUnique({
     where: { udise: data.schoolUdise },
-    select: { udise: true, districtCode: true },
+    select: { udise: true, districtCode: true, nameEn: true },
   });
   if (!school) return { error: 'SCHOOL_NOT_FOUND' };
 
@@ -174,6 +174,12 @@ export async function createTicket(data: {
           actorRole: null,
           eventType: 'CREATED',
           message: 'Ticket created',
+        },
+      },
+      disputeHistory: {
+        create: {
+          actionType: 'FILED',
+          notes: `Filed by: ${school.nameEn} / ${data.submitterName?.trim() || 'Public User'}`,
         },
       },
     },

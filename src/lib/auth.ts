@@ -30,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: 'SSSA System',
       credentials: demoCredentialsFields,
       async authorize() {
-        return authorizeDemoFirstUser(['SSSA_ADMIN', 'admin']);
+        return authorizeDemoFirstUser(['SSSA_ADMIN', 'admin', 'DISTRICT_ADMIN', 'DISTRICT_OFFICIAL']);
       },
     }),
     Credentials({
@@ -74,5 +74,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   session: { strategy: 'jwt' },
-  pages: { signIn: '/' },
+  pages: { signIn: '/login' },
 });

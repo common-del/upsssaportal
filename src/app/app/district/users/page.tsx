@@ -8,7 +8,7 @@ import UserListClient from '@/components/users/UserListClient';
 
 export default async function DistrictUsersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
 
   const t = await getTranslations('userMgmt');

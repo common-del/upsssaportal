@@ -8,7 +8,7 @@ import CreateUserForm from '@/components/users/CreateUserForm';
 
 export default async function SssaCreateUserPage() {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'SSSA_ADMIN') redirect('/');
 
   const t = await getTranslations('userMgmt');

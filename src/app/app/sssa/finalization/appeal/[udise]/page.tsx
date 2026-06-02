@@ -8,7 +8,7 @@ import AppealDecisionForm from '@/components/finalization/AppealDecisionForm';
 
 export default async function AppealDecisionPage({ params }: { params: Promise<{ udise: string }> }) {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'SSSA_ADMIN') redirect('/');
 
   const { udise } = await params;

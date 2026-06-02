@@ -15,7 +15,7 @@ const CATEGORY_TO_CODE: Record<string, string> = {
 
 export default async function VerifierFeedbackPage() {
   const session = await auth();
-  if (!session) redirect('/school');
+  if (!session) redirect('/login?tab=school');
   if (session.user.role !== 'SCHOOL') redirect('/');
 
   const t = await getTranslations('verifierFeedback');

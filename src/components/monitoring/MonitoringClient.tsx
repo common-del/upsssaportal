@@ -136,14 +136,13 @@ export default function MonitoringClient({
                   <th className="px-3 py-2.5">{t('colBlock')}</th>
                   <th className="px-3 py-2.5">{t('colStatus')}</th>
                   <th className="px-3 py-2.5 text-right">{t('colSaScore')}</th>
-                  <th className="px-3 py-2.5 text-right">{t('colRating')}</th>
                   <th className="px-3 py-2.5 text-right">{t('colVerifier')}</th>
                   <th className="px-3 py-2.5 text-right">{t('colFinal')}</th>
                 </tr>
               </thead>
               <tbody>
                 {schoolsData.rows.length === 0 ? (
-                  <tr><td colSpan={9} className="px-3 py-6 text-center text-text-secondary">{t('noResults')}</td></tr>
+                  <tr><td colSpan={8} className="px-3 py-6 text-center text-text-secondary">{t('noResults')}</td></tr>
                 ) : (
                   schoolsData.rows.map((s) => (
                     <tr key={s.udise} className="border-b border-border last:border-0 hover:bg-surface/50">
@@ -162,14 +161,6 @@ export default function MonitoringClient({
                       </td>
                       <td className="px-3 py-2.5 text-right font-medium">
                         {s.saScore !== null ? `${s.saScore}%` : '—'}
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        {s.ratingAvg !== null ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
-                            {s.ratingAvg} <span className="text-xs text-text-secondary">({s.ratingCount})</span>
-                          </span>
-                        ) : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-right font-medium">
                         {s.verifierScore !== null ? `${s.verifierScore}%` : '—'}

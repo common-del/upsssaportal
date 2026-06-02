@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useTransition, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Save, Send, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Paperclip } from 'lucide-react';
+import { Save, Send, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, ChevronLeft, Paperclip, Circle } from 'lucide-react';
 import { saveResponses, submitSubmission } from '@/lib/actions/selfAssessment';
 import EvidenceUploader, { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
+import { cn } from '@/lib/cn';
 
 type Option = { key: string; labelEn: string; labelHi: string };
 type Parameter = {
@@ -19,11 +21,50 @@ type ResponseState = Record<string, { selectedOptionKey: string; notes: string |
 
 type EvidenceMap = Record<string, EvidenceFile[]>;
 
+const NAVY = '#1B2A6B';
+
+function hasHindiTranslation(labelHi: string, labelEn: string) {
+  const hi = labelHi.trim();
+  const en = labelEn.trim();
+  return hi.length > 0 && hi !== en;
+}
+
+function DomainStatusIcon({ answered, total, active }: { answered: number; total: number; active: boolean }) {
+  if (total > 0 && answered === total) {
+    return (
+      <CheckCircle2
+        className={cn('h-5 w-5 shrink-0', active ? 'text-green-300' : 'text-green-600')}
+      />
+    );
+  }
+  if (answered === 0) {
+    return (
+      <Circle
+        className={cn('h-5 w-5 shrink-0', active ? 'text-white/50' : 'text-gray-300')}
+        strokeWidth={1.5}
+      />
+    );
+  }
+  return (
+    <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center">
+      <Circle className={cn('h-5 w-5', active ? 'text-white/40' : 'text-gray-300')} strokeWidth={1.5} />
+      <span
+        className={cn(
+          'absolute left-0 top-0 h-5 w-2.5 overflow-hidden rounded-l-full',
+          active ? 'bg-white/70' : 'bg-amber-400',
+        )}
+      />
+    </span>
+  );
+}
+
 export default function SelfAssessmentForm({
   framework, submissionId, schoolUdise, userId, existingResponses, existingEvidence, totalApplicable, isSubmitted: initialSubmitted,
+  variant = 'sidebar',
 }: {
   framework: Framework; submissionId: string; schoolUdise: string; userId: string;
   existingResponses: ResponseState; existingEvidence: EvidenceMap; totalApplicable: number; isSubmitted: boolean;
+  variant?: 'sidebar' | 'accordion' | 'school';
 }) {
   const t = useTranslations('selfAssessment');
   const router = useRouter();
@@ -33,8 +74,10 @@ export default function SelfAssessmentForm({
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(initialSubmitted);
   const [activeDomainIdx, setActiveDomainIdx] = useState(0);
+  const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(framework.domains.map((d, i) => [d.id, i === 0])),
+  );
   const mainRef = useRef<HTMLDivElement>(null);
-  const [showEvidencePlaceholder, setShowEvidencePlaceholder] = useState<Record<string, boolean>>({});
 
   const answeredCount = Object.values(responses).filter((r) => r.selectedOptionKey).length;
   const progressPct = totalApplicable > 0 ? Math.round((answeredCount / totalApplicable) * 100) : 0;
@@ -104,6 +147,227 @@ export default function SelfAssessmentForm({
     mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  function renderParameter(param: Parameter, schoolLayout = false) {
+    const resp = responses[param.id];
+    return (
+      <div
+        key={param.id}
+        className={cn(
+          'rounded-xl border p-4',
+          resp?.selectedOptionKey ? 'border-green-200 bg-green-50/30' : 'border-gray-200 bg-white',
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-gray-900">{param.titleEn}</p>
+            {hasHindiTranslation(param.titleHi, param.titleEn) && (
+              <p className="mt-0.5 text-xs text-gray-500">{param.titleHi}</p>
+            )}
+          </div>
+          {param.evidenceRequired && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+              <Paperclip size={10} /> {t('evidenceReq')}
+            </span>
+          )}
+        </div>
+
+        <div className={cn('mt-3 space-y-2', !schoolLayout && 'flex flex-wrap gap-2')}>
+          {param.options.map((opt) => {
+            const isSelected = resp?.selectedOptionKey === opt.key;
+            const showHindi = hasHindiTranslation(opt.labelHi, opt.labelEn);
+
+            if (schoolLayout) {
+              return (
+                <label
+                  key={opt.key}
+                  className={cn(
+                    'flex w-full cursor-pointer items-start gap-3 rounded-lg border p-3 transition',
+                    isSelected
+                      ? 'border-green-600 bg-[#ECFDF5]'
+                      : 'border-gray-200 bg-white hover:bg-gray-50',
+                    isSubmitted && 'pointer-events-none opacity-70',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name={`param-${param.id}`}
+                    value={opt.key}
+                    checked={isSelected}
+                    onChange={() => setResponse(param.id, 'selectedOptionKey', opt.key)}
+                    disabled={isSubmitted}
+                    className="mt-1 shrink-0 accent-green-700"
+                  />
+                  <div className="min-w-0 flex-1">
+                    {showHindi ? (
+                      <>
+                        <p className={cn('text-sm font-semibold leading-snug', isSelected ? 'text-green-900' : 'text-gray-900')}>
+                          {opt.labelHi}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-snug text-gray-500">{opt.labelEn}</p>
+                      </>
+                    ) : (
+                      // TODO: add Hindi translations for rating options in framework seed data
+                      <p className={cn('text-sm font-medium leading-snug', isSelected ? 'text-green-900' : 'text-gray-900')}>
+                        {opt.labelEn}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            }
+
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                disabled={isSubmitted}
+                onClick={() => setResponse(param.id, 'selectedOptionKey', opt.key)}
+                className={cn(
+                  'rounded-lg border px-3 py-2 text-xs font-medium transition',
+                  isSelected
+                    ? 'border-[#1B2A6B] bg-[#1B2A6B] text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-[#1B2A6B]',
+                  isSubmitted && 'pointer-events-none opacity-70',
+                )}
+              >
+                {opt.labelEn}
+              </button>
+            );
+          })}
+        </div>
+
+        <Link
+          href={`/app/school/evidence?parameterId=${param.id}`}
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-[#1B2A6B] hover:bg-gray-50"
+        >
+          <Paperclip size={14} /> Upload Evidence
+        </Link>
+
+        <textarea
+          value={resp?.notes ?? ''}
+          onChange={(e) => setResponse(param.id, 'notes', e.target.value)}
+          disabled={isSubmitted}
+          placeholder={t('notesPlaceholder')}
+          maxLength={500}
+          rows={2}
+          className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm disabled:opacity-60"
+        />
+
+        {param.evidenceRequired && (
+          <EvidenceUploader
+            files={existingEvidence[param.id] ?? []}
+            userId={userId}
+            kind="SELF_RESPONSE"
+            opts={{ saSubmissionId: submissionId, parameterId: param.id }}
+            disabled={isSubmitted}
+          />
+        )}
+      </div>
+    );
+  }
+
+  function renderSchoolLayout() {
+    return (
+      <>
+        <div className="mb-4 lg:hidden">
+          <select
+            value={activeDomainIdx}
+            onChange={(e) => switchDomain(parseInt(e.target.value, 10))}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm"
+          >
+            {framework.domains.map((domain, idx) => {
+              const prog = getDomainProgress(domain);
+              return (
+                <option key={domain.id} value={idx}>
+                  {domain.titleEn} ({prog.answered}/{prog.total})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex gap-6">
+          <nav className="hidden w-[240px] shrink-0 lg:block">
+            <div className="sticky top-24 space-y-2">
+              {framework.domains.map((domain, idx) => {
+                const prog = getDomainProgress(domain);
+                const isActive = idx === activeDomainIdx;
+                const isComplete = prog.total > 0 && prog.answered === prog.total;
+                const isPartial = prog.answered > 0 && !isComplete;
+
+                return (
+                  <button
+                    key={domain.id}
+                    type="button"
+                    onClick={() => switchDomain(idx)}
+                    className={cn(
+                      'flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition',
+                      isActive
+                        ? 'text-white shadow-sm'
+                        : isComplete
+                          ? 'bg-white text-[#1B2A6B] hover:bg-gray-50'
+                          : 'bg-white text-gray-500 hover:bg-gray-50',
+                    )}
+                    style={isActive ? { backgroundColor: NAVY } : undefined}
+                  >
+                    <DomainStatusIcon answered={prog.answered} total={prog.total} active={isActive} />
+                    <div className="min-w-0 flex-1">
+                      <p className={cn(
+                        'text-sm font-bold leading-tight',
+                        isActive ? 'text-white' : isComplete ? 'text-[#1B2A6B]' : 'text-gray-600',
+                      )}>
+                        {domain.titleEn}
+                      </p>
+                      <p className={cn(
+                        'mt-0.5 text-xs leading-tight',
+                        isActive ? 'text-white/70' : 'text-gray-400',
+                      )}>
+                        {domain.titleHi}
+                      </p>
+                      <p className={cn(
+                        'mt-2 text-[11px] font-medium',
+                        isActive ? 'text-white/80' : isComplete ? 'text-green-600' : isPartial ? 'text-amber-600' : 'text-gray-400',
+                      )}>
+                        {prog.answered}/{prog.total}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+
+          <div ref={mainRef} className="min-w-0 flex-1">
+            {activeDomain && (
+              <div>
+                <div className="mb-5 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+                  <h2 className="text-lg font-bold text-[#1B2A6B]">{activeDomain.titleEn}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{activeDomain.titleHi}</p>
+                </div>
+
+                <div className="space-y-8">
+                  {activeDomain.subDomains.map((sd) => (
+                    <div key={sd.id}>
+                      <div className="mb-4 border-b border-gray-100 pb-2">
+                        <h3 className="text-base font-semibold text-gray-900">{sd.titleEn}</h3>
+                        {hasHindiTranslation(sd.titleHi, sd.titleEn) && (
+                          <p className="text-sm text-gray-500">{sd.titleHi}</p>
+                        )}
+                      </div>
+                      <div className="space-y-4">
+                        {sd.parameters.map((param) => renderParameter(param, true))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div>
       {/* Progress bar */}
@@ -126,7 +390,48 @@ export default function SelfAssessmentForm({
         </div>
       )}
 
-      {/* Sidebar + Main layout */}
+      {variant === 'school' ? (
+        renderSchoolLayout()
+      ) : variant === 'accordion' ? (
+        <div className="space-y-4">
+          {framework.domains.map((domain, idx) => {
+            const prog = getDomainProgress(domain);
+            const open = expandedDomains[domain.id];
+            return (
+              <div key={domain.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setExpandedDomains((prev) => ({ ...prev, [domain.id]: !prev[domain.id] }))}
+                  className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-gray-50"
+                >
+                  {open ? <ChevronDown className="h-5 w-5 text-gray-500" /> : <ChevronRight className="h-5 w-5 text-gray-500" />}
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1B2A6B] text-xs font-bold text-white">
+                    {idx + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900">{domain.titleEn}</p>
+                    <p className="text-xs text-gray-500">{domain.titleHi} · {prog.answered}/{prog.total} rated</p>
+                  </div>
+                </button>
+                {open && (
+                  <div className="border-t border-gray-100 px-5 pb-5">
+                    {domain.subDomains.map((sd) => (
+                      <div key={sd.id} className="mt-4">
+                        <h3 className="text-sm font-semibold text-gray-800">{sd.titleEn}</h3>
+                        <p className="text-xs text-gray-500">{sd.titleHi}</p>
+                        <div className="mt-3 space-y-3">
+                          {sd.parameters.map((param) => renderParameter(param))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+      /* Sidebar + Main layout */
       <div className="flex gap-4">
         {/* Left sidebar - domain navigation */}
         <nav className="hidden w-64 shrink-0 md:block">
@@ -202,103 +507,7 @@ export default function SelfAssessmentForm({
                       <p className="text-xs text-text-secondary">{sd.titleEn}</p>
                     </div>
                     <div className="space-y-3">
-                      {sd.parameters.map((param) => {
-                        const resp = responses[param.id];
-                        return (
-                          <div key={param.id}
-                            className={`rounded-lg border p-4 ${resp?.selectedOptionKey ? 'border-green-200 bg-green-50/30' : 'border-border bg-white'}`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="text-sm font-medium text-navy-900">{param.titleHi}</p>
-                                <p className="mt-0.5 text-xs text-text-secondary">{param.titleEn}</p>
-                              </div>
-                              {param.evidenceRequired && (
-                                <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                                  <Paperclip size={10} /> {t('evidenceReq')}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Custom radio-style option selector instead of native select */}
-                            <div className="mt-3 space-y-2">
-                              {param.options.map((opt) => {
-                                const isSelected = resp?.selectedOptionKey === opt.key;
-                                return (
-                                  <label
-                                    key={opt.key}
-                                    className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition ${
-                                      isSelected
-                                        ? 'border-navy-500 bg-navy-50 ring-1 ring-navy-300'
-                                        : 'border-border hover:border-navy-200 hover:bg-surface/50'
-                                    } ${isSubmitted ? 'pointer-events-none opacity-70' : ''}`}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`param-${param.id}`}
-                                      value={opt.key}
-                                      checked={isSelected}
-                                      onChange={() => setResponse(param.id, 'selectedOptionKey', opt.key)}
-                                      disabled={isSubmitted}
-                                      className="mt-0.5 shrink-0 accent-navy-700"
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className={`text-xs leading-relaxed ${isSelected ? 'font-medium text-navy-900' : 'text-navy-800'}`}>
-                                        {opt.labelHi}
-                                      </p>
-                                      <p className="mt-0.5 text-[11px] leading-relaxed text-text-secondary">
-                                        {opt.labelEn}
-                                      </p>
-                                    </div>
-                                  </label>
-                                );
-                              })}
-                            </div>
-
-                            {!param.evidenceRequired && (
-                              <div className="mt-2">
-                                <button
-                                  type="button"
-                                  disabled={isSubmitted}
-                                  onClick={() => {
-                                    setShowEvidencePlaceholder((prev) => ({ ...prev, [param.id]: true }));
-                                    alert('Evidence upload coming soon.');
-                                  }}
-                                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-navy-700 transition hover:bg-surface disabled:opacity-50"
-                                >
-                                  <Paperclip size={14} /> Upload Evidence
-                                </button>
-                                {showEvidencePlaceholder[param.id] && (
-                                  <div className="mt-2">
-                                    <input type="file" disabled className="block w-full cursor-not-allowed rounded-md border border-border bg-surface px-3 py-2 text-sm opacity-70" />
-                                    <p className="mt-1 text-[11px] text-text-secondary">Evidence upload coming soon.</p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            <textarea
-                              value={resp?.notes ?? ''}
-                              onChange={(e) => setResponse(param.id, 'notes', e.target.value)}
-                              disabled={isSubmitted}
-                              placeholder={t('notesPlaceholder')}
-                              maxLength={500}
-                              rows={2}
-                              className="mt-2 w-full rounded-md border border-border bg-white px-3 py-2 text-sm placeholder:text-text-secondary/50 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500 disabled:opacity-60"
-                            />
-
-                            {param.evidenceRequired && (
-                              <EvidenceUploader
-                                files={existingEvidence[param.id] ?? []}
-                                userId={userId}
-                                kind="SELF_RESPONSE"
-                                opts={{ saSubmissionId: submissionId, parameterId: param.id }}
-                                disabled={isSubmitted}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
+                      {sd.parameters.map((param) => renderParameter(param))}
                     </div>
                   </div>
                 ))}
@@ -328,6 +537,7 @@ export default function SelfAssessmentForm({
           )}
         </div>
       </div>
+      )}
 
       {/* Submit errors */}
       {submitErrors.length > 0 && (

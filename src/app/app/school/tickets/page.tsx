@@ -22,7 +22,7 @@ export default async function SchoolTicketsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const session = await auth();
-  if (!session) redirect('/school');
+  if (!session) redirect('/login?tab=school');
   if (session.user.role !== 'SCHOOL') redirect('/');
 
   const searchParams = await props.searchParams;

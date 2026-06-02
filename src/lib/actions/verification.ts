@@ -108,7 +108,43 @@ export async function assignVerifiersForCycle({
   }
 
   revalidatePath('/app/sssa/verification/assign');
+  revalidatePath('/app/sssa/verifiers');
   return { assigned, skipped: schools.length - unassigned.length };
+}
+
+export async function assignSchoolsToVerifier(
+  cycleId: string,
+  verifierUserId: string,
+  schoolUdises: string[],
+): Promise<{ assigned: number; error?: string }> {
+  if (schoolUdises.length === 0) return { assigned: 0 };
+
+  const verifier = await prisma.user.findFirst({
+    where: { id: verifierUserId, role: 'VERIFIER', active: true },
+  });
+  if (!verifier) return { assigned: 0, error: 'Verifier not found.' };
+
+  let assigned = 0;
+  for (const udise of schoolUdises) {
+    const sub = await prisma.selfAssessmentSubmission.findFirst({
+      where: { cycleId, schoolUdise: udise, status: 'SUBMITTED' },
+    });
+    if (!sub) continue;
+
+    const existing = await prisma.verifierAssignment.findUnique({
+      where: { cycleId_schoolUdise: { cycleId, schoolUdise: udise } },
+    });
+    if (existing) continue;
+
+    await prisma.verifierAssignment.create({
+      data: { cycleId, schoolUdise: udise, verifierUserId },
+    });
+    assigned++;
+  }
+
+  revalidatePath('/app/sssa/verifiers');
+  revalidatePath('/app/sssa/verification/assign');
+  return { assigned };
 }
 
 export async function reassignVerifier(assignmentId: string, newVerifierUserId: string) {
@@ -117,6 +153,7 @@ export async function reassignVerifier(assignmentId: string, newVerifierUserId: 
     data: { verifierUserId: newVerifierUserId },
   });
   revalidatePath('/app/sssa/verification/assign');
+  revalidatePath('/app/sssa/verifiers');
 }
 
 export async function getVerifierAssignments(verifierUserId: string) {

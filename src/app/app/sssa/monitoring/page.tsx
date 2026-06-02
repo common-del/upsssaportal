@@ -1,14 +1,10 @@
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft, School, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
 import { getBatchRatingAggregates } from '@/lib/actions/rating';
 import MonitoringClient from '@/components/monitoring/MonitoringClient';
-import { UserCheck } from 'lucide-react';
+import { School, PlayCircle, CheckCircle2, UserCheck } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -17,22 +13,14 @@ export default async function MonitoringPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const session = await auth();
-  if (!session) redirect('/system/sssa');
-  if (session.user.role !== 'SSSA_ADMIN') redirect('/');
-
   const t = await getTranslations('monitoring');
   const sp = await searchParams;
 
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <Link href="/app/sssa" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-          <ArrowLeft size={16} /> {t('backToDashboard')}
-        </Link>
-        <h1 className="text-2xl font-bold text-navy-900">{t('title')}</h1>
-        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">{t('noCycle')}</div>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+        {t('noCycle')}
       </div>
     );
   }
@@ -224,14 +212,9 @@ export default async function MonitoringPage({
   const verifiedPct = totalSchools > 0 ? Math.round((verifierSubmitted / totalSchools) * 100) : 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <Link href="/app/sssa" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToDashboard')}
-      </Link>
-
-      <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">{t('title')}</h1>
-      <p className="mt-2 text-sm text-text-secondary">
-        {t('cycle')}: <span className="font-semibold text-navy-900">{cycle.name}</span>
+    <div className="space-y-6">
+      <p className="text-sm text-gray-600">
+        {t('cycle')}: <span className="font-semibold text-[#1B2A6B]">{cycle.name}</span>
       </p>
 
       {/* Cycle summary banner */}

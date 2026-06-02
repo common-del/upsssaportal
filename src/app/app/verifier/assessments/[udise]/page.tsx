@@ -16,7 +16,7 @@ export default async function VerifierAssessmentPage({
   params: Promise<{ udise: string }>;
 }) {
   const session = await auth();
-  if (!session) redirect('/system/verifier');
+  if (!session) redirect('/login?tab=verifier');
   if (session.user.role !== 'VERIFIER') redirect('/');
 
   const { udise } = await params;

@@ -19,7 +19,7 @@ const EVENT_COLORS: Record<string, string> = {
 
 export default async function DistrictTicketDetailPage(props: { params: Promise<{ ticketId: string }> }) {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
 
   const { ticketId } = await props.params;

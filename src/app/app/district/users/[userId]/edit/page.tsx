@@ -8,7 +8,7 @@ import EditUserForm from '@/components/users/EditUserForm';
 
 export default async function DistrictEditUserPage({ params }: { params: Promise<{ userId: string }> }) {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
 
   const { userId } = await params;

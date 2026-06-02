@@ -24,7 +24,7 @@ export default async function DistrictTicketsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
 
   const districtCode = session.user.districtCode!;

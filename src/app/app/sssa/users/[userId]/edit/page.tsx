@@ -9,7 +9,7 @@ import EditUserForm from '@/components/users/EditUserForm';
 
 export default async function SssaEditUserPage({ params }: { params: Promise<{ userId: string }> }) {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'SSSA_ADMIN') redirect('/');
 
   const { userId } = await params;

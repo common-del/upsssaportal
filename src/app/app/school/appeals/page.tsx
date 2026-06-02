@@ -9,7 +9,7 @@ import AppealForm from '@/components/appeals/AppealForm';
 
 export default async function SchoolAppealsPage() {
   const session = await auth();
-  if (!session) redirect('/school');
+  if (!session) redirect('/login?tab=school');
   if (session.user.role !== 'SCHOOL') redirect('/');
 
   const t = await getTranslations('appeal');

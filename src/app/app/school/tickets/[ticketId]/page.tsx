@@ -30,7 +30,7 @@ export default async function SchoolTicketDetailPage(props: {
   params: Promise<{ ticketId: string }>;
 }) {
   const session = await auth();
-  if (!session) redirect('/school');
+  if (!session) redirect('/login?tab=school');
   if (session.user.role !== 'SCHOOL') redirect('/');
 
   const { ticketId } = await props.params;

@@ -9,7 +9,7 @@ import FinalizationClient from '@/components/finalization/FinalizationClient';
 
 export default async function FinalizationPage() {
   const session = await auth();
-  if (!session) redirect('/system/sssa');
+  if (!session) redirect('/login?tab=official');
   if (session.user.role !== 'SSSA_ADMIN') redirect('/');
 
   const t = await getTranslations('finalization');

@@ -19,12 +19,15 @@ model User {
   active              Boolean                  @default(true)
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
+  preferredLocale       String?
   appealDecisions     Appeal[]                 @relation("AppealDecider")
   auditLogs           AuditLog[]               @relation("AuditLogActor")
   uploadedEvidence    EvidenceAsset[]          @relation("UploadedEvidence")
   verifications       VerificationSubmission[]
   verifierAssignments VerifierAssignment[]
   verifierDistricts   VerifierDistrict[]       @relation("VerifierDistricts")
+  notifications       Notification[]
+  notificationPreference NotificationPreference?
 }
 
 model District {
@@ -70,6 +73,9 @@ model School {
   tickets             Ticket[]
   verifications       VerificationSubmission[]
   verifierAssignments VerifierAssignment[]
+  feeDisclosure       FeeDisclosure?
+  schoolScholarships  SchoolScholarship[]
+  mandatoryDocuments  MandatoryDocument[]
 }
 
 model DisputeCategory {
@@ -93,6 +99,8 @@ model Ticket {
   submitterMobile String
   status          String           @default("ASSIGNED_TO_SCHOOL")
   handlerLevel    String           @default("SCHOOL")
+  schoolArgument  String?
+  verifierResponse String?
   nextDueAt       DateTime?
   lastEscalatedAt DateTime?
   resolvedAt      DateTime?
@@ -103,6 +111,17 @@ model Ticket {
   category        DisputeCategory  @relation(fields: [categoryCode], references: [code])
   school          School           @relation(fields: [schoolUdise], references: [udise])
   timeline        TicketTimeline[]
+  disputeHistory  DisputeHistory[]
+}
+
+model DisputeHistory {
+  id         String   @id @default(cuid())
+  ticketId   String
+  actorUserId String?
+  actionType String
+  notes      String?
+  createdAt  DateTime @default(now())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 model TicketTimeline {
@@ -476,4 +495,84 @@ model ParentRating {
   school          School   @relation(fields: [schoolUdise], references: [udise])
 
   @@unique([cycleId, schoolUdise, submitterMobile])
+}
+
+enum ScholarshipScheme {
+  MERIT
+  EWS
+  SPORTS
+  SC_ST
+  MINORITY
+  DIFFERENTLY_ABLED
+}
+
+enum MandatoryDocumentStatus {
+  NOT_UPLOADED
+  UPLOADED
+  EXPIRED
+  ACKNOWLEDGED
+}
+
+enum NotificationType {
+  CYCLE_OPENED
+  SUBMISSION_RECEIVED
+  REVIEW_COMMENT
+  DEADLINE_REMINDER
+  DISPUTE_FILED
+}
+
+model FeeDisclosure {
+  id                  String   @id @default(cuid())
+  schoolUdise         String   @unique
+  annualTuition       Int      @default(0)
+  admissionFee        Int      @default(0)
+  transportFee        Int      @default(0)
+  otherCharges        Int      @default(0)
+  scholarshipsSummary String?
+  lastUpdated         DateTime @default(now())
+  school              School   @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade)
+}
+
+model SchoolScholarship {
+  id          String            @id @default(cuid())
+  schoolUdise String
+  scheme      ScholarshipScheme
+  available   Boolean           @default(false)
+  school      School            @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade)
+
+  @@unique([schoolUdise, scheme])
+}
+
+model MandatoryDocument {
+  id           String                  @id @default(cuid())
+  schoolUdise  String
+  documentType String
+  fileUrl      String?
+  validTill    DateTime?
+  uploadedAt   DateTime?
+  status       MandatoryDocumentStatus @default(NOT_UPLOADED)
+  school       School                  @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade)
+
+  @@unique([schoolUdise, documentType])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  emailAlerts    Boolean @default(true)
+  smsAlerts      Boolean @default(false)
+  disputeAlerts  Boolean @default(true)
+  cycleReminders Boolean @default(true)
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

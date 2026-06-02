@@ -7,7 +7,7 @@ import { getVerifierAssignments } from '@/lib/actions/verification';
 
 export default async function VerifierHomePage() {
   const session = await auth();
-  if (!session) redirect('/system/verifier');
+  if (!session) redirect('/login?tab=verifier');
   if (session.user.role !== 'VERIFIER') redirect('/');
 
   const t = await getTranslations('verifierDashboard');

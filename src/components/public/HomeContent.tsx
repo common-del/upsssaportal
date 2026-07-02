@@ -18,7 +18,6 @@ import {
   BadgeCheck,
   Search,
   FileText,
-  AlertTriangle,
   ArrowRight,
   School,
 } from 'lucide-react';
@@ -69,12 +68,6 @@ const QUICK_ACCESS = [
     icon: School,
   },
   {
-    href: '/public/dispute/new',
-    title: '⚠️ Dispute & Feedback',
-    description: 'File a dispute or share feedback about a school',
-    icon: AlertTriangle,
-  },
-  {
     href: '/public/reports',
     title: '📊 Public Reports',
     description: 'View state, district and school performance reports',
@@ -114,13 +107,6 @@ export function HomeContent() {
             >
               <Search size={16} />
               Find School
-            </Link>
-            <Link
-              href="/public/dispute/new"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/40 bg-white/10 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-white/20"
-            >
-              <AlertTriangle size={16} />
-              File Dispute
             </Link>
           </div>
           <p className="mt-4 text-sm text-white/75">
@@ -236,6 +222,24 @@ export function HomeContent() {
             </Link>
           ))}
         </div>
+
+        <p className="mt-10 text-center text-xs text-gray-400">
+          For unresolved issues regarding a school, you may use the{' '}
+          <Link
+            href="/public/dispute/new"
+            className="underline hover:text-gray-600"
+          >
+            Grievance Redressal
+          </Link>{' '}
+          facility or{' '}
+          <Link
+            href="/public/dispute/track"
+            className="underline hover:text-gray-600"
+          >
+            track an existing grievance
+          </Link>
+          .
+        </p>
       </div>
     </>
   );

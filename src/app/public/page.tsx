@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {
   Search,
   School,
-  AlertTriangle,
   FileText,
   ArrowRight,
 } from 'lucide-react';
@@ -33,12 +32,6 @@ const QUICK_ACCESS = [
     title: 'Public Reports',
     description: 'View state, district and school performance reports',
     icon: FileText,
-  },
-  {
-    href: '/public/dispute/new',
-    title: 'Dispute & Feedback',
-    description: 'File a dispute or share feedback about a school',
-    icon: AlertTriangle,
   },
 ] as const;
 
@@ -96,6 +89,24 @@ export default function PublicHomePage() {
             </Link>
           ))}
         </div>
+
+        <p className="mt-10 text-center text-xs text-gray-400">
+          For unresolved issues regarding a school, you may use the{' '}
+          <Link
+            href="/public/dispute/new"
+            className="underline hover:text-gray-600"
+          >
+            Grievance Redressal
+          </Link>{' '}
+          facility or{' '}
+          <Link
+            href="/public/dispute/track"
+            className="underline hover:text-gray-600"
+          >
+            track an existing grievance
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

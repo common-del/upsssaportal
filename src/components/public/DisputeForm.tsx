@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useTransition, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, ArrowLeft, Search, Loader2 } from 'lucide-react';
-import { searchSchools, createTicket } from '@/lib/actions/dispute';
+import { ArrowRight, ArrowLeft, Search, Loader2, RefreshCw } from 'lucide-react';
+import { searchSchools, createTicket, getCaptcha } from '@/lib/actions/dispute';
+
+const MIN_DESCRIPTION_LENGTH = 50;
 
 interface CategoryOption {
   code: string;
@@ -44,12 +46,23 @@ export function DisputeForm({ categories, locale }: Props) {
   // Step 3: Description
   const [description, setDescription] = useState('');
 
-  // Step 4: Mobile + OTP
+  // Step 4: Mobile + OTP + CAPTCHA
   const [submitterName, setSubmitterName] = useState('');
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [captcha, setCaptcha] = useState<{ question: string; token: string } | null>(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaAnswer('');
+    setCaptcha(await getCaptcha());
+  }, []);
+
+  useEffect(() => {
+    if (step === 4 && !captcha) loadCaptcha();
+  }, [step, captcha, loadCaptcha]);
 
   const hi = locale === 'hi';
 
@@ -88,6 +101,8 @@ export function DisputeForm({ categories, locale }: Props) {
       if (step === 1 && !selectedSchool) errs.school = 'required';
       if (step === 2 && !categoryCode) errs.category = 'required';
       if (step === 3 && !description.trim()) errs.description = 'required';
+      else if (step === 3 && description.trim().length < MIN_DESCRIPTION_LENGTH)
+        errs.description = 'tooShort';
       if (Object.keys(errs).length > 0) {
         setErrors(errs);
         return;
@@ -112,6 +127,10 @@ export function DisputeForm({ categories, locale }: Props) {
       setErrors({ otp: 'required' });
       return;
     }
+    if (!captchaAnswer.trim()) {
+      setErrors({ captcha: 'required' });
+      return;
+    }
     setSubmitError('');
     startTransition(async () => {
       const result = await createTicket({
@@ -121,10 +140,19 @@ export function DisputeForm({ categories, locale }: Props) {
         submitterName: submitterName.trim(),
         submitterMobile: mobile,
         otp: otp.trim(),
+        captchaToken: captcha?.token || '',
+        captchaAnswer: captchaAnswer.trim(),
       });
       if ('error' in result) {
         if (result.error === 'INVALID_OTP') {
           setSubmitError(t('invalidOtp'));
+        } else if (result.error === 'CAPTCHA_FAILED') {
+          setSubmitError(t('captchaError'));
+          loadCaptcha();
+        } else if (result.error === 'DUPLICATE_OPEN') {
+          setSubmitError(t('duplicateError'));
+        } else if (result.error === 'DESCRIPTION_TOO_SHORT') {
+          setSubmitError(t('descTooShort'));
         } else {
           setSubmitError(t('submitError'));
         }
@@ -304,10 +332,12 @@ export function DisputeForm({ categories, locale }: Props) {
               className={`mt-1.5 ${selectClass} resize-none ${errors.description ? errorBorder : ''}`}
             />
             <p className="mt-1 text-xs text-text-secondary">
-              {description.length}/2000
+              {description.length}/2000 · {t('minDescNote')}
             </p>
             {errors.description && (
-              <span className="text-xs text-red-500">{t('required')}</span>
+              <span className="text-xs text-red-500">
+                {errors.description === 'tooShort' ? t('descTooShort') : t('required')}
+              </span>
             )}
           </div>
 
@@ -394,6 +424,41 @@ export function DisputeForm({ categories, locale }: Props) {
                   className={`mt-1.5 ${selectClass} max-w-48 ${errors.otp ? errorBorder : ''}`}
                 />
                 {errors.otp && (
+                  <span className="text-xs text-red-500">{t('required')}</span>
+                )}
+              </div>
+
+              <div>
+                <label className={labelClass}>
+                  {t('captchaLabel')} <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="rounded-lg border border-border bg-surface px-4 py-2.5 font-mono text-sm font-semibold tracking-wider text-navy-900">
+                    {captcha ? `${captcha.question} = ?` : '…'}
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={captchaAnswer}
+                    onChange={(e) => {
+                      setCaptchaAnswer(e.target.value);
+                      setErrors((prev) => ({ ...prev, captcha: '' }));
+                      setSubmitError('');
+                    }}
+                    placeholder={t('captchaPh')}
+                    maxLength={3}
+                    className={`${selectClass} max-w-24 ${errors.captcha ? errorBorder : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={loadCaptcha}
+                    title={t('captchaRefresh')}
+                    className="rounded-lg border border-border p-2.5 text-text-secondary transition-colors hover:bg-surface"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                </div>
+                {errors.captcha && (
                   <span className="text-xs text-red-500">{t('required')}</span>
                 )}
               </div>

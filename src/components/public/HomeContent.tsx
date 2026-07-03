@@ -15,7 +15,6 @@ import {
 import {
   LogIn,
   Search,
-  AlertTriangle,
   Building2,
   GraduationCap,
   BadgeCheck,
@@ -69,7 +68,7 @@ const QUICK_ACCESS = [
     icon: Search,
   },
   {
-    href: '#reports',
+    href: '/public/reports',
     title: 'Public Reports',
     description: 'State, district and school reports',
     icon: FileText,
@@ -79,12 +78,6 @@ const QUICK_ACCESS = [
     title: 'Compare Schools',
     description: 'Side-by-side school comparison',
     icon: GitCompareArrows,
-  },
-  {
-    href: '/public/dispute/new',
-    title: 'File Dispute',
-    description: 'Report issues or concerns',
-    icon: AlertTriangle,
   },
 ] as const;
 
@@ -168,13 +161,6 @@ export function HomeContent() {
           >
             <Search size={16} />
             Find School
-          </Link>
-          <Link
-            href="/public/dispute/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#F5B731] px-5 py-2.5 text-sm font-semibold text-[#1B2A6B] shadow-sm transition-opacity hover:opacity-90"
-          >
-            <AlertTriangle size={16} />
-            File Dispute
           </Link>
         </div>
         <p className="mt-6 text-sm text-white/70">
@@ -308,7 +294,7 @@ export function HomeContent() {
       {/* Quick access */}
       <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900">Quick Access</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {QUICK_ACCESS.map(({ href, title, description, icon: Icon }) => (
             <Link
               key={href}

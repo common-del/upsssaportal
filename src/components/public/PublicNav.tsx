@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 const NAV_LINKS = [
   { href: '/public', label: 'Homepage' },
   { href: '/public/find', label: 'Schools' },
+  { href: '/public/dispute', label: 'Dispute Resolution' },
   { href: '/public#reports', label: 'Reports' },
   { href: '/public/compare', label: 'Compare Schools' },
   { href: '/public/about', label: 'About' },
@@ -17,8 +18,8 @@ export function PublicNav() {
   const pathname = usePathname();
   const locale = useLocale();
 
-  function toggleLocale() {
-    const next = locale === 'en' ? 'hi' : 'en';
+  function changeLocale(next: string) {
+    if (next === locale) return;
     document.cookie = `NEXT_LOCALE=${next};path=/;max-age=31536000`;
     window.location.reload();
   }
@@ -59,13 +60,15 @@ export function PublicNav() {
               </Link>
             );
           })}
-          <button
-            type="button"
-            onClick={toggleLocale}
-            className="rounded-full bg-[#F5B731] px-3 py-1 text-xs font-semibold text-[#1B2A6B] transition-opacity hover:opacity-90"
+          <select
+            value={locale}
+            onChange={(e) => changeLocale(e.target.value)}
+            aria-label="Change language"
+            className="cursor-pointer rounded-full border-none bg-[#F5B731] px-3 py-1.5 text-xs font-semibold text-[#1B2A6B]"
           >
-            {locale === 'en' ? 'EN - Hindi' : 'Hindi - EN'}
-          </button>
+            <option value="en">EN · English</option>
+            <option value="hi">HI · हिन्दी</option>
+          </select>
           <Link
             href="/login"
             className="rounded-lg border border-white/30 bg-white/10 px-4 py-1.5 text-sm font-medium transition-colors hover:bg-white/20"

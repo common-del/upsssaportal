@@ -1,5 +1,5 @@
-import { ReportsContent } from '@/components/public/ReportsContent';
+import { redirect } from 'next/navigation';
 
 export default function ReportsPage() {
-  return <ReportsContent />;
+  redirect('/public#reports');
 }

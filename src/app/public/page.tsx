@@ -5,6 +5,7 @@ import {
   FileText,
   ArrowRight,
 } from 'lucide-react';
+import { ReportsContent } from '@/components/public/ReportsContent';
 
 const STATS_STRIP = [
   { label: 'Total Schools', value: '1,50,540' },
@@ -28,7 +29,7 @@ const QUICK_ACCESS = [
     icon: School,
   },
   {
-    href: '/public/reports',
+    href: '#reports',
     title: 'Public Reports',
     description: 'View state, district and school performance reports',
     icon: FileText,
@@ -89,8 +90,14 @@ export default function PublicHomePage() {
             </Link>
           ))}
         </div>
+      </div>
 
-        <p className="mt-10 text-center text-xs text-gray-400">
+      <section id="reports" className="scroll-mt-20">
+        <ReportsContent />
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 pb-10">
+        <p className="text-center text-xs text-gray-400">
           For unresolved issues regarding a school, you may use the{' '}
           <Link
             href="/public/dispute/new"

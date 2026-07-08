@@ -1,5 +1,6 @@
 'use server';
 
+import { createHmac } from 'crypto';
 import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth';
 
@@ -7,6 +8,35 @@ import { auth } from '@/lib/auth';
 const SLA_SCHOOL_DAYS = 5;
 const SLA_BLOCK_DAYS = 10;
 const SLA_DISTRICT_DAYS = 30;
+
+const MIN_DESCRIPTION_LENGTH = 50;
+
+/* ── CAPTCHA (self-contained, HMAC-signed challenge) ─── */
+const CAPTCHA_TTL_MS = 10 * 60 * 1000;
+
+function signCaptcha(answer: number, expiresAt: number): string {
+  const secret = process.env.NEXTAUTH_SECRET || 'captcha-fallback-secret';
+  return createHmac('sha256', secret).update(`${answer}.${expiresAt}`).digest('hex');
+}
+
+export async function getCaptcha() {
+  const a = Math.floor(Math.random() * 8) + 2;
+  const b = Math.floor(Math.random() * 8) + 1;
+  const expiresAt = Date.now() + CAPTCHA_TTL_MS;
+  return {
+    question: `${a} + ${b}`,
+    token: `${expiresAt}.${signCaptcha(a + b, expiresAt)}`,
+  };
+}
+
+function verifyCaptcha(token: string, answer: string): boolean {
+  const [expStr, sig] = (token || '').split('.');
+  const expiresAt = Number(expStr);
+  const value = Number((answer || '').trim());
+  if (!expiresAt || expiresAt < Date.now()) return false;
+  if (!Number.isFinite(value)) return false;
+  return signCaptcha(value, expiresAt) === sig;
+}
 
 function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -138,8 +168,18 @@ export async function createTicket(data: {
   submitterName: string;
   submitterMobile: string;
   otp: string;
+  captchaToken: string;
+  captchaAnswer: string;
 }) {
+  if (!verifyCaptcha(data.captchaToken, data.captchaAnswer)) {
+    return { error: 'CAPTCHA_FAILED' };
+  }
+
   if (data.otp !== '123456') return { error: 'INVALID_OTP' };
+
+  if (data.description.trim().length < MIN_DESCRIPTION_LENGTH) {
+    return { error: 'DESCRIPTION_TOO_SHORT' };
+  }
 
   const school = await prisma.school.findUnique({
     where: { udise: data.schoolUdise },
@@ -154,6 +194,17 @@ export async function createTicket(data: {
 
   const mobile = data.submitterMobile.replace(/\D/g, '');
   if (mobile.length < 10) return { error: 'INVALID_MOBILE' };
+
+  // One open complaint per mobile number per school at a time
+  const existingOpen = await prisma.ticket.findFirst({
+    where: {
+      schoolUdise: data.schoolUdise,
+      submitterMobile: mobile.slice(-10),
+      status: { notIn: CLOSED_STATUSES },
+    },
+    select: { id: true },
+  });
+  if (existingOpen) return { error: 'DUPLICATE_OPEN' };
 
   const now = new Date();
 

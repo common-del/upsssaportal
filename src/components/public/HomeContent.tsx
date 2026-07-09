@@ -88,12 +88,6 @@ const QUICK_ACCESS = [
   },
 ] as const;
 
-const PENDING_BADGE = (
-  <span className="rounded-md bg-[#FDE68A] px-2.5 py-1 text-xs font-medium text-[#92400E]">
-    Pending latest UDISE+ import
-  </span>
-);
-
 export function HomeContent() {
   const router = useRouter();
   const [district, setDistrict] = useState('All Districts');
@@ -196,10 +190,7 @@ export function HomeContent() {
 
       {/* Domain Performance Analytics */}
       <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-900">Domain Performance Analytics</h2>
-          {PENDING_BADGE}
-        </div>
+        <h2 className="text-base font-semibold text-gray-900">Domain Performance Analytics</h2>
         <p className="mt-1 text-xs text-gray-500">
           {district === 'All Districts' ? 'Statewide average' : district} · updates with the
           district filter above
@@ -272,10 +263,7 @@ export function HomeContent() {
 
       {/* SQAAF Submission Analytics */}
       <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-900">SQAAF Submission Analytics</h2>
-          {PENDING_BADGE}
-        </div>
+        <h2 className="text-base font-semibold text-gray-900">SQAAF Submission Analytics</h2>
         <p className="mt-1 text-xs text-gray-500">
           All 18 mandals · open a mandal to see its districts
         </p>

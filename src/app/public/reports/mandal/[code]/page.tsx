@@ -28,9 +28,6 @@ export default async function MandalDistrictsPage({
       <p className="mt-2 text-sm text-gray-600">
         {mandal.districts.length} districts · SQAAF submission analytics
       </p>
-      <span className="mt-3 inline-block rounded-md bg-[#FDE68A] px-2.5 py-1 text-xs font-medium text-[#92400E]">
-        Pending latest UDISE+ import
-      </span>
 
       <div className="mt-6 overflow-x-auto rounded-xl bg-white p-6 shadow-sm">
         <table className="w-full min-w-[720px] text-left text-sm">

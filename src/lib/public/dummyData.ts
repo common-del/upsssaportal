@@ -208,3 +208,119 @@ export function heatmapCellColor(score: number): string {
 }
 
 export const COMPARE_SCHOOL_COLORS = ['#1B2A6B', '#22C55E', '#F5B731', '#F97316'] as const;
+
+/* ── Mandals (18 administrative divisions) — illustrative, pending UDISE+ import ──
+   District groupings are based on general knowledge of UP's mandal structure, not a
+   verified live source; confirm against the official list before relying on this data. */
+export type Mandal = {
+  code: string;
+  name: string;
+  districts: string[];
+};
+
+export const MANDALS: Mandal[] = [
+  { code: 'agra', name: 'Agra', districts: ['Agra', 'Firozabad', 'Mainpuri', 'Mathura'] },
+  { code: 'aligarh', name: 'Aligarh', districts: ['Aligarh', 'Etah', 'Hathras', 'Kasganj'] },
+  { code: 'azamgarh', name: 'Azamgarh', districts: ['Azamgarh', 'Ballia', 'Mau'] },
+  { code: 'bareilly', name: 'Bareilly', districts: ['Bareilly', 'Badaun', 'Pilibhit', 'Shahjahanpur'] },
+  { code: 'basti', name: 'Basti', districts: ['Basti', 'Sant Kabir Nagar', 'Siddharthnagar'] },
+  { code: 'chitrakoot', name: 'Chitrakoot', districts: ['Banda', 'Chitrakoot', 'Hamirpur', 'Mahoba'] },
+  { code: 'devipatan', name: 'Devipatan', districts: ['Balrampur', 'Bahraich', 'Gonda', 'Shrawasti'] },
+  { code: 'faizabad', name: 'Ayodhya (Faizabad)', districts: ['Ayodhya', 'Ambedkar Nagar', 'Amethi', 'Barabanki', 'Sultanpur'] },
+  { code: 'gorakhpur', name: 'Gorakhpur', districts: ['Deoria', 'Gorakhpur', 'Kushinagar', 'Maharajganj'] },
+  { code: 'jhansi', name: 'Jhansi', districts: ['Jalaun', 'Jhansi', 'Lalitpur'] },
+  { code: 'kanpur', name: 'Kanpur', districts: ['Auraiya', 'Etawah', 'Farrukhabad', 'Kannauj', 'Kanpur Dehat', 'Kanpur Nagar'] },
+  { code: 'lucknow', name: 'Lucknow', districts: ['Hardoi', 'Lakhimpur Kheri', 'Lucknow', 'Raebareli', 'Sitapur', 'Unnao'] },
+  { code: 'meerut', name: 'Meerut', districts: ['Baghpat', 'Bulandshahr', 'Gautam Buddha Nagar', 'Ghaziabad', 'Hapur', 'Meerut'] },
+  { code: 'mirzapur', name: 'Mirzapur (Vindhyachal)', districts: ['Bhadohi', 'Mirzapur', 'Sonbhadra'] },
+  { code: 'moradabad', name: 'Moradabad', districts: ['Amroha', 'Bijnor', 'Moradabad', 'Rampur', 'Sambhal'] },
+  { code: 'prayagraj', name: 'Prayagraj', districts: ['Fatehpur', 'Kaushambi', 'Prayagraj', 'Pratapgarh'] },
+  { code: 'saharanpur', name: 'Saharanpur', districts: ['Muzaffarnagar', 'Saharanpur', 'Shamli'] },
+  { code: 'varanasi', name: 'Varanasi', districts: ['Chandauli', 'Ghazipur', 'Jaunpur', 'Varanasi'] },
+];
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) % 1000000007;
+  }
+  return Math.abs(h);
+}
+
+export type SqaafStats = {
+  district: string;
+  totalSchools: number;
+  govt: number;
+  private: number;
+  students: number;
+  teachers: number;
+  verified: number;
+  recognition: number;
+};
+
+/** Returns the curated row for sample districts, or a deterministic (non-random,
+ * stable across renders) estimate for every other district. */
+export function districtSqaafStats(district: string): SqaafStats {
+  const curated = SQAAF_DISTRICT_TABLE.find((r) => r.district === district);
+  if (curated) return curated;
+
+  const seed = hashString(district);
+  const totalSchools = 1800 + (seed % 3200);
+  const govt = Math.round(totalSchools * (0.42 + ((seed % 17) / 100)));
+  const priv = Math.round(totalSchools * (0.16 + ((seed % 13) / 100)));
+  const students = totalSchools * (140 + (seed % 60));
+  const teachers = Math.round(students / (28 + (seed % 10)));
+  const recognition = 60 + (seed % 30);
+  const verified = Math.round(totalSchools * (recognition / 100) * 0.55);
+  return { district, totalSchools, govt, private: priv, students, teachers, verified, recognition };
+}
+
+export function mandalSqaafStats(mandal: Mandal) {
+  const rows = mandal.districts.map(districtSqaafStats);
+  const totalSchools = rows.reduce((a, r) => a + r.totalSchools, 0);
+  const govt = rows.reduce((a, r) => a + r.govt, 0);
+  const priv = rows.reduce((a, r) => a + r.private, 0);
+  const students = rows.reduce((a, r) => a + r.students, 0);
+  const teachers = rows.reduce((a, r) => a + r.teachers, 0);
+  const verified = rows.reduce((a, r) => a + r.verified, 0);
+  const recognition = totalSchools > 0 ? Math.round((verified / totalSchools) * 100) : 0;
+  return {
+    code: mandal.code,
+    name: mandal.name,
+    districtCount: mandal.districts.length,
+    totalSchools,
+    govt,
+    private: priv,
+    students,
+    teachers,
+    verified,
+    recognition,
+  };
+}
+
+/** Domain-wise averages for a district; deterministic offset from the state
+ * baseline so the chart visibly changes per selection without real per-district
+ * domain data (pending UDISE+ / SQAAF import). */
+export function domainAveragesForDistrict(district: string) {
+  if (district === 'All Districts') return DOMAIN_AVERAGES;
+  return DOMAIN_AVERAGES.map(({ domain, score }) => {
+    const offset = (hashString(district + domain) % 21) - 10;
+    return { domain, score: Math.max(30, Math.min(95, score + offset)) };
+  });
+}
+
+export function performanceDistributionForDistrict(district: string) {
+  if (district === 'All Districts') return PERFORMANCE_DISTRIBUTION;
+  const domains = domainAveragesForDistrict(district);
+  const avg = domains.reduce((a, d) => a + d.score, 0) / domains.length;
+  const baseAvg = DOMAIN_AVERAGES.reduce((a, d) => a + d.score, 0) / DOMAIN_AVERAGES.length;
+  const delta = avg - baseAvg;
+  const utkarsh = Math.max(5, Math.min(70, Math.round(32 + delta)));
+  const uday = Math.max(5, Math.min(70, Math.round(28 - delta)));
+  const unnat = Math.max(10, 100 - utkarsh - uday);
+  return [
+    { name: 'Uday' as PerformanceLevel, value: uday, fill: '#F9A8D4' },
+    { name: 'Unnat' as PerformanceLevel, value: unnat, fill: '#FDE68A' },
+    { name: 'Utkarsh' as PerformanceLevel, value: utkarsh, fill: '#86EFAC' },
+  ];
+}

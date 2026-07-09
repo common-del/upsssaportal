@@ -80,16 +80,16 @@ export const DISPUTE_CATEGORIES = [
 ];
 
 export const SQAAF_DISTRICT_TABLE = [
-  { district: 'Lucknow', totalSchools: 4950, govt: 2100, private: 1450, students: 892000, teachers: 28400, verified: 1420, recognition: 89 },
-  { district: 'Agra', totalSchools: 4050, govt: 1850, private: 1100, students: 720000, teachers: 22100, verified: 1180, recognition: 82 },
-  { district: 'Varanasi', totalSchools: 4780, govt: 2400, private: 980, students: 810000, teachers: 25600, verified: 1310, recognition: 85 },
-  { district: 'Kanpur', totalSchools: 5220, govt: 2200, private: 1680, students: 945000, teachers: 30200, verified: 1580, recognition: 91 },
-  { district: 'Prayagraj', totalSchools: 3990, govt: 1980, private: 920, students: 698000, teachers: 21400, verified: 1090, recognition: 78 },
-  { district: 'Meerut', totalSchools: 4100, govt: 1750, private: 1320, students: 756000, teachers: 23800, verified: 1250, recognition: 84 },
-  { district: 'Gorakhpur', totalSchools: 4550, govt: 2600, private: 780, students: 682000, teachers: 20900, verified: 980, recognition: 76 },
-  { district: 'Aligarh', totalSchools: 3600, govt: 1680, private: 890, students: 612000, teachers: 19200, verified: 920, recognition: 74 },
-  { district: 'Bareilly', totalSchools: 4100, govt: 1920, private: 1010, students: 734000, teachers: 22800, verified: 1150, recognition: 80 },
-  { district: 'Mathura', totalSchools: 3020, govt: 1540, private: 720, students: 498000, teachers: 15600, verified: 780, recognition: 71 },
+  { district: 'Lucknow', totalSchools: 4950, govt: 2100, aided: 980, private: 1450, students: 892000, teachers: 28400, verified: 1420, recognition: 89 },
+  { district: 'Agra', totalSchools: 4050, govt: 1850, aided: 720, private: 1100, students: 720000, teachers: 22100, verified: 1180, recognition: 82 },
+  { district: 'Varanasi', totalSchools: 4780, govt: 2400, aided: 890, private: 980, students: 810000, teachers: 25600, verified: 1310, recognition: 85 },
+  { district: 'Kanpur', totalSchools: 5220, govt: 2200, aided: 1050, private: 1680, students: 945000, teachers: 30200, verified: 1580, recognition: 91 },
+  { district: 'Prayagraj', totalSchools: 3990, govt: 1980, aided: 640, private: 920, students: 698000, teachers: 21400, verified: 1090, recognition: 78 },
+  { district: 'Meerut', totalSchools: 4100, govt: 1750, aided: 810, private: 1320, students: 756000, teachers: 23800, verified: 1250, recognition: 84 },
+  { district: 'Gorakhpur', totalSchools: 4550, govt: 2600, aided: 550, private: 780, students: 682000, teachers: 20900, verified: 980, recognition: 76 },
+  { district: 'Aligarh', totalSchools: 3600, govt: 1680, aided: 690, private: 890, students: 612000, teachers: 19200, verified: 920, recognition: 74 },
+  { district: 'Bareilly', totalSchools: 4100, govt: 1920, aided: 760, private: 1010, students: 734000, teachers: 22800, verified: 1150, recognition: 80 },
+  { district: 'Mathura', totalSchools: 3020, govt: 1540, aided: 480, private: 720, students: 498000, teachers: 15600, verified: 780, recognition: 71 },
 ];
 
 export const MANAGEMENT_PERFORMANCE = [
@@ -251,6 +251,7 @@ export type SqaafStats = {
   district: string;
   totalSchools: number;
   govt: number;
+  aided: number;
   private: number;
   students: number;
   teachers: number;
@@ -267,18 +268,20 @@ export function districtSqaafStats(district: string): SqaafStats {
   const seed = hashString(district);
   const totalSchools = 1800 + (seed % 3200);
   const govt = Math.round(totalSchools * (0.42 + ((seed % 17) / 100)));
+  const aided = Math.round(totalSchools * (0.14 + ((seed % 11) / 100)));
   const priv = Math.round(totalSchools * (0.16 + ((seed % 13) / 100)));
   const students = totalSchools * (140 + (seed % 60));
   const teachers = Math.round(students / (28 + (seed % 10)));
   const recognition = 60 + (seed % 30);
   const verified = Math.round(totalSchools * (recognition / 100) * 0.55);
-  return { district, totalSchools, govt, private: priv, students, teachers, verified, recognition };
+  return { district, totalSchools, govt, aided, private: priv, students, teachers, verified, recognition };
 }
 
 export function mandalSqaafStats(mandal: Mandal) {
   const rows = mandal.districts.map(districtSqaafStats);
   const totalSchools = rows.reduce((a, r) => a + r.totalSchools, 0);
   const govt = rows.reduce((a, r) => a + r.govt, 0);
+  const aided = rows.reduce((a, r) => a + r.aided, 0);
   const priv = rows.reduce((a, r) => a + r.private, 0);
   const students = rows.reduce((a, r) => a + r.students, 0);
   const teachers = rows.reduce((a, r) => a + r.teachers, 0);
@@ -290,6 +293,7 @@ export function mandalSqaafStats(mandal: Mandal) {
     districtCount: mandal.districts.length,
     totalSchools,
     govt,
+    aided,
     private: priv,
     students,
     teachers,

@@ -5,27 +5,27 @@ import { PERFORMANCE_COLORS } from '@/lib/public/constants';
 export const UP_SQAAF_DOMAINS = [
   {
     id: 'infra',
-    name: 'Infrastructure & Safety of Students',
+    name: 'Infrastructure and Safety',
     weightage: 20,
   },
   {
     id: 'admin',
-    name: 'Administration — Human Resources & Leadership',
+    name: 'Administration, HR and Leadership',
     weightage: 20,
   },
   {
     id: 'pedagogy',
-    name: 'Teaching & Learning Pedagogy — Curriculum Transaction',
+    name: 'Teaching and Learning',
     weightage: 20,
   },
   {
     id: 'assessment',
-    name: 'Assessment — Learning Outcomes',
+    name: 'Assessment and Learning Outcomes',
     weightage: 20,
   },
   {
     id: 'inclusive',
-    name: 'Inclusiveness — Student Well-being and Community Participation',
+    name: 'Inclusiveness and Community Engagement',
     weightage: 20,
   },
 ] as const;
@@ -33,19 +33,19 @@ export const UP_SQAAF_DOMAINS = [
 export type AccreditationStatus = 'SQAAF Verified' | 'Pending';
 
 export function scoreToLevel(score: number): PerformanceLevel {
-  if (score < 50) return 'Uday';
-  if (score <= 75) return 'Unnat';
+  if (score <= 55) return 'Uday';
+  if (score <= 80) return 'Unnat';
   return 'Utkarsh';
 }
 
 export function levelDescription(level: PerformanceLevel): string {
   switch (level) {
     case 'Uday':
-      return 'School is at the foundational level and requires focused improvement across key domains.';
+      return 'Needs improvement.';
     case 'Unnat':
-      return 'School demonstrates steady progress with scope for strengthening teaching and infrastructure.';
+      return 'Performing satisfactorily.';
     case 'Utkarsh':
-      return 'School shows strong performance aligned with UP-SQAAF excellence benchmarks.';
+      return 'Exemplary performance.';
   }
 }
 

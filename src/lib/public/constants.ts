@@ -35,11 +35,11 @@ export const SCHOOL_LEVELS = [
 export type SchoolLevel = (typeof SCHOOL_LEVELS)[number];
 
 export const SQAAF_DOMAINS = [
-  'Teaching-Learning',
-  'Assessment & Evaluation',
-  'School Management',
-  'Student Development',
-  'Infrastructure',
+  'Infrastructure and Safety',
+  'Administration, HR and Leadership',
+  'Teaching and Learning',
+  'Assessment and Learning Outcomes',
+  'Inclusiveness and Community Engagement',
 ] as const;
 
 export const PERFORMANCE_LEVELS = ['Uday', 'Unnat', 'Utkarsh'] as const;

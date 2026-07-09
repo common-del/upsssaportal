@@ -36,11 +36,11 @@ import {
 } from '@/lib/public/dummyData';
 
 const DOMAIN_LABELS: Record<(typeof SQAAF_DOMAINS)[number], string> = {
-  'Teaching-Learning': 'Teaching-Learning',
-  'Assessment & Evaluation': 'Assessment & Eval',
-  'School Management': 'School Management',
-  'Student Development': 'Student Development',
-  Infrastructure: 'Infrastructure',
+  'Infrastructure and Safety': 'Infrastructure & Safety',
+  'Administration, HR and Leadership': 'Admin, HR & Leadership',
+  'Teaching and Learning': 'Teaching & Learning',
+  'Assessment and Learning Outcomes': 'Assessment & Outcomes',
+  'Inclusiveness and Community Engagement': 'Inclusiveness & Engagement',
 };
 
 const LEVEL_BAR_FILL: Record<PerformanceLevel, string> = {

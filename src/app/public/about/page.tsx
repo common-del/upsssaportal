@@ -1,43 +1,43 @@
 const LEVEL_CARDS = [
   {
     name: 'Uday',
-    score: 'Score < 50',
-    desc: 'Foundational level — needs support and improvement',
+    score: 'Upto 55%',
+    desc: 'Needs improvement',
     bg: 'bg-[#FCE7F3]',
   },
   {
     name: 'Unnat',
-    score: 'Score 51–75',
-    desc: 'Developing level — shows progress with room for growth',
+    score: '55% to 80%',
+    desc: 'Performing satisfactorily',
     bg: 'bg-[#FEF9C3]',
   },
   {
     name: 'Utkarsh',
-    score: 'Score > 75',
-    desc: 'Advanced level — demonstrates strong practices',
+    score: 'Above 80%',
+    desc: 'Exemplary performance',
     bg: 'bg-[#DCFCE7]',
   },
 ] as const;
 
 const DOMAINS = [
   {
-    title: '🏫 Infrastructure & Safety of Students',
+    title: '🏫 Infrastructure and Safety',
     text: 'Physical facilities, classrooms, labs, safety measures, drinking water, toilets, and boundary walls.',
   },
   {
-    title: '👥 Administration — Human Resources & Leadership',
+    title: '👥 Administration, HR and Leadership',
     text: 'School governance, leadership planning, teacher adequacy, professional development, and HR management.',
   },
   {
-    title: '📚 Teaching & Learning Pedagogy — Curriculum Transaction',
+    title: '📚 Teaching and Learning',
     text: 'How well the school plans and delivers lessons, uses teaching aids, and implements the curriculum.',
   },
   {
-    title: '📊 Assessment — Learning Outcomes',
+    title: '📊 Assessment and Learning Outcomes',
     text: 'How schools assess students, track learning outcomes, and use data to improve teaching and results.',
   },
   {
-    title: '🤝 Inclusiveness — Student Well-being and Community Participation',
+    title: '🤝 Inclusiveness and Community Engagement',
     text: 'Ensuring all children have equal access, addressing dropout, promoting health, and engaging parents and community.',
   },
 ] as const;
@@ -56,7 +56,7 @@ const ASSESSMENT_STEPS = [
   {
     step: 3,
     title: 'Scoring & Levels',
-    text: 'Domain scores are computed using defined weightages. Schools are classified as Uday (< 50), Unnat (51–75), or Utkarsh (> 75) based on overall performance.',
+    text: 'Domain scores are computed using defined weightages. Schools are classified as Uday (upto 55%), Unnat (55% to 80%), or Utkarsh (above 80%) based on overall performance.',
   },
 ] as const;
 
@@ -80,39 +80,41 @@ export default function AboutPage() {
     <div className="bg-[#F3F4F6]">
       <section className="bg-[#1B2A6B] px-4 py-12 text-white sm:py-14">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-2xl font-bold sm:text-3xl">About SSSA UP</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">
+            About the Uttar Pradesh State School Standard Authority
+          </h1>
           <p className="mt-2 text-lg text-white/90">
-            State School Standards Authority, Uttar Pradesh
+            Uttar Pradesh State School Standard Authority
           </p>
         </div>
       </section>
 
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-10">
-        <ContentCard title="What is SSSA?">
+        <ContentCard title="What is the Uttar Pradesh State School Standard Authority?">
           <p>
-            The State School Standards Authority (SSSA), Uttar Pradesh is an independent
-            regulatory body established to set, monitor, and enforce quality standards for
-            all government and aided schools across the state. SSSA UP functions as the
-            standards and accreditation authority, ensuring transparent quality benchmarks
-            and public accountability in school education.
+            The Uttar Pradesh State School Standard Authority is an independent regulatory
+            body established to set, monitor, and enforce quality standards for all
+            government and aided schools across the state. It functions as the standards
+            and accreditation authority, ensuring transparent quality benchmarks and public
+            accountability in school education.
           </p>
         </ContentCard>
 
         <ContentCard title="What is NEP 2020?">
           <p>
             The National Education Policy 2020 is India&apos;s comprehensive education reform
-            framework. NEP 2020 mandates that every state establish an independent State
-            School Standards Authority (SSSA) to ensure school quality through a transparent
+            framework. NEP 2020 mandates that every state establish an independent state
+            school standards authority to ensure school quality through a transparent
             regulatory approach — setting clear minimum standards while encouraging school
             autonomy and improvement.
           </p>
         </ContentCard>
 
-        <ContentCard title="What is UP-SQAAF?">
+        <ContentCard title="What is the Uttar Pradesh School Quality Assessment and Accreditation Framework?">
           <p>
-            The School Quality Assessment and Assurance Framework (UP-SQAAF) is the primary
-            assessment tool used by SSSA UP. It evaluates schools across 5 quality domains
-            using a structured scoring methodology.
+            The Uttar Pradesh School Quality Assessment and Accreditation Framework is the
+            primary assessment tool used by the Authority. It evaluates schools across 5
+            quality domains using a structured scoring methodology.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {LEVEL_CARDS.map((card) => (

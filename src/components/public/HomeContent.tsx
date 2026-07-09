@@ -18,11 +18,6 @@ import {
   Building2,
   GraduationCap,
   BadgeCheck,
-  Landmark,
-  Building,
-  Layers,
-  Briefcase,
-  School,
   FileText,
   GitCompareArrows,
 } from 'lucide-react';
@@ -103,39 +98,6 @@ export function HomeContent() {
     ...r,
     Other: Math.round((r.Government + r.Aided + r.Private) * 0.06),
   }));
-
-  const managementCards = [
-    {
-      label: 'Govt / Aided Schools',
-      value: totals.government + totals.aided,
-      description: 'Public schools under UP SSSA jurisdiction',
-      icon: Landmark,
-    },
-    {
-      label: 'Government Schools',
-      value: totals.government,
-      description: 'Under UP SSSA jurisdiction',
-      icon: Building,
-    },
-    {
-      label: 'Aided Schools',
-      value: totals.aided,
-      description: 'Subtype under the broader public education category',
-      icon: Layers,
-    },
-    {
-      label: 'Private Schools',
-      value: totals.private,
-      description: 'Under UP SSSA jurisdiction',
-      icon: Briefcase,
-    },
-    {
-      label: 'Other Schools',
-      value: totals.other,
-      description: 'Under UP SSSA jurisdiction',
-      icon: School,
-    },
-  ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -222,33 +184,6 @@ export function HomeContent() {
           </div>
         </div>
       </div>
-
-      {/* Management category */}
-      <h2 className="mt-8 text-base font-semibold text-gray-900">
-        Schools by Management Category
-      </h2>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {managementCards.map(({ label, value, description, icon: Icon }) => (
-          <div
-            key={label}
-            className="flex items-start justify-between rounded-xl bg-white p-5 shadow-sm"
-          >
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {label}
-              </p>
-              <p className="mt-2 text-2xl font-bold text-[#1B2A6B]">{formatIN(value)}</p>
-              <p className="mt-1 text-xs text-gray-500">{description}</p>
-            </div>
-            <div className="rounded-lg bg-gray-100 p-2.5 text-[#1B2A6B]">
-              <Icon size={20} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-        Source: Pending latest UDISE+ import {PENDING_BADGE}
-      </p>
 
       {/* District-wise chart */}
       <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">

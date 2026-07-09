@@ -308,6 +308,19 @@ export function HomeContent() {
           ))}
         </div>
       </section>
+
+      {/* Grievance redressal (low-key entry point) */}
+      <p className="mt-6 text-center text-xs text-gray-400">
+        For unresolved issues regarding a school, you may use the{' '}
+        <Link href="/public/dispute/new" className="underline hover:text-gray-600">
+          Grievance Redressal
+        </Link>{' '}
+        facility or{' '}
+        <Link href="/public/dispute/track" className="underline hover:text-gray-600">
+          track an existing grievance
+        </Link>
+        .
+      </p>
     </div>
   );
 }

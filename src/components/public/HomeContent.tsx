@@ -40,7 +40,7 @@ import {
 
 const MANDAL_ROWS = MANDALS.map(mandalSqaafStats);
 const topDistricts = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 5);
-const MEDAL_COLORS = ['#F5B731', '#9CA3AF', '#B45309', '#1B2A6B', '#1B2A6B'];
+const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333', '#1B2A6B', '#8C5E3C'];
 
 // Statewide totals (illustrative — pending latest UDISE+ import)
 const STATE_TOTALS = {

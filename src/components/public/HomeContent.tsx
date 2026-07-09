@@ -31,6 +31,7 @@ import {
 import { UP_NAVY } from '@/lib/public/constants';
 import {
   DISTRICT_SCHOOL_CHART,
+  DISTRICT_RANKINGS,
   MANDALS,
   mandalSqaafStats,
   domainAveragesForDistrict,
@@ -38,6 +39,8 @@ import {
 } from '@/lib/public/dummyData';
 
 const MANDAL_ROWS = MANDALS.map(mandalSqaafStats);
+const topDistricts = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 5);
+const MEDAL_COLORS = ['#F5B731', '#9CA3AF', '#B45309', '#1B2A6B', '#1B2A6B'];
 
 // Statewide totals (illustrative — pending latest UDISE+ import)
 const STATE_TOTALS = {
@@ -258,6 +261,40 @@ export function HomeContent() {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Top Performing Districts */}
+      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-gray-900">
+          Top 5 Districts — Best Performing Schools
+        </h2>
+        <p className="mt-1 text-xs text-gray-500">Ranked by average SQAAF school score, statewide</p>
+
+        <div className="mt-5 space-y-3">
+          {topDistricts.map((row, i) => (
+            <div key={row.district} className="flex items-center gap-4">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                style={{ backgroundColor: MEDAL_COLORS[i] }}
+              >
+                {i + 1}
+              </div>
+              <div className="w-28 shrink-0 text-sm font-medium text-gray-900">{row.district}</div>
+              <div className="h-2.5 flex-1 rounded-full bg-gray-100">
+                <div
+                  className="h-2.5 rounded-full"
+                  style={{
+                    width: `${(row.score / topDistricts[0].score) * 100}%`,
+                    backgroundColor: MEDAL_COLORS[i],
+                  }}
+                />
+              </div>
+              <div className="w-12 shrink-0 text-right text-sm font-semibold text-[#1B2A6B]">
+                {row.score.toFixed(1)}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

@@ -30,10 +30,11 @@ import {
 } from 'lucide-react';
 import { UP_NAVY } from '@/lib/public/constants';
 import {
-  DISTRICT_SCHOOL_CHART,
+  ALL_DISTRICTS,
   DISTRICT_RANKINGS,
   MANDALS,
   mandalSqaafStats,
+  districtSqaafStats,
   domainAveragesForDistrict,
   performanceDistributionForDistrict,
 } from '@/lib/public/dummyData';
@@ -46,25 +47,25 @@ const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333', '#1B2A6B', '#8C5E3C'];
 // Score bands and descriptions match scoreToLevel()/levelDescription() in lib/public/schoolProfile.ts
 const DISTRIBUTION_INFO = {
   Uday: {
-    range: 'below 50%',
-    desc: 'Foundational level, needs focused improvement across key domains.',
+    range: 'upto 55%',
+    desc: 'Needs improvement.',
   },
   Unnat: {
-    range: '50-75%',
-    desc: 'Steady progress, with room to strengthen teaching and infrastructure.',
+    range: '55% to 80%',
+    desc: 'Performing satisfactorily.',
   },
   Utkarsh: {
-    range: 'above 75%',
-    desc: 'Strong performance, meeting SQAAF excellence benchmarks.',
+    range: 'above 80%',
+    desc: 'Exemplary performance.',
   },
 } as const;
 
-// Statewide totals (illustrative — pending latest UDISE+ import)
+// Statewide totals — 2,48,998 total schools in UP
 const STATE_TOTALS = {
-  government: 108320,
-  aided: 8470,
-  private: 28940,
-  other: 4810,
+  government: 179200,
+  aided: 14000,
+  private: 47850,
+  other: 7948,
 };
 
 function formatIN(n: number) {
@@ -76,15 +77,9 @@ function districtTotals(district: string) {
     const { government, aided, private: priv, other } = STATE_TOTALS;
     return { government, aided, private: priv, other };
   }
-  const row = DISTRICT_SCHOOL_CHART.find((r) => r.district === district);
-  if (!row) return STATE_TOTALS;
-  const base = row.Government + row.Aided + row.Private;
-  return {
-    government: row.Government,
-    aided: row.Aided,
-    private: row.Private,
-    other: Math.round(base * 0.06),
-  };
+  const stats = districtSqaafStats(district);
+  const other = Math.max(0, stats.totalSchools - stats.govt - stats.aided - stats.private);
+  return { government: stats.govt, aided: stats.aided, private: stats.private, other };
 }
 
 const QUICK_ACCESS = [
@@ -107,6 +102,29 @@ const QUICK_ACCESS = [
     icon: GitCompareArrows,
   },
 ] as const;
+
+function DomainAxisTick({
+  x,
+  y,
+  payload,
+}: {
+  x: string | number;
+  y: string | number;
+  payload: { value: string };
+}) {
+  const words = payload.value.split(' ');
+  const mid = Math.ceil(words.length / 2);
+  const line1 = words.slice(0, mid).join(' ');
+  const line2 = words.slice(mid).join(' ');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="middle" fontSize={10} fill="#4B5563">
+        <tspan x={0} dy={12}>{line1}</tspan>
+        <tspan x={0} dy={13}>{line2}</tspan>
+      </text>
+    </g>
+  );
+}
 
 export function HomeContent() {
   const router = useRouter();
@@ -165,26 +183,26 @@ export function HomeContent() {
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
         >
           <option>All Districts</option>
-          {DISTRICT_SCHOOL_CHART.map((r) => (
-            <option key={r.district}>{r.district}</option>
+          {ALL_DISTRICTS.map((d) => (
+            <option key={d}>{d}</option>
           ))}
         </select>
       </div>
 
       {/* Headline stats */}
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
-        <div className="flex items-start justify-between rounded-xl border-l-4 border-[#1B2A6B] bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between rounded-xl bg-[#1B2A6B] p-5 text-white shadow-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
               Total Schools
             </p>
-            <p className="mt-2 text-3xl font-bold text-[#1B2A6B]">{formatIN(totalSchools)}</p>
+            <p className="mt-2 text-3xl font-bold">{formatIN(totalSchools)}</p>
           </div>
-          <div className="rounded-lg bg-[#1B2A6B]/10 p-2.5 text-[#1B2A6B]">
+          <div className="rounded-lg bg-white/15 p-2.5">
             <Building2 size={20} />
           </div>
         </div>
-        <div className="flex items-start justify-between rounded-xl border-l-4 border-[#1B2A6B] bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between rounded-xl bg-white p-5 shadow-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Schools Assessed
@@ -195,14 +213,14 @@ export function HomeContent() {
             <GraduationCap size={20} />
           </div>
         </div>
-        <div className="flex items-start justify-between rounded-xl border-l-4 border-[#F5B731] bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between rounded-xl bg-[#F5B731] p-5 text-[#1B2A6B] shadow-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#1B2A6B]/80">
               SQAAF Verified Schools
             </p>
-            <p className="mt-2 text-3xl font-bold text-[#1B2A6B]">{formatIN(verified)}</p>
+            <p className="mt-2 text-3xl font-bold">{formatIN(verified)}</p>
           </div>
-          <div className="rounded-lg bg-[#F5B731]/15 p-2.5 text-[#92400E]">
+          <div className="rounded-lg bg-[#1B2A6B]/10 p-2.5">
             <BadgeCheck size={20} />
           </div>
         </div>
@@ -210,36 +228,46 @@ export function HomeContent() {
 
       {/* About */}
       <section className="mt-8 rounded-xl border-l-4 border-gray-300 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900">About UP SSSA</h2>
+        <h2 className="text-base font-semibold text-gray-900">
+          About Uttar Pradesh State School Standard Authority
+        </h2>
         <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          The State School Standards Authority (SSSA), Uttar Pradesh is an independent
-          regulatory body set up under India&apos;s NEP 2020 to set, monitor, and enforce
-          quality standards for government, aided, and private schools across the state.
+          The Uttar Pradesh State School Standard Authority is an independent body (set up
+          under India&apos;s NEP 2020) that sets and monitors quality standards for schools
+          statewide. Every school runs a{' '}
+          <strong className="text-gray-800">
+            Uttar Pradesh School Quality Assessment and Accreditation Framework
+          </strong>{' '}
+          self-assessment and lands in one of three tiers based on its score:
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          <strong className="text-gray-800">UP-SQAAF</strong> (School Quality Assessment and
-          Assurance Framework) is the tool schools use to assess themselves across 5 domains —
-          infrastructure &amp; safety, administration &amp; leadership, teaching &amp; learning,
-          assessment of learning outcomes, and inclusiveness.
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          After completing this self-assessment, each school is placed into one of three
-          tiers based on its overall score: <strong className="text-gray-800">Uday</strong>{' '}
-          (below 50%, foundational — needs support),{' '}
-          <strong className="text-gray-800">Unnat</strong> (50-75%, developing — steady
-          progress), or <strong className="text-gray-800">Utkarsh</strong> (above 75%,
-          advanced — strong practices).
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          The goal isn&apos;t to penalize schools — it&apos;s to give every school a clear,
-          evidence-based picture of where it stands and what to improve next, so more schools
-          move from Uday to Unnat to Utkarsh over time.
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-[#FCE7F3] p-4">
+            <p className="font-bold text-[#1B2A6B]">Uday</p>
+            <p className="mt-1 text-xs font-medium text-gray-700">Upto 55%</p>
+            <p className="mt-2 text-sm text-gray-600">Needs improvement</p>
+          </div>
+          <div className="rounded-lg bg-[#FEF9C3] p-4">
+            <p className="font-bold text-[#1B2A6B]">Unnat</p>
+            <p className="mt-1 text-xs font-medium text-gray-700">55% to 80%</p>
+            <p className="mt-2 text-sm text-gray-600">Performing satisfactorily</p>
+          </div>
+          <div className="rounded-lg bg-[#DCFCE7] p-4">
+            <p className="font-bold text-[#1B2A6B]">Utkarsh</p>
+            <p className="mt-1 text-xs font-medium text-gray-700">Above 80%</p>
+            <p className="mt-2 text-sm text-gray-600">Exemplary performance</p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-relaxed text-gray-600">
+          The goal isn&apos;t to penalize schools — it&apos;s to help every school see clearly
+          where it stands and move up a tier over time.
         </p>
         <Link
           href="/public/about"
           className="mt-3 inline-block text-sm font-medium text-[#1B2A6B] underline hover:no-underline"
         >
-          Learn more about UP SSSA and UP-SQAAF
+          Learn more about the Authority and its assessment framework
         </Link>
       </section>
 
@@ -292,8 +320,8 @@ export function HomeContent() {
               className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs shadow-sm"
             >
               <option>All Districts</option>
-              {DISTRICT_SCHOOL_CHART.map((r) => (
-                <option key={r.district}>{r.district}</option>
+              {ALL_DISTRICTS.map((d) => (
+                <option key={d}>{d}</option>
               ))}
             </select>
           </div>
@@ -326,14 +354,13 @@ export function HomeContent() {
             <h3 className="mb-3 text-sm font-medium text-gray-700">Domain-wise Average Score</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={domainAverages} margin={{ top: 8, right: 8, bottom: 48 }}>
+                <BarChart data={domainAverages} margin={{ top: 8, right: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="domain"
-                    angle={-25}
-                    textAnchor="end"
                     interval={0}
-                    tick={{ fontSize: 10 }}
+                    height={40}
+                    tick={(props) => <DomainAxisTick {...props} />}
                   />
                   <YAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <Tooltip />
@@ -345,8 +372,8 @@ export function HomeContent() {
           <div>
             <h3 className="mb-3 text-sm font-medium text-gray-700">Performance Distribution</h3>
             <p className="mb-3 text-xs text-gray-500">
-              After completing a UP-SQAAF self-assessment, every school is placed into one of
-              three performance tiers:
+              After completing a self-assessment, every school is placed into one of three
+              performance tiers:
             </p>
             <div className="mb-4 space-y-2">
               {performanceDistribution.map((entry) => {

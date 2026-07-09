@@ -39,8 +39,25 @@ import {
 } from '@/lib/public/dummyData';
 
 const MANDAL_ROWS = MANDALS.map(mandalSqaafStats);
-const topDistricts = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 5);
+const ALL_RANKED_DISTRICTS = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score);
+const topDistricts = ALL_RANKED_DISTRICTS.slice(0, 5);
 const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333', '#1B2A6B', '#8C5E3C'];
+
+// Score bands and descriptions match scoreToLevel()/levelDescription() in lib/public/schoolProfile.ts
+const DISTRIBUTION_INFO = {
+  Uday: {
+    range: 'below 50%',
+    desc: 'Foundational level, needs focused improvement across key domains.',
+  },
+  Unnat: {
+    range: '50-75%',
+    desc: 'Steady progress, with room to strengthen teaching and infrastructure.',
+  },
+  Utkarsh: {
+    range: 'above 75%',
+    desc: 'Strong performance, meeting SQAAF excellence benchmarks.',
+  },
+} as const;
 
 // Statewide totals (illustrative — pending latest UDISE+ import)
 const STATE_TOTALS = {
@@ -156,18 +173,18 @@ export function HomeContent() {
 
       {/* Headline stats */}
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
-        <div className="flex items-start justify-between rounded-xl bg-[#1B2A6B] p-5 text-white shadow-sm">
+        <div className="flex items-start justify-between rounded-xl border-l-4 border-[#1B2A6B] bg-white p-5 shadow-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Total Schools
             </p>
-            <p className="mt-2 text-3xl font-bold">{formatIN(totalSchools)}</p>
+            <p className="mt-2 text-3xl font-bold text-[#1B2A6B]">{formatIN(totalSchools)}</p>
           </div>
-          <div className="rounded-lg bg-white/15 p-2.5">
+          <div className="rounded-lg bg-[#1B2A6B]/10 p-2.5 text-[#1B2A6B]">
             <Building2 size={20} />
           </div>
         </div>
-        <div className="flex items-start justify-between rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between rounded-xl border-l-4 border-[#1B2A6B] bg-white p-5 shadow-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Schools Assessed
@@ -178,94 +195,56 @@ export function HomeContent() {
             <GraduationCap size={20} />
           </div>
         </div>
-        <div className="flex items-start justify-between rounded-xl bg-[#F5B731] p-5 text-[#1B2A6B] shadow-sm">
+        <div className="flex items-start justify-between rounded-xl border-l-4 border-[#F5B731] bg-white p-5 shadow-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1B2A6B]/80">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               SQAAF Verified Schools
             </p>
-            <p className="mt-2 text-3xl font-bold">{formatIN(verified)}</p>
+            <p className="mt-2 text-3xl font-bold text-[#1B2A6B]">{formatIN(verified)}</p>
           </div>
-          <div className="rounded-lg bg-[#1B2A6B]/10 p-2.5">
+          <div className="rounded-lg bg-[#F5B731]/15 p-2.5 text-[#92400E]">
             <BadgeCheck size={20} />
           </div>
         </div>
       </div>
 
-      {/* Domain Performance Analytics */}
-      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900">Domain Performance Analytics</h2>
-        <p className="mt-1 text-xs text-gray-500">
-          {district === 'All Districts' ? 'Statewide average' : district} · updates with the
-          district filter above
+      {/* About */}
+      <section className="mt-8 rounded-xl border-l-4 border-gray-300 bg-white p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-gray-900">About UP SSSA</h2>
+        <p className="mt-3 text-sm leading-relaxed text-gray-600">
+          The State School Standards Authority (SSSA), Uttar Pradesh is an independent
+          regulatory body set up under India&apos;s NEP 2020 to set, monitor, and enforce
+          quality standards for government, aided, and private schools across the state.
         </p>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              <TrendingUp size={16} />
-              Top Performing Domain
-            </p>
-            <p className="mt-2 text-lg font-bold text-[#1B2A6B]">{topDomain.domain}</p>
-            <p className="text-2xl font-bold text-emerald-600">{topDomain.score}%</p>
-          </div>
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-red-700">
-              <TrendingDown size={16} />
-              Least Performing Domain
-            </p>
-            <p className="mt-2 text-lg font-bold text-[#1B2A6B]">{leastDomain.domain}</p>
-            <p className="text-2xl font-bold text-red-500">{leastDomain.score}%</p>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <div>
-            <h3 className="mb-3 text-sm font-medium text-gray-700">Domain-wise Average Score</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={domainAverages}
-                  margin={{ left: 8, right: 16 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="domain" width={140} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="score" fill={UP_NAVY} radius={[0, 4, 4, 0]} name="Score" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-3 text-sm font-medium text-gray-700">Performance Distribution</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={performanceDistribution}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="45%"
-                    outerRadius={90}
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {performanceDistribution.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
+        <p className="mt-3 text-sm leading-relaxed text-gray-600">
+          <strong className="text-gray-800">UP-SQAAF</strong> (School Quality Assessment and
+          Assurance Framework) is the tool schools use to assess themselves across 5 domains —
+          infrastructure &amp; safety, administration &amp; leadership, teaching &amp; learning,
+          assessment of learning outcomes, and inclusiveness.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-gray-600">
+          After completing this self-assessment, each school is placed into one of three
+          tiers based on its overall score: <strong className="text-gray-800">Uday</strong>{' '}
+          (below 50%, foundational — needs support),{' '}
+          <strong className="text-gray-800">Unnat</strong> (50-75%, developing — steady
+          progress), or <strong className="text-gray-800">Utkarsh</strong> (above 75%,
+          advanced — strong practices).
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-gray-600">
+          The goal isn&apos;t to penalize schools — it&apos;s to give every school a clear,
+          evidence-based picture of where it stands and what to improve next, so more schools
+          move from Uday to Unnat to Utkarsh over time.
+        </p>
+        <Link
+          href="/public/about"
+          className="mt-3 inline-block text-sm font-medium text-[#1B2A6B] underline hover:no-underline"
+        >
+          Learn more about UP SSSA and UP-SQAAF
+        </Link>
       </section>
 
       {/* Top Performing Districts */}
-      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
+      <section className="mt-8 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900">
           Top 5 Districts — Best Performing Schools
         </h2>
@@ -298,8 +277,121 @@ export function HomeContent() {
         </div>
       </section>
 
+      {/* Domain Performance Analytics */}
+      <section className="mt-8 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-gray-900">Domain Performance Analytics</h2>
+          <div className="flex items-center gap-2">
+            <label htmlFor="domain-district" className="text-xs font-medium text-gray-600">
+              District:
+            </label>
+            <select
+              id="domain-district"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs shadow-sm"
+            >
+              <option>All Districts</option>
+              {DISTRICT_SCHOOL_CHART.map((r) => (
+                <option key={r.district}>{r.district}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          {district === 'All Districts' ? 'Statewide average' : district}
+        </p>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              <TrendingUp size={16} />
+              Top Performing Domain
+            </p>
+            <p className="mt-2 text-lg font-bold text-[#1B2A6B]">{topDomain.domain}</p>
+            <p className="text-2xl font-bold text-emerald-600">{topDomain.score}%</p>
+          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-red-700">
+              <TrendingDown size={16} />
+              Least Performing Domain
+            </p>
+            <p className="mt-2 text-lg font-bold text-[#1B2A6B]">{leastDomain.domain}</p>
+            <p className="text-2xl font-bold text-red-500">{leastDomain.score}%</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-700">Domain-wise Average Score</h3>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={domainAverages} margin={{ top: 8, right: 8, bottom: 48 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="domain"
+                    angle={-25}
+                    textAnchor="end"
+                    interval={0}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="score" fill={UP_NAVY} radius={[4, 4, 0, 0]} name="Score" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-700">Performance Distribution</h3>
+            <p className="mb-3 text-xs text-gray-500">
+              After completing a UP-SQAAF self-assessment, every school is placed into one of
+              three performance tiers:
+            </p>
+            <div className="mb-4 space-y-2">
+              {performanceDistribution.map((entry) => {
+                const info = DISTRIBUTION_INFO[entry.name as keyof typeof DISTRIBUTION_INFO];
+                return (
+                  <p key={entry.name} className="flex items-start gap-2 text-xs text-gray-600">
+                    <span
+                      className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: entry.fill }}
+                    />
+                    <span>
+                      <strong className="text-gray-800">{entry.name}</strong>{' '}
+                      <span className="text-gray-400">({info.range})</span> — {info.desc}
+                    </span>
+                  </p>
+                );
+              })}
+            </div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={performanceDistribution}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    isAnimationActive={false}
+                  >
+                    {performanceDistribution.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value}%`} />
+                  <Legend formatter={(value, entry) => `${value}: ${(entry.payload as { value: number }).value}%`} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SQAAF Submission Analytics */}
-      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
+      <section className="mt-8 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900">SQAAF Submission Analytics</h2>
         <p className="mt-1 text-xs text-gray-500">
           All 18 mandals · open a mandal to see its districts
@@ -350,18 +442,8 @@ export function HomeContent() {
         </div>
       </section>
 
-      {/* About */}
-      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900">About UP SSSA</h2>
-        <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          The State School Standards Authority, Uttar Pradesh, monitors and accredits all
-          schools across the state — government, aided, and private — to ensure quality
-          education aligned with NEP 2020 and the SQAAF framework.
-        </p>
-      </section>
-
       {/* Quick access */}
-      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
+      <section className="mt-8 rounded-xl border-l-4 border-gray-300 bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900">Quick Access</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {QUICK_ACCESS.map(({ href, title, description, icon: Icon }) => (

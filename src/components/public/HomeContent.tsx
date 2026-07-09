@@ -292,7 +292,7 @@ export function HomeContent() {
                 <div
                   className="h-2.5 rounded-full"
                   style={{
-                    width: `${(row.score / topDistricts[0].score) * 100}%`,
+                    width: `${row.score}%`,
                     backgroundColor: MEDAL_COLORS[i],
                   }}
                 />

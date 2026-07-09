@@ -39,11 +39,11 @@ export default async function MandalDistrictsPage({
               <th className="px-3 py-2">District</th>
               <th className="px-3 py-2">Total Schools</th>
               <th className="px-3 py-2">Government</th>
+              <th className="px-3 py-2">Govt Aided Schools</th>
               <th className="px-3 py-2">Private</th>
               <th className="px-3 py-2">Students</th>
               <th className="px-3 py-2">Teachers</th>
               <th className="px-3 py-2">SQAAF Verified</th>
-              <th className="px-3 py-2">Recognition</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -52,11 +52,11 @@ export default async function MandalDistrictsPage({
                 <td className="px-3 py-2 font-medium text-[#1B2A6B]">{row.district}</td>
                 <td className="px-3 py-2">{row.totalSchools.toLocaleString('en-IN')}</td>
                 <td className="px-3 py-2">{row.govt.toLocaleString('en-IN')}</td>
+                <td className="px-3 py-2">{row.aided.toLocaleString('en-IN')}</td>
                 <td className="px-3 py-2">{row.private.toLocaleString('en-IN')}</td>
                 <td className="px-3 py-2">{row.students.toLocaleString('en-IN')}</td>
                 <td className="px-3 py-2">{row.teachers.toLocaleString('en-IN')}</td>
                 <td className="px-3 py-2">{row.verified.toLocaleString('en-IN')}</td>
-                <td className="px-3 py-2">{row.recognition}%</td>
               </tr>
             ))}
           </tbody>

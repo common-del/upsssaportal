@@ -287,11 +287,11 @@ export function HomeContent() {
                 <th className="px-3 py-2">Districts</th>
                 <th className="px-3 py-2">Total Schools</th>
                 <th className="px-3 py-2">Government</th>
+                <th className="px-3 py-2">Govt Aided Schools</th>
                 <th className="px-3 py-2">Private</th>
                 <th className="px-3 py-2">Students</th>
                 <th className="px-3 py-2">Teachers</th>
                 <th className="px-3 py-2">SQAAF Verified</th>
-                <th className="px-3 py-2">Recognition</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -310,11 +310,11 @@ export function HomeContent() {
                   <td className="px-3 py-2">{row.districtCount}</td>
                   <td className="px-3 py-2">{row.totalSchools.toLocaleString('en-IN')}</td>
                   <td className="px-3 py-2">{row.govt.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.aided.toLocaleString('en-IN')}</td>
                   <td className="px-3 py-2">{row.private.toLocaleString('en-IN')}</td>
                   <td className="px-3 py-2">{row.students.toLocaleString('en-IN')}</td>
                   <td className="px-3 py-2">{row.teachers.toLocaleString('en-IN')}</td>
                   <td className="px-3 py-2">{row.verified.toLocaleString('en-IN')}</td>
-                  <td className="px-3 py-2">{row.recognition}%</td>
                   <td className="px-3 py-2 text-gray-400">
                     <ChevronRight size={16} />
                   </td>

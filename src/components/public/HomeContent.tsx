@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -9,6 +10,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  PieChart,
+  Pie,
+  Cell,
   Legend,
   ResponsiveContainer,
 } from 'recharts';
@@ -20,12 +24,20 @@ import {
   BadgeCheck,
   FileText,
   GitCompareArrows,
+  TrendingUp,
+  TrendingDown,
+  ChevronRight,
 } from 'lucide-react';
-import { UP_NAVY, UP_GOLD } from '@/lib/public/constants';
-import { DISTRICT_SCHOOL_CHART } from '@/lib/public/dummyData';
+import { UP_NAVY } from '@/lib/public/constants';
+import {
+  DISTRICT_SCHOOL_CHART,
+  MANDALS,
+  mandalSqaafStats,
+  domainAveragesForDistrict,
+  performanceDistributionForDistrict,
+} from '@/lib/public/dummyData';
 
-const AIDED_BLUE = '#3B82F6';
-const OTHER_GREEN = '#22C55E';
+const MANDAL_ROWS = MANDALS.map(mandalSqaafStats);
 
 // Statewide totals (illustrative — pending latest UDISE+ import)
 const STATE_TOTALS = {
@@ -83,6 +95,7 @@ const PENDING_BADGE = (
 );
 
 export function HomeContent() {
+  const router = useRouter();
   const [district, setDistrict] = useState('All Districts');
 
   const totals = districtTotals(district);
@@ -90,14 +103,10 @@ export function HomeContent() {
   const assessed = Math.round(totalSchools * 0.3);
   const verified = Math.round(totalSchools * 0.256);
 
-  const chartData = (
-    district === 'All Districts'
-      ? DISTRICT_SCHOOL_CHART
-      : DISTRICT_SCHOOL_CHART.filter((r) => r.district === district)
-  ).map((r) => ({
-    ...r,
-    Other: Math.round((r.Government + r.Aided + r.Private) * 0.06),
-  }));
+  const domainAverages = domainAveragesForDistrict(district);
+  const performanceDistribution = performanceDistributionForDistrict(district);
+  const topDomain = domainAverages.reduce((a, b) => (b.score > a.score ? b : a));
+  const leastDomain = domainAverages.reduce((a, b) => (b.score < a.score ? b : a));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -185,34 +194,134 @@ export function HomeContent() {
         </div>
       </div>
 
-      {/* District-wise chart */}
+      {/* Domain Performance Analytics */}
       <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-900">
-            District-wise Schools under UP SSSA jurisdiction
-          </h2>
+          <h2 className="text-base font-semibold text-gray-900">Domain Performance Analytics</h2>
           {PENDING_BADGE}
         </div>
-        <div className="mt-4 h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="district"
-                angle={-45}
-                textAnchor="end"
-                interval={0}
-                tick={{ fontSize: 11 }}
-              />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 12 }} />
-              <Bar dataKey="Government" stackId="a" fill={UP_NAVY} />
-              <Bar dataKey="Aided" stackId="a" fill={AIDED_BLUE} />
-              <Bar dataKey="Private" stackId="a" fill={UP_GOLD} />
-              <Bar dataKey="Other" stackId="a" fill={OTHER_GREEN} />
-            </BarChart>
-          </ResponsiveContainer>
+        <p className="mt-1 text-xs text-gray-500">
+          {district === 'All Districts' ? 'Statewide average' : district} · updates with the
+          district filter above
+        </p>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              <TrendingUp size={16} />
+              Top Performing Domain
+            </p>
+            <p className="mt-2 text-lg font-bold text-[#1B2A6B]">{topDomain.domain}</p>
+            <p className="text-2xl font-bold text-emerald-600">{topDomain.score}%</p>
+          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-red-700">
+              <TrendingDown size={16} />
+              Least Performing Domain
+            </p>
+            <p className="mt-2 text-lg font-bold text-[#1B2A6B]">{leastDomain.domain}</p>
+            <p className="text-2xl font-bold text-red-500">{leastDomain.score}%</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-700">Domain-wise Average Score</h3>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={domainAverages}
+                  margin={{ left: 8, right: 16 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="domain" width={140} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="score" fill={UP_NAVY} radius={[0, 4, 4, 0]} name="Score" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-700">Performance Distribution</h3>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={performanceDistribution}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="45%"
+                    outerRadius={90}
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {performanceDistribution.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SQAAF Submission Analytics */}
+      <section className="mt-8 rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-gray-900">SQAAF Submission Analytics</h2>
+          {PENDING_BADGE}
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          All 18 mandals · open a mandal to see its districts
+        </p>
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[880px] text-left text-sm">
+            <thead className="border-b bg-gray-50 text-xs font-semibold uppercase text-gray-600">
+              <tr>
+                <th className="px-3 py-2">Mandal</th>
+                <th className="px-3 py-2">Districts</th>
+                <th className="px-3 py-2">Total Schools</th>
+                <th className="px-3 py-2">Government</th>
+                <th className="px-3 py-2">Private</th>
+                <th className="px-3 py-2">Students</th>
+                <th className="px-3 py-2">Teachers</th>
+                <th className="px-3 py-2">SQAAF Verified</th>
+                <th className="px-3 py-2">Recognition</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {MANDAL_ROWS.map((row) => (
+                <tr
+                  key={row.code}
+                  onClick={() => router.push(`/public/reports/mandal/${row.code}`)}
+                  className="cursor-pointer hover:bg-gray-50"
+                >
+                  <td className="px-3 py-2 font-medium text-[#1B2A6B]">
+                    <Link href={`/public/reports/mandal/${row.code}`} className="hover:underline">
+                      {row.name}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2">{row.districtCount}</td>
+                  <td className="px-3 py-2">{row.totalSchools.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.govt.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.private.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.students.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.teachers.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.verified.toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2">{row.recognition}%</td>
+                  <td className="px-3 py-2 text-gray-400">
+                    <ChevronRight size={16} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

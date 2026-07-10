@@ -125,13 +125,6 @@ export const MANAGEMENT_PERFORMANCE = [
   { type: 'Private', score: 62, fill: '#F97316' },
 ];
 
-export const LEVEL_PERFORMANCE = [
-  { level: 'Primary', score: 51 },
-  { level: 'Upper Primary', score: 55 },
-  { level: 'Secondary', score: 59 },
-  { level: 'Higher Secondary', score: 63 },
-];
-
 export const DISTRICT_RANKINGS = [
   { district: 'Lucknow', score: 63.1 },
   { district: 'Kanpur', score: 61.4 },
@@ -164,8 +157,18 @@ export function getHeatmapData(): {
   }));
 }
 
+/** Average SQAAF score for a district: the curated figure for the 10 sample
+ * districts, or a deterministic offset from the state average for the rest
+ * (pending real per-district SQAAF data for all 75 districts). */
+function districtAvgScore(district: string): number {
+  const curated = DISTRICT_RANKINGS.find((d) => d.district === district);
+  if (curated) return curated.score;
+  const offset = (hashString(district) % 41) - 20;
+  return Math.round((STATE_AVG + offset) * 10) / 10;
+}
+
 export function getTopSchoolsByDistrict(): {
-  district: District;
+  district: string;
   avgScore: number;
   schools: {
     rank: number;
@@ -175,31 +178,33 @@ export function getTopSchoolsByDistrict(): {
     score: number;
   }[];
 }[] {
-  return DISTRICTS.map((district) => {
+  return ALL_DISTRICTS.map((district) => {
     const districtSchools = SCHOOLS.filter((s) => s.district === district)
       .sort((a, b) => b.overallScore - a.overallScore)
       .slice(0, 3);
+    const avgScore = districtAvgScore(district);
+    const clamp = (n: number) => Math.max(20, Math.min(98, Math.round(n)));
     const fallback = [
       {
         rank: 1,
         name: `${district} Model School`,
         type: 'Government' as SchoolType,
         level: 'Secondary' as SchoolLevel,
-        score: 72,
+        score: clamp(avgScore + 9),
       },
       {
         rank: 2,
         name: `${district} Public Academy`,
         type: 'Private' as SchoolType,
         level: 'Higher Secondary' as SchoolLevel,
-        score: 68,
+        score: clamp(avgScore + 4),
       },
       {
         rank: 3,
         name: `${district} Aided High School`,
         type: 'Aided' as SchoolType,
         level: 'Upper Primary' as SchoolLevel,
-        score: 61,
+        score: clamp(avgScore - 6),
       },
     ];
     const schools =
@@ -212,8 +217,6 @@ export function getTopSchoolsByDistrict(): {
             score: s.overallScore,
           }))
         : fallback;
-    const avgScore =
-      DISTRICT_RANKINGS.find((d) => d.district === district)?.score ?? 54;
     return { district, avgScore, schools };
   });
 }

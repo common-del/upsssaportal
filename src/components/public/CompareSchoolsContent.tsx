@@ -15,24 +15,16 @@ import {
 } from 'recharts';
 import { GraduationCap, Trophy, Star, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import {
-  SCHOOL_LEVELS,
-  SCHOOL_TYPES,
-  SQAAF_DOMAINS,
-  UP_NAVY,
-} from '@/lib/public/constants';
+import { SCHOOL_TYPES, SQAAF_DOMAINS } from '@/lib/public/constants';
 import type { PerformanceLevel } from '@/lib/public/constants';
 import { DIRECTORY_LEVEL_BADGE, scoreToLevel } from '@/lib/public/schoolProfile';
 import {
   SCHOOLS,
   ALL_DISTRICTS,
   MANAGEMENT_PERFORMANCE,
-  LEVEL_PERFORMANCE,
   DISTRICT_RANKINGS,
-  getHeatmapData,
   getTopSchoolsByDistrict,
   scoreToStars,
-  heatmapCellColor,
   type SchoolRecord,
 } from '@/lib/public/dummyData';
 import { SearchableSelect } from '@/components/public/SearchableSelect';
@@ -60,11 +52,17 @@ const LEVEL_PILL_LARGE: Record<PerformanceLevel, string> = {
 const TABS = ['Overview', 'Top by District', 'Compare Schools'] as const;
 type Tab = (typeof TABS)[number];
 
+// Same ranked medal-list treatment as the homepage's "Top 5 Districts" section.
+const TOP_5_DISTRICTS = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 5);
+const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333', '#1B2A6B', '#8C5E3C'];
+
+const DISTRICTS_PER_PAGE = 12;
+
 export type CompareInitialState = {
   tab?: string;
   schools?: string;
   district?: string;
-  level?: string;
+  type?: string;
   search?: string;
 };
 
@@ -205,8 +203,6 @@ function CompareReportCard({ school }: { school: SchoolRecord }) {
 }
 
 function OverviewTab() {
-  const heatmap = getHeatmapData();
-
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -219,106 +215,106 @@ function OverviewTab() {
         <SummaryCard title="BEST MANAGEMENT" value="Private" subtitle="Avg 61.5%" />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <ChartCard title="Management-wise Performance">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={MANAGEMENT_PERFORMANCE}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="type" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="score" name="Avg Score">
-                {MANAGEMENT_PERFORMANCE.map((entry) => (
-                  <Cell key={entry.type} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-        <ChartCard title="School Level-wise Performance">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={LEVEL_PERFORMANCE}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="level"
-                tick={{ fontSize: 10 }}
-                interval={0}
-                angle={-15}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="score" fill={UP_NAVY} name="Avg Score" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      <ChartCard title="District Rankings" className="mt-6">
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart layout="vertical" data={DISTRICT_RANKINGS} margin={{ left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-            <XAxis type="number" domain={[0, 100]} />
-            <YAxis type="category" dataKey="district" width={90} tick={{ fontSize: 11 }} />
+      <ChartCard title="Management-wise Performance" className="mt-6">
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={MANAGEMENT_PERFORMANCE}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="type" tick={{ fontSize: 11 }} />
+            <YAxis domain={[0, 100]} />
             <Tooltip />
-            <Bar dataKey="score" fill={UP_NAVY} name="Avg SQAAF" />
+            <Bar dataKey="score" name="Avg Score">
+              {MANAGEMENT_PERFORMANCE.map((entry) => (
+                <Cell key={entry.type} fill={entry.fill} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      <div className="mt-6 overflow-x-auto rounded-xl bg-white p-4 shadow-sm">
-        <h3 className="font-semibold text-[#1B2A6B]">District × Management Heatmap</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Average SQAAF score by district and management type.
-        </p>
-        <table className="mt-4 w-full min-w-[480px] text-center text-xs sm:text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="px-2 py-2 text-left">District</th>
-              {SCHOOL_TYPES.map((t) => (
-                <th key={t} className="px-2 py-2">
-                  {t}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {heatmap.map((row) => (
-              <tr key={row.district} className="border-b border-gray-100">
-                <td className="px-2 py-2 text-left font-medium">{row.district}</td>
-                {SCHOOL_TYPES.map((type) => {
-                  const score = row.scores[type];
-                  return (
-                    <td key={type} className="px-1 py-1">
-                      <div
-                        className="flex min-h-[48px] items-center justify-center rounded-md px-2 py-2 font-semibold"
-                        style={{ backgroundColor: heatmapCellColor(score) }}
-                      >
-                        {score}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-6 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-6 shadow-sm">
+        <h3 className="text-base font-semibold text-gray-900">
+          Top 5 Districts — Best Performing Schools
+        </h3>
+        <p className="mt-1 text-xs text-gray-500">Ranked by average SQAAF school score, statewide</p>
+
+        <div className="mt-5 space-y-3">
+          {TOP_5_DISTRICTS.map((row, i) => (
+            <div key={row.district} className="flex items-center gap-4">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                style={{ backgroundColor: MEDAL_COLORS[i] }}
+              >
+                {i + 1}
+              </div>
+              <div className="w-28 shrink-0 text-sm font-medium text-gray-900">{row.district}</div>
+              <div className="h-2.5 flex-1 rounded-full bg-gray-100">
+                <div
+                  className="h-2.5 rounded-full"
+                  style={{
+                    width: `${row.score}%`,
+                    backgroundColor: MEDAL_COLORS[i],
+                  }}
+                />
+              </div>
+              <div className="w-12 shrink-0 text-right text-sm font-semibold text-[#1B2A6B]">
+                {row.score.toFixed(1)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );
 }
 
 function TopByDistrictTab() {
-  const districts = getTopSchoolsByDistrict();
+  const allDistricts = useMemo(() => getTopSchoolsByDistrict(), []);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allDistricts;
+    return allDistricts.filter((d) => d.district.toLowerCase().includes(q));
+  }, [allDistricts, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / DISTRICTS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice(
+    (currentPage - 1) * DISTRICTS_PER_PAGE,
+    currentPage * DISTRICTS_PER_PAGE,
+  );
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
 
   return (
     <>
-      <p className="text-gray-600">
-        Top performing schools by district based on SQAAF scores.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-gray-600">
+          Top performing schools by district based on SQAAF scores. Covering all 75 districts of
+          Uttar Pradesh.
+        </p>
+        <div className="relative w-full sm:w-64 sm:shrink-0">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="search"
+            placeholder="Search district..."
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm"
+          />
+        </div>
+      </div>
+
+      {paged.length === 0 && (
+        <p className="mt-6 text-sm text-gray-500">No districts match &quot;{search}&quot;.</p>
+      )}
+
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {districts.map(({ district, avgScore, schools }) => (
+        {paged.map(({ district, avgScore, schools }) => (
           <div key={district} className="rounded-xl bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
               <Trophy className="text-[#F5B731]" size={20} />
@@ -347,6 +343,30 @@ function TopByDistrictTab() {
           </div>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-gray-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-gray-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -358,10 +378,10 @@ function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
   const [district, setDistrict] = useState(
     initial?.district && ALL_DISTRICTS.includes(initial.district) ? initial.district : 'All Districts',
   );
-  const [level, setLevel] = useState(
-    initial?.level && (SCHOOL_LEVELS as readonly string[]).includes(initial.level)
-      ? initial.level
-      : 'All Levels',
+  const [type, setType] = useState(
+    initial?.type && (SCHOOL_TYPES as readonly string[]).includes(initial.type)
+      ? initial.type
+      : 'All Types',
   );
   const [search, setSearch] = useState(initial?.search ?? '');
   const [selected, setSelected] = useState<string[]>(() => {
@@ -375,12 +395,12 @@ function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
   const filtered = useMemo(() => {
     return SCHOOLS.filter((s) => {
       if (district !== 'All Districts' && s.district !== district) return false;
-      if (level !== 'All Levels' && s.level !== level) return false;
+      if (type !== 'All Types' && s.type !== type) return false;
       const q = search.toLowerCase();
       if (q && !s.name.toLowerCase().includes(q) && !s.udise.includes(q)) return false;
       return true;
     });
-  }, [district, level, search]);
+  }, [district, type, search]);
 
   const selectedSchools = useMemo(
     () =>
@@ -406,10 +426,10 @@ function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
     params.set('tab', 'compare');
     if (selected.length) params.set('schools', selected.join(','));
     if (district !== 'All Districts') params.set('district', district);
-    if (level !== 'All Levels') params.set('level', level);
+    if (type !== 'All Types') params.set('type', type);
     if (search) params.set('search', search);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [selected, district, level, search, pathname, router]);
+  }, [selected, district, type, search, pathname, router]);
 
   const compareGridClass = cn(
     'mt-8 grid gap-6',
@@ -432,13 +452,13 @@ function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
           className="w-[200px]"
         />
         <select
-          value={level}
-          onChange={(e) => setLevel(e.target.value)}
+          value={type}
+          onChange={(e) => setType(e.target.value)}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
         >
-          <option>All Levels</option>
-          {SCHOOL_LEVELS.map((l) => (
-            <option key={l}>{l}</option>
+          <option>All Types</option>
+          {SCHOOL_TYPES.map((t) => (
+            <option key={t}>{t}</option>
           ))}
         </select>
         <div className="relative min-w-[220px] flex-1">

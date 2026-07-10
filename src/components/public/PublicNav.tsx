@@ -7,8 +7,7 @@ import { cn } from '@/lib/cn';
 
 const NAV_LINKS = [
   { href: '/public', label: 'Homepage' },
-  { href: '/public/find', label: 'Schools' },
-  { href: '/public/reports', label: 'Reports' },
+  { href: '/public/directory', label: 'School Directory' },
   { href: '/public/compare', label: 'Compare Schools' },
   { href: '/public/about', label: 'About' },
 ] as const;

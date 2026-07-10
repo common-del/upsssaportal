@@ -3,9 +3,9 @@ import type { PerformanceLevel } from '@/lib/public/constants';
 import { PERFORMANCE_COLORS } from '@/lib/public/constants';
 
 const TEXT_COLORS: Record<PerformanceLevel, string> = {
-  Uday: 'text-pink-900',
-  Unnat: 'text-amber-900',
-  Utkarsh: 'text-green-900',
+  Uday: 'text-gray-700',
+  Unnat: 'text-[#1B2A6B]',
+  Utkarsh: 'text-[#F5B731]',
 };
 
 export function LevelBadge({

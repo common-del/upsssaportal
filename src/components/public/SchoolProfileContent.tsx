@@ -7,10 +7,12 @@ import {
   BookOpen,
   Building,
   Building2,
+  Check,
   ChevronDown,
   ChevronUp,
   Download,
   Droplets,
+  FileText,
   FlaskConical,
   Flame,
   GraduationCap,
@@ -29,12 +31,13 @@ import { LevelBadge } from '@/components/public/LevelBadge';
 import {
   DIRECTORY_LEVEL_BADGE,
   levelDescription,
+  scoreToLevel,
   type SchoolProfileData,
 } from '@/lib/public/schoolProfile';
 import type { PerformanceLevel } from '@/lib/public/constants';
 
 const NAVY = '#1B2A6B';
-const TABS = ['Overview', 'School Performance (SQAAF)', 'Fee Disclosure'] as const;
+const TABS = ['Overview', 'Performance (SQAAF)', 'Fee Disclosure', 'School Report Card'] as const;
 type TabId = (typeof TABS)[number];
 
 function ProgressBarRow({
@@ -112,11 +115,11 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <Link
-        href="/public/find"
+        href="/public/directory"
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[#1B2A6B] hover:underline print:hidden"
       >
         <ArrowLeft size={16} />
-        Back to search
+        Back to Schools
       </Link>
 
       <div
@@ -152,7 +155,7 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
 
       <div className="mt-6">
         {tab === 'Overview' && <OverviewTab profile={profile} />}
-        {tab === 'School Performance (SQAAF)' && (
+        {tab === 'Performance (SQAAF)' && (
           <PerformanceTab
             profile={profile}
             compareMode={compareMode}
@@ -164,6 +167,7 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
           />
         )}
         {tab === 'Fee Disclosure' && <FeeTab profile={profile} />}
+        {tab === 'School Report Card' && <ReportCardTab profile={profile} />}
       </div>
     </div>
   );
@@ -507,17 +511,6 @@ function PerformanceTab({
 }) {
   return (
     <div className="space-y-8">
-      <div className="flex justify-end print:hidden">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#1B2A6B] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-        >
-          <Download size={16} />
-          Download PDF
-        </button>
-      </div>
-
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <div>
@@ -569,7 +562,17 @@ function PerformanceTab({
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-[#1B2A6B]">Domain-wise Performance</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-[#1B2A6B]">Domain-wise Performance</h2>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#1B2A6B] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 print:hidden"
+          >
+            <Download size={16} />
+            Download Raw Data
+          </button>
+        </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {profile.performance.domains.map((d) => {
             const open = expandedDomains[d.id];
@@ -647,13 +650,123 @@ function FeeTab({ profile }: { profile: SchoolProfileData }) {
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {fields.map((field) => (
-        <div key={field.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">{field.label}</p>
-          <p className="mt-1 font-semibold text-gray-900">{field.value}</p>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-bold text-[#1B2A6B]">Fee Disclosure</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {fields.map((field) => (
+            <div key={field.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              <p className="text-xs text-gray-500">{field.label}</p>
+              <p className="mt-1 font-semibold text-gray-900">{field.value}</p>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
+
+      <section>
+        <h2 className="text-lg font-bold text-[#1B2A6B]">Scholarship Details</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {f.scholarships.map((name) => (
+            <span
+              key={name}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#FEF3C7] px-4 py-2.5 text-sm font-medium text-[#92400E]"
+            >
+              <Check size={16} className="shrink-0" />
+              {name}
+            </span>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ReportCardTab({ profile }: { profile: SchoolProfileData }) {
+  const rc = profile.reportCard;
+  const levelForDomain = (name: string): PerformanceLevel => {
+    const match = rc.domainScores.find((s) => s.name === name);
+    return match ? scoreToLevel(match.score) : profile.performanceLevel;
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-start gap-3 rounded-xl bg-[#FEF3C7] p-4">
+        <FileText className="mt-0.5 h-5 w-5 shrink-0 text-[#92400E]" aria-hidden />
+        <div>
+          <p className="font-semibold text-[#92400E]">Self Evaluated</p>
+          <p className="mt-0.5 text-sm text-[#92400E]/80">
+            These results were submitted by the school and have not yet been independently
+            verified by an external evaluator.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-[#1B2A6B]">School Report Card</h2>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#1B2A6B] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 print:hidden"
+        >
+          <Download size={16} />
+          Download PDF
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-6 text-center shadow-sm">
+        <p className="text-4xl font-bold text-[#1B2A6B]">{profile.overallScore}/100</p>
+        <div className="mt-2 flex justify-center">
+          <LevelBadge level={profile.performanceLevel} />
+        </div>
+        <p className="mx-auto mt-3 max-w-xl text-sm text-gray-600">
+          {levelDescription(profile.performanceLevel)}
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-[#F5B731]">Top 3 Strengths</h3>
+          <ul className="mt-3 space-y-3">
+            {rc.strengths.map((name) => (
+              <li key={name} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-gray-700">{name}</span>
+                <LevelBadge level={levelForDomain(name)} />
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-[#1B2A6B]">3 Areas for Improvement</h3>
+          <ul className="mt-3 space-y-3">
+            {rc.improvements.map((name) => (
+              <li key={name} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-gray-700">{name}</span>
+                <LevelBadge level={levelForDomain(name)} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <section>
+        <h2 className="text-lg font-semibold text-[#1B2A6B]">Domain Summary</h2>
+        <div className="mt-4 space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          {rc.domainScores.map((d) => (
+            <div key={d.name}>
+              <div className="mb-1 flex justify-between text-sm">
+                <span className="text-gray-700">{d.name}</span>
+                <span className="font-medium text-gray-900">{d.score}/100</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-[#F5B731]"
+                  style={{ width: `${d.score}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

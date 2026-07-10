@@ -4,9 +4,9 @@ export const UP_BG = '#F3F4F6';
 export const UP_ORANGE = '#F97316';
 export const UP_GREEN = '#22C55E';
 
-export const LEVEL_UDAY = '#F9A8D4';
-export const LEVEL_UNNAT = '#FDE68A';
-export const LEVEL_UTKARSH = '#86EFAC';
+export const LEVEL_UDAY = '#E5E7EB';
+export const LEVEL_UNNAT = '#F5B731';
+export const LEVEL_UTKARSH = '#1B2A6B';
 
 export const DISTRICTS = [
   'Lucknow',

@@ -7,7 +7,7 @@ export default async function CompareSchoolsPage({
     tab?: string;
     schools?: string;
     district?: string;
-    level?: string;
+    type?: string;
     search?: string;
   }>;
 }) {

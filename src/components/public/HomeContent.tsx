@@ -229,10 +229,10 @@ export function HomeContent() {
       {/* About */}
       <section className="mt-8 rounded-xl border-l-4 border-gray-300 bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900">
-          About Uttar Pradesh State School Standard Authority
+          About State School Standard Authority, Uttar Pradesh
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          The Uttar Pradesh State School Standard Authority is an independent body (set up
+          The State School Standard Authority, Uttar Pradesh is an independent body (set up
           under India&apos;s NEP 2020) that sets and monitors quality standards for schools
           statewide. Every school runs a{' '}
           <strong className="text-gray-800">
@@ -419,7 +419,7 @@ export function HomeContent() {
 
       {/* SQAAF Submission Analytics */}
       <section className="mt-8 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900">SQAAF Submission Analytics</h2>
+        <h2 className="text-base font-semibold text-gray-900">Mandal-wise Analytics</h2>
         <p className="mt-1 text-xs text-gray-500">
           All 18 mandals · open a mandal to see its districts
         </p>
@@ -430,9 +430,9 @@ export function HomeContent() {
                 <th className="px-3 py-2">Mandal</th>
                 <th className="px-3 py-2">Districts</th>
                 <th className="px-3 py-2">Total Schools</th>
-                <th className="px-3 py-2">Government</th>
+                <th className="px-3 py-2">Government Schools</th>
                 <th className="px-3 py-2">Govt Aided Schools</th>
-                <th className="px-3 py-2">Private</th>
+                <th className="px-3 py-2">Private Schools</th>
                 <th className="px-3 py-2">Students</th>
                 <th className="px-3 py-2">Teachers</th>
                 <th className="px-3 py-2">SQAAF Verified</th>

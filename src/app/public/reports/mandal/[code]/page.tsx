@@ -35,9 +35,9 @@ export default async function MandalDistrictsPage({
             <tr>
               <th className="px-3 py-2">District</th>
               <th className="px-3 py-2">Total Schools</th>
-              <th className="px-3 py-2">Government</th>
+              <th className="px-3 py-2">Government Schools</th>
               <th className="px-3 py-2">Govt Aided Schools</th>
-              <th className="px-3 py-2">Private</th>
+              <th className="px-3 py-2">Private Schools</th>
               <th className="px-3 py-2">Students</th>
               <th className="px-3 py-2">Teachers</th>
               <th className="px-3 py-2">SQAAF Verified</th>

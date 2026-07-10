@@ -21,9 +21,9 @@ import { DIRECTORY_LEVEL_BADGE, scoreToLevel } from '@/lib/public/schoolProfile'
 import {
   SCHOOLS,
   ALL_DISTRICTS,
-  MANAGEMENT_PERFORMANCE,
   DISTRICT_RANKINGS,
   getTopSchoolsByDistrict,
+  managementPerformanceForDistrict,
   scoreToStars,
   type SchoolRecord,
 } from '@/lib/public/dummyData';
@@ -52,9 +52,13 @@ const LEVEL_PILL_LARGE: Record<PerformanceLevel, string> = {
 const TABS = ['Overview', 'Top by District', 'Compare Schools'] as const;
 type Tab = (typeof TABS)[number];
 
-// Same ranked medal-list treatment as the homepage's "Top 5 Districts" section.
-const TOP_5_DISTRICTS = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 5);
+// Same ranked medal-list treatment as the homepage's "Top 5 Districts" section,
+// extended to the top 10.
+const TOP_10_DISTRICTS = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 10);
 const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333', '#1B2A6B', '#8C5E3C'];
+function medalColor(rank: number): string {
+  return MEDAL_COLORS[rank] ?? '#1B2A6B';
+}
 
 const DISTRICTS_PER_PAGE = 12;
 
@@ -203,6 +207,12 @@ function CompareReportCard({ school }: { school: SchoolRecord }) {
 }
 
 function OverviewTab() {
+  const [mgmtDistrict, setMgmtDistrict] = useState('All Districts');
+  const managementPerformance = useMemo(
+    () => managementPerformanceForDistrict(mgmtDistrict),
+    [mgmtDistrict],
+  );
+
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -215,34 +225,54 @@ function OverviewTab() {
         <SummaryCard title="BEST MANAGEMENT" value="Private" subtitle="Avg 61.5%" />
       </div>
 
-      <ChartCard title="Management-wise Performance" className="mt-6">
+      <div className="mt-6 rounded-xl bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-semibold text-[#1B2A6B]">Management-wise Performance</h3>
+          <div className="flex items-center gap-2">
+            <label htmlFor="mgmt-district" className="text-xs font-medium text-gray-600">
+              District:
+            </label>
+            <SearchableSelect
+              id="mgmt-district"
+              value={mgmtDistrict}
+              onChange={setMgmtDistrict}
+              options={ALL_DISTRICTS.map((d) => ({ value: d, label: d }))}
+              allLabel="All Districts"
+              allValue="All Districts"
+              searchPlaceholder="Search district..."
+              ariaLabel="District"
+              className="w-[180px]"
+              buttonClassName="px-2.5 py-1.5 text-xs"
+            />
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={MANAGEMENT_PERFORMANCE}>
+          <BarChart data={managementPerformance}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="type" tick={{ fontSize: 11 }} />
             <YAxis domain={[0, 100]} />
             <Tooltip />
             <Bar dataKey="score" name="Avg Score">
-              {MANAGEMENT_PERFORMANCE.map((entry) => (
+              {managementPerformance.map((entry) => (
                 <Cell key={entry.type} fill={entry.fill} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </div>
 
       <div className="mt-6 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-6 shadow-sm">
         <h3 className="text-base font-semibold text-gray-900">
-          Top 5 Districts — Best Performing Schools
+          Top 10 Districts — Best Performing Schools
         </h3>
         <p className="mt-1 text-xs text-gray-500">Ranked by average SQAAF school score, statewide</p>
 
         <div className="mt-5 space-y-3">
-          {TOP_5_DISTRICTS.map((row, i) => (
+          {TOP_10_DISTRICTS.map((row, i) => (
             <div key={row.district} className="flex items-center gap-4">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ backgroundColor: MEDAL_COLORS[i] }}
+                style={{ backgroundColor: medalColor(i) }}
               >
                 {i + 1}
               </div>
@@ -252,7 +282,7 @@ function OverviewTab() {
                   className="h-2.5 rounded-full"
                   style={{
                     width: `${row.score}%`,
-                    backgroundColor: MEDAL_COLORS[i],
+                    backgroundColor: medalColor(i),
                   }}
                 />
               </div>
@@ -534,23 +564,6 @@ function SummaryCard({
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{title}</p>
       <p className="mt-1 text-2xl font-bold text-[#1B2A6B]">{value}</p>
       <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
-    </div>
-  );
-}
-
-function ChartCard({
-  title,
-  children,
-  className,
-}: {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn('rounded-xl bg-white p-4 shadow-sm', className)}>
-      <h3 className="mb-3 font-semibold text-[#1B2A6B]">{title}</h3>
-      {children}
     </div>
   );
 }

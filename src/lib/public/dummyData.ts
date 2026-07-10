@@ -125,6 +125,17 @@ export const MANAGEMENT_PERFORMANCE = [
   { type: 'Private', score: 62, fill: '#F97316' },
 ];
 
+/** Management-wise averages for a district; deterministic offset from the
+ * statewide baseline so the chart visibly changes per selection without real
+ * per-district management-type data (pending UDISE+ / SQAAF import). */
+export function managementPerformanceForDistrict(district: string) {
+  if (district === 'All Districts') return MANAGEMENT_PERFORMANCE;
+  return MANAGEMENT_PERFORMANCE.map(({ type, score, fill }) => {
+    const offset = (hashString(district + type) % 21) - 10;
+    return { type, score: Math.max(30, Math.min(95, score + offset)), fill };
+  });
+}
+
 export const DISTRICT_RANKINGS = [
   { district: 'Lucknow', score: 63.1 },
   { district: 'Kanpur', score: 61.4 },

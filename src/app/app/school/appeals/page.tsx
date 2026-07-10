@@ -1,11 +1,10 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getAppealEligibility, getDifferingParameters } from '@/lib/actions/finalization';
 import AppealForm from '@/components/appeals/AppealForm';
+import { BackButton } from '@/components/common/BackButton';
 
 export default async function SchoolAppealsPage() {
   const session = await auth();
@@ -76,9 +75,7 @@ export default async function SchoolAppealsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link href="/app/school" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToHome')}
-      </Link>
+      <BackButton fallbackHref="/app/school" label={t('backToHome')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
       <h1 className="text-2xl font-bold text-navy-900">{t('title')}</h1>
       <p className="mt-1 text-sm text-text-secondary">{t('subtitle')}</p>
 
@@ -105,9 +102,7 @@ export default async function SchoolAppealsPage() {
 function Wrap({ t, msg }: { t: (k: string) => string; msg: string }) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link href="/app/school" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToHome')}
-      </Link>
+      <BackButton fallbackHref="/app/school" label={t('backToHome')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
       <h1 className="text-2xl font-bold text-navy-900">{t('title')}</h1>
       <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">{msg}</div>
     </div>

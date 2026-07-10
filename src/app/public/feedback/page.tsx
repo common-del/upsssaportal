@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, Search } from 'lucide-react';
+import { AlertTriangle, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import { BackButton } from '@/components/common/BackButton';
 
 export default async function FeedbackPage() {
   const t = await getTranslations('feedbackPage');
@@ -8,13 +9,11 @@ export default async function FeedbackPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link
-        href="/public"
+      <BackButton
+        fallbackHref="/public"
+        label={tc('back')}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
-      >
-        <ArrowLeft size={16} />
-        {tc('back')}
-      </Link>
+      />
 
       <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">
         {t('title')}

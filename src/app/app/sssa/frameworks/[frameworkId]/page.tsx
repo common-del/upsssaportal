@@ -1,9 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { getFrameworkFull } from '@/lib/actions/framework';
+import { BackButton } from '@/components/common/BackButton';
 import FrameworkEditor from '@/components/framework/FrameworkEditor';
 
 export default async function FrameworkEditorPage({
@@ -25,13 +25,11 @@ export default async function FrameworkEditorPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <Link
-        href="/app/sssa/frameworks"
+      <BackButton
+        fallbackHref="/app/sssa/frameworks"
+        label={t('backToFrameworks')}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
-      >
-        <ArrowLeft size={16} />
-        {t('backToFrameworks')}
-      </Link>
+      />
 
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <h1 className="text-2xl font-bold text-navy-900">{t('editorTitle')}</h1>

@@ -2,10 +2,11 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle, Scale } from 'lucide-react';
+import { AlertCircle, Scale } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
 import { getAppealEligibility } from '@/lib/actions/finalization';
+import { BackButton } from '@/components/common/BackButton';
 
 const CATEGORY_TO_CODE: Record<string, string> = {
   Primary: 'PRIMARY',
@@ -94,9 +95,7 @@ export default async function VerifierFeedbackPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <Link href="/app/school" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToHome')}
-      </Link>
+      <BackButton fallbackHref="/app/school" label={t('backToHome')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
 
       <h1 className="text-2xl font-bold text-navy-900">{t('title')}</h1>
       <p className="mt-1 text-sm text-text-secondary">{t('subtitle')}</p>
@@ -222,9 +221,7 @@ async function AppealBanner({ cycleId, schoolUdise, t }: { cycleId: string; scho
 function EmptyWrap({ t, msg }: { t: (k: string) => string; msg: string }) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link href="/app/school" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToHome')}
-      </Link>
+      <BackButton fallbackHref="/app/school" label={t('backToHome')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
       <h1 className="text-2xl font-bold text-navy-900">{t('title')}</h1>
       <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">{msg}</div>
     </div>

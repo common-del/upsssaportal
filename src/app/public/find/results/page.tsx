@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { computeAge, ageToGrade, gradeLabel } from '@/lib/age-to-grade';
 import { ResultsSortSelect } from '@/components/public/ResultsSortSelect';
@@ -192,13 +191,11 @@ export default async function FindResultsPage(props: {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <Link
-        href="/public/find"
+      <BackButton
+        fallbackHref="/public/find"
+        label="Back to search"
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[#1B2A6B] hover:underline"
-      >
-        <ArrowLeft size={16} />
-        Back to search
-      </Link>
+      />
 
       <h1 className="text-2xl font-bold text-[#1B2A6B] sm:text-3xl">Search Results</h1>
 

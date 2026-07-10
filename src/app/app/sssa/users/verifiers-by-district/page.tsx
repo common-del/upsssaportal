@@ -1,9 +1,8 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/db';
+import { BackButton } from '@/components/common/BackButton';
 
 export default async function VerifiersByDistrictPage() {
   const session = await auth();
@@ -80,9 +79,7 @@ export default async function VerifiersByDistrictPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <Link href="/app/sssa/verification/assign" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToAssign')}
-      </Link>
+      <BackButton fallbackHref="/app/sssa/verification/assign" label={t('backToAssign')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
       <h1 className="mb-6 text-2xl font-bold text-navy-900">{t('title')}</h1>
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white">

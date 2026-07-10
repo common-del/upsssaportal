@@ -1,8 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { getUserAuditLogs } from '@/lib/actions/users';
 import EditUserForm from '@/components/users/EditUserForm';
@@ -27,9 +26,11 @@ export default async function SssaEditUserPage({ params }: { params: Promise<{ u
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <Link href="/app/sssa/users" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToUsers')}
-      </Link>
+      <BackButton
+        fallbackHref="/app/sssa/users"
+        label={t('backToUsers')}
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
+      />
       <h1 className="mb-6 text-2xl font-bold text-navy-900">{t('editTitle')}: {user.username}</h1>
       <EditUserForm
         actorId={session.user.id!} actorRole="SSSA_ADMIN"

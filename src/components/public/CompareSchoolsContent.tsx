@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -59,8 +60,16 @@ const LEVEL_PILL_LARGE: Record<PerformanceLevel, string> = {
 const TABS = ['Overview', 'Top by District', 'Compare Schools'] as const;
 type Tab = (typeof TABS)[number];
 
-export function CompareSchoolsContent() {
-  const [tab, setTab] = useState<Tab>('Overview');
+export type CompareInitialState = {
+  tab?: string;
+  schools?: string;
+  district?: string;
+  level?: string;
+  search?: string;
+};
+
+export function CompareSchoolsContent({ initial }: { initial?: CompareInitialState }) {
+  const [tab, setTab] = useState<Tab>(initial?.tab === 'compare' ? 'Compare Schools' : 'Overview');
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -91,7 +100,7 @@ export function CompareSchoolsContent() {
       <div className="mt-6">
         {tab === 'Overview' && <OverviewTab />}
         {tab === 'Top by District' && <TopByDistrictTab />}
-        {tab === 'Compare Schools' && <CompareSchoolsTab />}
+        {tab === 'Compare Schools' && <CompareSchoolsTab initial={initial} />}
       </div>
 
       <FindSchoolBanner />
@@ -342,11 +351,26 @@ function TopByDistrictTab() {
   );
 }
 
-function CompareSchoolsTab() {
-  const [district, setDistrict] = useState('All Districts');
-  const [level, setLevel] = useState('All Levels');
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<string[]>([]);
+function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [district, setDistrict] = useState(
+    initial?.district && ALL_DISTRICTS.includes(initial.district) ? initial.district : 'All Districts',
+  );
+  const [level, setLevel] = useState(
+    initial?.level && (SCHOOL_LEVELS as readonly string[]).includes(initial.level)
+      ? initial.level
+      : 'All Levels',
+  );
+  const [search, setSearch] = useState(initial?.search ?? '');
+  const [selected, setSelected] = useState<string[]>(() => {
+    if (!initial?.schools) return [];
+    return initial.schools
+      .split(',')
+      .filter((id) => SCHOOLS.some((s) => s.id === id))
+      .slice(0, 4);
+  });
 
   const filtered = useMemo(() => {
     return SCHOOLS.filter((s) => {
@@ -373,6 +397,19 @@ function CompareSchoolsTab() {
       return [...prev, id];
     });
   }
+
+  // Keep the URL in sync with the current filters/selection so that real
+  // browser back/forward navigation lands on this exact comparison, not a
+  // blank Compare Schools page.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('tab', 'compare');
+    if (selected.length) params.set('schools', selected.join(','));
+    if (district !== 'All Districts') params.set('district', district);
+    if (level !== 'All Levels') params.set('level', level);
+    if (search) params.set('search', search);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [selected, district, level, search, pathname, router]);
 
   const compareGridClass = cn(
     'mt-8 grid gap-6',

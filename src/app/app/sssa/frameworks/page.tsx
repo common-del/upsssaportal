@@ -1,10 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import CycleManager from '@/components/framework/CycleManager';
+import { BackButton } from '@/components/common/BackButton';
 
 export default async function FrameworksPage() {
   const session = await auth();
@@ -56,13 +55,11 @@ export default async function FrameworksPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link
-        href="/app/sssa"
+      <BackButton
+        fallbackHref="/app/sssa"
+        label={t('backToDashboard')}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
-      >
-        <ArrowLeft size={16} />
-        {t('backToDashboard')}
-      </Link>
+      />
 
       <h1 className="mb-6 text-2xl font-bold text-navy-900 sm:text-3xl">{t('title')}</h1>
 

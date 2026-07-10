@@ -1,10 +1,10 @@
 import { auth } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
+import { BackButton } from '@/components/common/BackButton';
 import { TicketActionBar } from '@/components/tickets/TicketActionBar';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -46,9 +46,7 @@ export default async function DistrictTicketDetailPage(props: { params: Promise<
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <Link href="/app/district/tickets" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToList')}
-      </Link>
+      <BackButton fallbackHref="/app/district/tickets" label={t('backToList')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

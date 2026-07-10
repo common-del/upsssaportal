@@ -102,17 +102,16 @@ function CompareBars({
 
 export function SchoolProfileContent({
   profile,
-  cameFromCompare,
+  backHref,
+  backLabel,
 }: {
   profile: SchoolProfileData;
-  cameFromCompare?: boolean;
+  backHref: string;
+  backLabel: string;
 }) {
   const [tab, setTab] = useState<TabId>('Overview');
   const [compareMode, setCompareMode] = useState<'state' | 'district'>('state');
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({});
-
-  const backHref = cameFromCompare ? '/public/compare' : '/public/directory';
-  const backLabel = cameFromCompare ? 'Back to Compare Schools' : 'Back to Schools';
 
   const compareAvg =
     compareMode === 'state'

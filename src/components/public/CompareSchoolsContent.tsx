@@ -59,8 +59,16 @@ const LEVEL_PILL_LARGE: Record<PerformanceLevel, string> = {
 const TABS = ['Overview', 'Top by District', 'Compare Schools'] as const;
 type Tab = (typeof TABS)[number];
 
-export function CompareSchoolsContent() {
-  const [tab, setTab] = useState<Tab>('Overview');
+export type CompareInitialState = {
+  tab?: string;
+  schools?: string;
+  district?: string;
+  level?: string;
+  search?: string;
+};
+
+export function CompareSchoolsContent({ initial }: { initial?: CompareInitialState }) {
+  const [tab, setTab] = useState<Tab>(initial?.tab === 'compare' ? 'Compare Schools' : 'Overview');
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -91,7 +99,7 @@ export function CompareSchoolsContent() {
       <div className="mt-6">
         {tab === 'Overview' && <OverviewTab />}
         {tab === 'Top by District' && <TopByDistrictTab />}
-        {tab === 'Compare Schools' && <CompareSchoolsTab />}
+        {tab === 'Compare Schools' && <CompareSchoolsTab initial={initial} />}
       </div>
 
       <FindSchoolBanner />
@@ -122,7 +130,7 @@ function FindSchoolBanner() {
   );
 }
 
-function CompareReportCard({ school }: { school: SchoolRecord }) {
+function CompareReportCard({ school, backQuery }: { school: SchoolRecord; backQuery: string }) {
   const level = school.performanceLevel;
 
   return (
@@ -185,7 +193,7 @@ function CompareReportCard({ school }: { school: SchoolRecord }) {
 
       <div className="mt-6 border-t border-gray-200 pt-4">
         <Link
-          href={`/public/schools/${school.udise}?from=compare`}
+          href={`/public/schools/${school.udise}?from=compare&back=${encodeURIComponent(backQuery)}`}
           className="text-sm font-semibold text-[#1B2A6B] hover:underline"
         >
           View Full Profile →
@@ -342,11 +350,23 @@ function TopByDistrictTab() {
   );
 }
 
-function CompareSchoolsTab() {
-  const [district, setDistrict] = useState('All Districts');
-  const [level, setLevel] = useState('All Levels');
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<string[]>([]);
+function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
+  const [district, setDistrict] = useState(
+    initial?.district && ALL_DISTRICTS.includes(initial.district) ? initial.district : 'All Districts',
+  );
+  const [level, setLevel] = useState(
+    initial?.level && (SCHOOL_LEVELS as readonly string[]).includes(initial.level)
+      ? initial.level
+      : 'All Levels',
+  );
+  const [search, setSearch] = useState(initial?.search ?? '');
+  const [selected, setSelected] = useState<string[]>(() => {
+    if (!initial?.schools) return [];
+    return initial.schools
+      .split(',')
+      .filter((id) => SCHOOLS.some((s) => s.id === id))
+      .slice(0, 4);
+  });
 
   const filtered = useMemo(() => {
     return SCHOOLS.filter((s) => {
@@ -373,6 +393,16 @@ function CompareSchoolsTab() {
       return [...prev, id];
     });
   }
+
+  const backQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('tab', 'compare');
+    if (selected.length) params.set('schools', selected.join(','));
+    if (district !== 'All Districts') params.set('district', district);
+    if (level !== 'All Levels') params.set('level', level);
+    if (search) params.set('search', search);
+    return params.toString();
+  }, [selected, district, level, search]);
 
   const compareGridClass = cn(
     'mt-8 grid gap-6',
@@ -449,7 +479,7 @@ function CompareSchoolsTab() {
       {selectedSchools.length >= 2 && (
         <div className={compareGridClass}>
           {selectedSchools.map((school) => (
-            <CompareReportCard key={school.id} school={school} />
+            <CompareReportCard key={school.id} school={school} backQuery={backQuery} />
           ))}
         </div>
       )}

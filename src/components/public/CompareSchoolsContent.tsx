@@ -55,7 +55,7 @@ type Tab = (typeof TABS)[number];
 // Same ranked medal-list treatment as the homepage's "Top 5 Districts" section,
 // extended to the top 10.
 const TOP_10_DISTRICTS = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score).slice(0, 10);
-const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333', '#1B2A6B', '#8C5E3C'];
+const MEDAL_COLORS = ['#D4AF37', '#B0B4BA', '#B87333'];
 function medalColor(rank: number): string {
   return MEDAL_COLORS[rank] ?? '#1B2A6B';
 }

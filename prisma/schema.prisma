@@ -96,7 +96,9 @@ model Ticket {
   districtCode    String           @default("")
   description     String
   submitterName   String?
+  submitterRole   String?
   submitterMobile String
+  evidenceUrl     String?
   status          String           @default("ASSIGNED_TO_SCHOOL")
   handlerLevel    String           @default("SCHOOL")
   schoolArgument  String?

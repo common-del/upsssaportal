@@ -162,10 +162,23 @@ export type SchoolProfileData = SchoolProfileBase & {
     domainScores: { name: string; score: number }[];
     learningOutcomes: {
       grade: string;
+      headerLabel: string;
       subjects: { name: string; pct: number; stateAvg: number }[];
     }[];
   };
 };
+
+const CLASS_LEVELS = ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'] as const;
+const CLASS_END_GRADE: Record<(typeof CLASS_LEVELS)[number], number> = {
+  Primary: 5,
+  'Upper Primary': 8,
+  Secondary: 10,
+  'Higher Secondary': 12,
+};
+
+function pctClamp(value: number): number {
+  return Math.min(99, Math.max(30, Math.round(value)));
+}
 
 export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileData {
   const dummy = getDummySchoolRecord(base.udise);
@@ -175,6 +188,13 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
   const level = dummy?.performanceLevel ?? derived.performanceLevel;
   const students = dummy?.students ?? 400 + (h % 900);
   const teachers = dummy?.teachers ?? 12 + (h % 40);
+
+  const classLevel = dummy?.level ?? CLASS_LEVELS[h % CLASS_LEVELS.length];
+  const endGrade = CLASS_END_GRADE[classLevel];
+  const startsAtBalvatika = h % 2 === 0;
+  const classRange = startsAtBalvatika ? `Balvatika to ${endGrade}` : `1-${endGrade}`;
+  const hasGrade10 = endGrade >= 10;
+  const hasGrade12 = endGrade >= 12;
 
   const domainScores = UP_SQAAF_DOMAINS.map((d, i) => {
     const ourScore = Math.min(95, Math.max(28, score - 8 + ((h + i * 7) % 18)));
@@ -206,7 +226,7 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
     accreditation: dummy?.accreditation ?? derived.accreditation,
     recognition: 'Recognized',
     board: derived.type === 'Private' ? 'CBSE' : 'UP Board',
-    classes: dummy?.level ?? 'Primary to Secondary',
+    classes: classRange,
     overview: {
       totalStudents: students,
       totalTeachers: teachers,
@@ -281,41 +301,40 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
       ],
       domainScores: domainScores.map((d) => ({ name: d.name, score: d.ourScore })),
       learningOutcomes: [
-        {
-          grade: 'Grade 3',
-          subjects: [
-            { name: 'Language', pct: 72, stateAvg: 65 },
-            { name: 'Mathematics', pct: 68, stateAvg: 62 },
-          ],
-        },
-        {
-          grade: 'Grade 5',
-          subjects: [
-            { name: 'Language', pct: 74, stateAvg: 66 },
-            { name: 'Mathematics', pct: 70, stateAvg: 63 },
-          ],
-        },
-        {
-          grade: 'Grade 8',
-          subjects: [
-            { name: 'Science', pct: 71, stateAvg: 64 },
-            { name: 'Social Science', pct: 69, stateAvg: 61 },
-          ],
-        },
-        {
-          grade: 'Grade 10',
-          subjects: [
-            { name: 'Mathematics', pct: 76, stateAvg: 68 },
-            { name: 'Science', pct: 73, stateAvg: 65 },
-          ],
-        },
-        {
-          grade: 'Grade 12',
-          subjects: [
-            { name: 'Physics', pct: 78, stateAvg: 70 },
-            { name: 'Chemistry', pct: 75, stateAvg: 68 },
-          ],
-        },
+        ...(hasGrade10
+          ? [
+              {
+                grade: 'Grade 10',
+                headerLabel: 'Board Pass %',
+                subjects: [
+                  { name: 'Board Pass %', pct: pctClamp(score + 20 + (h % 6)), stateAvg: pctClamp(score + 10) },
+                  { name: 'Language', pct: pctClamp(score + 16 + (h % 5)), stateAvg: pctClamp(score + 2) },
+                  { name: 'Mathematics', pct: pctClamp(score + 10 + (h % 8)), stateAvg: pctClamp(score - 6) },
+                  { name: 'Science', pct: pctClamp(score + 12 + (h % 6)), stateAvg: pctClamp(score - 4) },
+                  { name: 'Social Science', pct: pctClamp(score + 14 + (h % 4)), stateAvg: pctClamp(score - 2) },
+                ],
+              },
+            ]
+          : []),
+        ...(hasGrade12
+          ? [
+              {
+                grade: 'Grade 12',
+                headerLabel: 'Overall Achievement',
+                subjects: [
+                  { name: 'Board Pass %', pct: pctClamp(score - 3 + (h % 6)), stateAvg: pctClamp(score - 4) },
+                  {
+                    name: 'Distinction %',
+                    pct: Math.min(40, Math.max(5, Math.round(score * 0.18) + (h % 5))),
+                    stateAvg: Math.min(38, Math.max(4, Math.round(score * 0.16))),
+                  },
+                  { name: 'Arts Stream Pass %', pct: pctClamp(score + 3 + (h % 6)), stateAvg: pctClamp(score) },
+                  { name: 'Science Stream Pass %', pct: pctClamp(score - 11 + (h % 8)), stateAvg: pctClamp(score - 6) },
+                  { name: 'Commerce Stream Pass %', pct: pctClamp(score - 6 + (h % 7)), stateAvg: pctClamp(score - 2) },
+                ],
+              },
+            ]
+          : []),
       ],
     },
   };
@@ -326,5 +345,5 @@ export { PERFORMANCE_COLORS };
 export const DIRECTORY_LEVEL_BADGE: Record<PerformanceLevel, string> = {
   Uday: 'bg-gray-100 text-gray-700',
   Unnat: 'bg-[#F5B731] text-[#1B2A6B]',
-  Utkarsh: 'bg-[#1B2A6B] text-[#F5B731]',
+  Utkarsh: 'bg-[#F5B731] text-[#1B2A6B]',
 };

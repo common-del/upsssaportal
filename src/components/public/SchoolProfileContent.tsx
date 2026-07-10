@@ -29,7 +29,6 @@ import {
 import { cn } from '@/lib/cn';
 import { LevelBadge } from '@/components/public/LevelBadge';
 import {
-  DIRECTORY_LEVEL_BADGE,
   levelDescription,
   scoreToLevel,
   type SchoolProfileData,
@@ -135,7 +134,7 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
         </p>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-1 border-b border-gray-200 print:hidden">
+      <div className="mt-4 flex flex-wrap justify-center gap-1 border-b border-gray-200 print:hidden">
         {TABS.map((t) => (
           <button
             key={t}
@@ -275,18 +274,66 @@ function OverviewMetricBar({
   );
 }
 
+function OutcomeMetricRow({
+  name,
+  pct,
+  stateAvg,
+}: {
+  name: string;
+  pct: number;
+  stateAvg: number;
+}) {
+  return (
+    <div>
+      <div className="flex justify-between text-sm">
+        <span className="text-gray-700">{name}</span>
+        <span className="font-semibold text-gray-900">{pct}%</span>
+      </div>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-200">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: NAVY }} />
+      </div>
+      <div className="mt-1 flex justify-between text-xs text-gray-500">
+        <span>State Avg: {stateAvg}%</span>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-full rounded-full bg-[#F5B731]" style={{ width: `${stateAvg}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function LearningOutcomeCard({
+  lo,
+}: {
+  lo: SchoolProfileData['reportCard']['learningOutcomes'][number];
+}) {
+  const headerValue = lo.subjects[0]?.pct ?? 0;
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h3 className="font-bold text-[#1B2A6B]">{lo.grade}</h3>
+      <p className="mt-1 text-sm text-gray-500">
+        {lo.headerLabel}: <span className="font-semibold text-gray-900">{headerValue}%</span>
+      </p>
+      <div className="mt-4 space-y-4">
+        {lo.subjects.map((s) => (
+          <OutcomeMetricRow key={s.name} {...s} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OverviewTab({ profile }: { profile: SchoolProfileData }) {
   const o = profile.overview;
   const level = profile.performanceLevel as PerformanceLevel;
   const waterAvailable = o.drinkingWater === 'Available';
 
-  const infoBadges = [
-    { label: 'Accreditation', value: profile.accreditation, isLevel: false },
-    { label: 'Recognition', value: profile.recognition, isLevel: false },
-    { label: 'SQAAF Level', value: profile.performanceLevel, isLevel: true },
-    { label: 'Board', value: profile.board, isLevel: false },
-    { label: 'Classes', value: profile.classes, isLevel: false },
-    { label: 'Type', value: profile.type, isLevel: false },
+  const infoBoxes = [
+    { label: 'Accreditation', value: profile.accreditation, showLevel: true },
+    { label: 'Recognition', value: profile.recognition, showLevel: false },
+    { label: 'Board', value: profile.board, showLevel: false },
+    { label: 'Classes', value: profile.classes, showLevel: false },
+    { label: 'Type', value: profile.type, showLevel: false },
   ];
 
   const statCards = [
@@ -302,19 +349,18 @@ function OverviewTab({ profile }: { profile: SchoolProfileData }) {
 
   return (
     <div className="space-y-10">
-      {/* Header info row — 6 pills */}
-      <div className="flex flex-wrap gap-2">
-        {infoBadges.map((b) => (
-          <span
-            key={b.label}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-1.5 text-sm',
-              b.isLevel ? DIRECTORY_LEVEL_BADGE[level] : 'bg-white',
-            )}
-          >
-            <span className="text-xs text-[#6B7280]">{b.label}</span>
-            <span className="font-bold text-[#111827]">{b.value}</span>
-          </span>
+      {/* Header info row — boxes */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {infoBoxes.map((b) => (
+          <div key={b.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#6B7280]">
+              {b.label}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <p className="font-bold text-[#111827]">{b.value}</p>
+              {b.showLevel && <LevelBadge level={level} />}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -488,6 +534,18 @@ function OverviewTab({ profile }: { profile: SchoolProfileData }) {
           })()}
         </div>
       </section>
+
+      {/* Learning Outcomes — only for grades this school actually has */}
+      {profile.reportCard.learningOutcomes.length > 0 && (
+        <section>
+          <h2 className="text-lg font-bold text-[#1B2A6B]">Learning Outcomes</h2>
+          <div className="mt-4 grid gap-6 lg:grid-cols-2">
+            {profile.reportCard.learningOutcomes.map((lo) => (
+              <LearningOutcomeCard key={lo.grade} lo={lo} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -562,17 +620,7 @@ function PerformanceTab({
       </section>
 
       <section>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[#1B2A6B]">Domain-wise Performance</h2>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1B2A6B] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 print:hidden"
-          >
-            <Download size={16} />
-            Download Raw Data
-          </button>
-        </div>
+        <h2 className="text-lg font-semibold text-[#1B2A6B]">Domain-wise Performance</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {profile.performance.domains.map((d) => {
             const open = expandedDomains[d.id];
@@ -695,8 +743,8 @@ function ReportCardTab({ profile }: { profile: SchoolProfileData }) {
         <div>
           <p className="font-semibold text-[#92400E]">Self Evaluated</p>
           <p className="mt-0.5 text-sm text-[#92400E]/80">
-            These results were submitted by the school and have not yet been independently
-            verified by an external evaluator.
+            These results were submitted by the school and have not been independently verified
+            by an external evaluator yet.
           </p>
         </div>
       </div>

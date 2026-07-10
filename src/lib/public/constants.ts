@@ -6,7 +6,7 @@ export const UP_GREEN = '#22C55E';
 
 export const LEVEL_UDAY = '#E5E7EB';
 export const LEVEL_UNNAT = '#F5B731';
-export const LEVEL_UTKARSH = '#1B2A6B';
+export const LEVEL_UTKARSH = '#F5B731';
 
 export const DISTRICTS = [
   'Lucknow',

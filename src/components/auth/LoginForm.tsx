@@ -14,7 +14,7 @@ const roleRedirectMap: Record<string, string> = {
   SCHOOL_USER: '/app/school',
   VERIFIER: '/app/verifier',
   DISTRICT_OFFICIAL: '/app/district',
-  DISTRICT_ADMIN: '/app/district',
+  DISTRICT_ADMIN: '/app/dashboard',
   SSSA_ADMIN: '/app/sssa',
   admin: '/app/sssa',
 };
@@ -41,24 +41,29 @@ export function LoginForm({
     setError('');
     setLoading(true);
 
-    const fd = new FormData(e.currentTarget);
-    const result = await signIn(credentialsProviderId, {
-      username: fd.get('username'),
-      password: fd.get('password'),
-      redirect: false,
-    });
+    try {
+      const fd = new FormData(e.currentTarget);
+      const result = await signIn(credentialsProviderId, {
+        username: fd.get('username'),
+        password: fd.get('password'),
+        redirect: false,
+      });
 
-    if (!result?.ok) {
+      if (!result?.ok) {
+        setError(t('error'));
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/auth/session');
+      const session = await res.json();
+      const role: string = session?.user?.role ?? '';
+      router.push(roleRedirectMap[role] || '/');
+      router.refresh();
+    } catch {
       setError(t('error'));
       setLoading(false);
-      return;
     }
-
-    const res = await fetch('/api/auth/session');
-    const session = await res.json();
-    const role: string = session?.user?.role ?? '';
-    router.push(roleRedirectMap[role] || '/');
-    router.refresh();
   }
 
   return (

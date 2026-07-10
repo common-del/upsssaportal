@@ -81,18 +81,18 @@ export default function AboutPage() {
       <section className="bg-[#1B2A6B] px-4 py-12 text-white sm:py-14">
         <div className="mx-auto max-w-4xl">
           <h1 className="text-2xl font-bold sm:text-3xl">
-            About the Uttar Pradesh State School Standard Authority
+            About State School Standard Authority, Uttar Pradesh
           </h1>
           <p className="mt-2 text-lg text-white/90">
-            Uttar Pradesh State School Standard Authority
+            State School Standard Authority, Uttar Pradesh
           </p>
         </div>
       </section>
 
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-10">
-        <ContentCard title="What is the Uttar Pradesh State School Standard Authority?">
+        <ContentCard title="What is the State School Standard Authority, Uttar Pradesh?">
           <p>
-            The Uttar Pradesh State School Standard Authority is an independent regulatory
+            The State School Standard Authority, Uttar Pradesh is an independent regulatory
             body established to set, monitor, and enforce quality standards for all
             government and aided schools across the state. It functions as the standards
             and accreditation authority, ensuring transparent quality benchmarks and public

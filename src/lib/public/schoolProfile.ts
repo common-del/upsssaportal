@@ -1,34 +1,42 @@
 import { SCHOOLS, type SchoolRecord } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
-import { PERFORMANCE_COLORS } from '@/lib/public/constants';
+import { PERFORMANCE_COLORS, SQAAF_DOMAIN_WEIGHTAGE } from '@/lib/public/constants';
 
+// Weightages per the UPSQAAF Overall Scoring System (5 domains, 11 sub-domains, 100% total).
 export const UP_SQAAF_DOMAINS = [
   {
     id: 'infra',
     name: 'Infrastructure and Safety',
-    weightage: 20,
+    weightage: SQAAF_DOMAIN_WEIGHTAGE['Infrastructure and Safety'],
   },
   {
     id: 'admin',
     name: 'Administration, HR and Leadership',
-    weightage: 20,
+    weightage: SQAAF_DOMAIN_WEIGHTAGE['Administration, HR and Leadership'],
   },
   {
     id: 'pedagogy',
     name: 'Teaching and Learning',
-    weightage: 20,
+    weightage: SQAAF_DOMAIN_WEIGHTAGE['Teaching and Learning'],
   },
   {
     id: 'assessment',
     name: 'Assessment and Learning Outcomes',
-    weightage: 20,
+    weightage: SQAAF_DOMAIN_WEIGHTAGE['Assessment and Learning Outcomes'],
   },
   {
     id: 'inclusive',
     name: 'Inclusiveness and Community Engagement',
-    weightage: 20,
+    weightage: SQAAF_DOMAIN_WEIGHTAGE['Inclusiveness and Community Engagement'],
   },
 ] as const;
+
+// Domain Weightage Score (%) = Domain Ratio x Assigned Weightage; Final Score = sum across domains.
+function weightedOverallScore(domainRawScores: { weightage: number; ourScore: number }[]): number {
+  return Math.round(
+    domainRawScores.reduce((sum, d) => sum + (d.ourScore / 100) * d.weightage, 0),
+  );
+}
 
 export type AccreditationStatus = 'SQAAF Verified' | 'Pending';
 
@@ -184,8 +192,9 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
   const dummy = getDummySchoolRecord(base.udise);
   const derived = deriveResultFields(base.udise);
   const h = hashUdise(base.udise);
-  const score = dummy?.overallScore ?? derived.overallScore;
-  const level = dummy?.performanceLevel ?? derived.performanceLevel;
+  // Seeds the per-domain jitter below; the final score/level is derived FROM the
+  // domain scores via the weighted formula, not assigned independently of them.
+  const jitterSeed = dummy?.overallScore ?? derived.overallScore;
   const students = dummy?.students ?? 400 + (h % 900);
   const teachers = dummy?.teachers ?? 12 + (h % 40);
 
@@ -197,7 +206,9 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
   const hasGrade12 = endGrade >= 12;
 
   const domainScores = UP_SQAAF_DOMAINS.map((d, i) => {
-    const ourScore = Math.min(95, Math.max(28, score - 8 + ((h + i * 7) % 18)));
+    const ourScore = dummy
+      ? dummy.domainScores[d.name]
+      : Math.min(95, Math.max(28, jitterSeed - 8 + ((h + i * 7) % 18)));
     const topScore = Math.min(98, ourScore + 12 + (i % 5));
     return {
       id: d.id,
@@ -213,6 +224,10 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
       ],
     };
   });
+
+  // Final School Score (%) = sum of each domain's (ratio x weightage) — per the UPSQAAF methodology.
+  const score = weightedOverallScore(domainScores);
+  const level = scoreToLevel(score);
 
   const boys = Math.floor(students * 0.52);
   const girls = students - boys;

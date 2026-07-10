@@ -1,4 +1,4 @@
-import { DISTRICTS } from './constants';
+import { ALL_DISTRICTS } from './dummyData';
 
 export type GeoOption = {
   code: string;
@@ -8,7 +8,7 @@ export type GeoOption = {
 };
 
 export function getFallbackGeo(): { districts: GeoOption[]; blocks: GeoOption[] } {
-  const districts: GeoOption[] = DISTRICTS.map((name, i) => ({
+  const districts: GeoOption[] = ALL_DISTRICTS.map((name, i) => ({
     code: `FD${String(i + 1).padStart(3, '0')}`,
     nameEn: name,
     nameHi: name,

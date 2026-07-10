@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { computeAge, ageToGrade, gradeLabel } from '@/lib/age-to-grade';
 import type { GeoOption } from '@/lib/public/findGeoFallback';
+import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 const SPECIAL_NEEDS_OPTIONS = [
   { value: 'not_applicable', label: 'Not Applicable' },
@@ -146,22 +147,21 @@ export function FindSchoolFlow({ districts, blocks }: FindSchoolFlowProps) {
                 <label className="text-sm font-medium text-gray-700">
                   District <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={district}
-                  onChange={(e) => {
-                    setDistrict(e.target.value);
+                  onChange={(v) => {
+                    setDistrict(v);
                     setBlock('');
                     setErrors((p) => ({ ...p, district: false }));
                   }}
-                  className={cn('mt-1.5', selectClass, errors.district && errorBorder)}
-                >
-                  <option value="">Select district...</option>
-                  {districts.map((d) => (
-                    <option key={d.code} value={d.code}>
-                      {d.nameEn}
-                    </option>
-                  ))}
-                </select>
+                  options={districts.map((d) => ({ value: d.code, label: d.nameEn }))}
+                  allLabel="Select district..."
+                  allValue=""
+                  searchPlaceholder="Search district..."
+                  ariaLabel="District"
+                  className="mt-1.5"
+                  buttonClassName={cn('py-2.5', errors.district && errorBorder)}
+                />
               </div>
 
               <div>

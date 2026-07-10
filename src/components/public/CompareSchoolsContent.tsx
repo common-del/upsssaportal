@@ -15,7 +15,6 @@ import {
 import { GraduationCap, Trophy, Star, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
-  DISTRICTS,
   SCHOOL_LEVELS,
   SCHOOL_TYPES,
   SQAAF_DOMAINS,
@@ -25,6 +24,7 @@ import type { PerformanceLevel } from '@/lib/public/constants';
 import { DIRECTORY_LEVEL_BADGE, scoreToLevel } from '@/lib/public/schoolProfile';
 import {
   SCHOOLS,
+  ALL_DISTRICTS,
   MANAGEMENT_PERFORMANCE,
   LEVEL_PERFORMANCE,
   DISTRICT_RANKINGS,
@@ -34,6 +34,7 @@ import {
   heatmapCellColor,
   type SchoolRecord,
 } from '@/lib/public/dummyData';
+import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 const DOMAIN_LABELS: Record<(typeof SQAAF_DOMAINS)[number], string> = {
   'Infrastructure and Safety': 'Infrastructure & Safety',
@@ -383,16 +384,16 @@ function CompareSchoolsTab() {
   return (
     <>
       <div className="flex flex-wrap gap-3">
-        <select
+        <SearchableSelect
           value={district}
-          onChange={(e) => setDistrict(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-        >
-          <option>All Districts</option>
-          {DISTRICTS.map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
+          onChange={setDistrict}
+          options={ALL_DISTRICTS.map((d) => ({ value: d, label: d }))}
+          allLabel="All Districts"
+          allValue="All Districts"
+          searchPlaceholder="Search district..."
+          ariaLabel="District"
+          className="w-[200px]"
+        />
         <select
           value={level}
           onChange={(e) => setLevel(e.target.value)}

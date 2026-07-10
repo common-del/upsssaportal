@@ -38,6 +38,7 @@ import {
   domainAveragesForDistrict,
   performanceDistributionForDistrict,
 } from '@/lib/public/dummyData';
+import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 const MANDAL_ROWS = MANDALS.map(mandalSqaafStats);
 const ALL_RANKED_DISTRICTS = [...DISTRICT_RANKINGS].sort((a, b) => b.score - a.score);
@@ -176,17 +177,17 @@ export function HomeContent() {
         <label htmlFor="home-district" className="text-sm font-medium text-gray-700">
           Filter District:
         </label>
-        <select
+        <SearchableSelect
           id="home-district"
           value={district}
-          onChange={(e) => setDistrict(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm"
-        >
-          <option>All Districts</option>
-          {ALL_DISTRICTS.map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
+          onChange={setDistrict}
+          options={ALL_DISTRICTS.map((d) => ({ value: d, label: d }))}
+          allLabel="All Districts"
+          allValue="All Districts"
+          searchPlaceholder="Search district..."
+          ariaLabel="Filter District"
+          className="w-[220px]"
+        />
       </div>
 
       {/* Headline stats */}
@@ -313,17 +314,18 @@ export function HomeContent() {
             <label htmlFor="domain-district" className="text-xs font-medium text-gray-600">
               District:
             </label>
-            <select
+            <SearchableSelect
               id="domain-district"
               value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs shadow-sm"
-            >
-              <option>All Districts</option>
-              {ALL_DISTRICTS.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
+              onChange={setDistrict}
+              options={ALL_DISTRICTS.map((d) => ({ value: d, label: d }))}
+              allLabel="All Districts"
+              allValue="All Districts"
+              searchPlaceholder="Search district..."
+              ariaLabel="District"
+              className="w-[180px]"
+              buttonClassName="px-2.5 py-1.5 text-xs"
+            />
           </div>
         </div>
         <p className="mt-1 text-xs text-gray-500">

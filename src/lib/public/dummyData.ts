@@ -1,5 +1,24 @@
 import type { District, PerformanceLevel, SchoolLevel, SchoolType } from './constants';
-import { DISTRICTS, SQAAF_DOMAINS } from './constants';
+import { DISTRICTS, SQAAF_DOMAINS, SQAAF_DOMAIN_WEIGHTAGE } from './constants';
+
+// Per the UPSQAAF Overall Scoring System: Final Score (%) = sum of each domain's
+// (raw score / max score) x assigned weightage. Domain scores here are already stored
+// as 0-100 percentages, so this reduces to (domainScore / 100) x weightage, summed.
+function weightedOverallScore(domainScores: Record<(typeof SQAAF_DOMAINS)[number], number>): number {
+  return Math.round(
+    SQAAF_DOMAINS.reduce(
+      (sum, domain) => sum + (domainScores[domain] / 100) * SQAAF_DOMAIN_WEIGHTAGE[domain],
+      0,
+    ),
+  );
+}
+
+// Per the UPSQAAF School Grading Category table: Uday <=55%, Unnat 56-80%, Utkarsh >80%.
+function levelFromScore(score: number): PerformanceLevel {
+  if (score <= 55) return 'Uday';
+  if (score <= 80) return 'Unnat';
+  return 'Utkarsh';
+}
 
 export type DistrictChartRow = {
   district: District;
@@ -38,7 +57,7 @@ export type SchoolRecord = {
   performanceLevel: PerformanceLevel;
 };
 
-export const SCHOOLS: SchoolRecord[] = [
+const SCHOOLS_RAW: SchoolRecord[] = [
   { id: '1', name: 'Government Inter College, Hazratganj', udise: '09123456789', district: 'Lucknow', block: 'Hazratganj', type: 'Government', level: 'Higher Secondary', feeDisclosed: true, accreditation: 'SQAAF Verified', overallScore: 68, domainScores: { 'Teaching and Learning': 72, 'Assessment and Learning Outcomes': 65, 'Administration, HR and Leadership': 74, 'Inclusiveness and Community Engagement': 66, 'Infrastructure and Safety': 63 }, students: 1240, teachers: 48, performanceLevel: 'Utkarsh' },
   { id: '2', name: 'St. Mary\'s Convent School', udise: '09123456790', district: 'Lucknow', block: 'Gomti Nagar', type: 'Private', level: 'Secondary', feeDisclosed: true, accreditation: 'SQAAF Verified', overallScore: 74, domainScores: { 'Teaching and Learning': 78, 'Assessment and Learning Outcomes': 71, 'Administration, HR and Leadership': 76, 'Inclusiveness and Community Engagement': 73, 'Infrastructure and Safety': 72 }, students: 890, teachers: 42, performanceLevel: 'Utkarsh' },
   { id: '3', name: 'Aided Junior High School, Agra Cantt', udise: '09123456791', district: 'Agra', block: 'Agra Cantt', type: 'Aided', level: 'Upper Primary', feeDisclosed: false, accreditation: 'Pending', overallScore: 52, domainScores: { 'Teaching and Learning': 54, 'Assessment and Learning Outcomes': 48, 'Administration, HR and Leadership': 58, 'Inclusiveness and Community Engagement': 51, 'Infrastructure and Safety': 49 }, students: 420, teachers: 18, performanceLevel: 'Unnat' },
@@ -55,6 +74,14 @@ export const SCHOOLS: SchoolRecord[] = [
   { id: '14', name: 'Prayagraj Kendriya Vidyalaya', udise: '09123456802', district: 'Prayagraj', block: 'Civil Lines', type: 'Government', level: 'Secondary', feeDisclosed: true, accreditation: 'SQAAF Verified', overallScore: 72, domainScores: { 'Teaching and Learning': 74, 'Assessment and Learning Outcomes': 70, 'Administration, HR and Leadership': 75, 'Inclusiveness and Community Engagement': 71, 'Infrastructure and Safety': 70 }, students: 1350, teachers: 52, performanceLevel: 'Utkarsh' },
   { id: '15', name: 'Lucknow International School', udise: '09123456803', district: 'Lucknow', block: 'Aliganj', type: 'Private', level: 'Primary', feeDisclosed: true, accreditation: 'Pending', overallScore: 59, domainScores: { 'Teaching and Learning': 61, 'Assessment and Learning Outcomes': 57, 'Administration, HR and Leadership': 60, 'Inclusiveness and Community Engagement': 58, 'Infrastructure and Safety': 59 }, students: 450, teachers: 22, performanceLevel: 'Unnat' },
 ];
+
+// overallScore/performanceLevel above are illustrative placeholders; the exported SCHOOLS
+// recomputes both from domainScores using the real UPSQAAF weightage formula so every
+// school's Uday/Unnat/Utkarsh tag is compliant with the scoring system.
+export const SCHOOLS: SchoolRecord[] = SCHOOLS_RAW.map((s) => {
+  const overallScore = weightedOverallScore(s.domainScores);
+  return { ...s, overallScore, performanceLevel: levelFromScore(overallScore) };
+});
 
 export const DOMAIN_AVERAGES = [
   { domain: 'Infrastructure and Safety', score: 47 },

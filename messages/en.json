@@ -265,6 +265,7 @@
     "captchaError": "Security check failed. Please answer the new question.",
     "duplicateError": "You already have an open complaint for this school. Please wait for it to be resolved before filing a new one.",
     "schoolNotFound": "We couldn't find a school with that UDISE code. Please check it, or use the District / Block / School selection instead.",
+    "serviceUnavailable": "The dispute filing service is temporarily unavailable. Please try again in a few minutes.",
     "successTitle": "Dispute Submitted Successfully",
     "successDesc": "Your dispute has been registered and will be sent to the school for response.",
     "ticketIdLabel": "Ticket ID",

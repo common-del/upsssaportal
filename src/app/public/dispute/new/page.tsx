@@ -27,14 +27,19 @@ export default async function NewDisputePage() {
   const tc = await getTranslations('common');
   const locale = await getLocale();
 
-  const [categories, { districts, blocks }] = await Promise.all([
-    prisma.disputeCategory.findMany({
+  let categories: { code: string; nameEn: string; nameHi: string }[] = [];
+  let dbUnavailable = false;
+  try {
+    categories = await prisma.disputeCategory.findMany({
       where: { isActive: true },
       select: { code: true, nameEn: true, nameHi: true },
       orderBy: { nameEn: 'asc' },
-    }),
-    loadGeo(),
-  ]);
+    });
+  } catch {
+    dbUnavailable = true;
+  }
+
+  const { districts, blocks } = await loadGeo();
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -49,7 +54,13 @@ export default async function NewDisputePage() {
       </h1>
       <p className="mt-2 text-text-secondary">{t('newSubtitle')}</p>
 
-      <DisputeForm categories={categories} districts={districts} blocks={blocks} locale={locale} />
+      {dbUnavailable ? (
+        <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {t('serviceUnavailable')}
+        </p>
+      ) : (
+        <DisputeForm categories={categories} districts={districts} blocks={blocks} locale={locale} />
+      )}
     </div>
   );
 }

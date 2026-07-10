@@ -160,10 +160,10 @@ export function HomeContent() {
           </Link>
           <Link
             href="/public/find"
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-[#1B2A6B] shadow-sm transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#F5B731] px-5 py-2.5 text-sm font-semibold text-[#1B2A6B] shadow-sm transition-opacity hover:opacity-90"
           >
             <Search size={16} />
-            Find School
+            Find the Right School for Your Child
           </Link>
         </div>
         <p className="mt-6 text-sm text-white/70">

@@ -143,20 +143,14 @@ export async function runEscalations(districtCode?: string) {
   return { escalated };
 }
 
-/* ── School search (for autocomplete) ────────────────── */
-export async function searchSchools(query: string) {
-  if (!query || query.length < 2) return [];
+/* ── Schools within a block (for the District > Block > School selects) ── */
+export async function getSchoolsByBlock(blockCode: string) {
+  if (!blockCode) return [];
   return prisma.school.findMany({
-    where: {
-      OR: [
-        { nameEn: { contains: query, mode: 'insensitive' } },
-        { nameHi: { contains: query } },
-        { udise: { contains: query } },
-      ],
-    },
-    select: { udise: true, nameEn: true, nameHi: true, category: true },
-    take: 10,
+    where: { blockCode },
+    select: { udise: true, nameEn: true, nameHi: true },
     orderBy: { nameEn: 'asc' },
+    take: 300,
   });
 }
 
@@ -166,7 +160,9 @@ export async function createTicket(data: {
   categoryCode: string;
   description: string;
   submitterName: string;
+  submitterRole?: string;
   submitterMobile: string;
+  evidenceUrl?: string;
   otp: string;
   captchaToken: string;
   captchaAnswer: string;
@@ -215,7 +211,9 @@ export async function createTicket(data: {
       districtCode: school.districtCode,
       description: data.description.trim(),
       submitterName: data.submitterName?.trim() || null,
+      submitterRole: data.submitterRole?.trim() || null,
       submitterMobile: mobile.slice(-10),
+      evidenceUrl: data.evidenceUrl?.trim() || null,
       status: 'ASSIGNED_TO_SCHOOL',
       handlerLevel: 'SCHOOL',
       nextDueAt: addDays(now, SLA_SCHOOL_DAYS),
@@ -230,7 +228,7 @@ export async function createTicket(data: {
       disputeHistory: {
         create: {
           actionType: 'FILED',
-          notes: `Filed by: ${school.nameEn} / ${data.submitterName?.trim() || 'Public User'}`,
+          notes: `Filed by: ${school.nameEn} / ${data.submitterName?.trim() || 'Public User'}${data.submitterRole ? ` (${data.submitterRole})` : ''}`,
         },
       },
     },

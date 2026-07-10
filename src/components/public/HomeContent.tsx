@@ -22,7 +22,6 @@ import {
   Building2,
   GraduationCap,
   BadgeCheck,
-  FileText,
   GitCompareArrows,
   TrendingUp,
   TrendingDown,
@@ -91,10 +90,10 @@ const QUICK_ACCESS = [
     icon: Search,
   },
   {
-    href: '/public/reports',
-    title: 'Public Reports',
-    description: 'State, district and school reports',
-    icon: FileText,
+    href: '/public/find',
+    title: 'Find the Right School for Your Child',
+    description: 'Answer a few questions to find matching schools',
+    icon: GraduationCap,
   },
   {
     href: '/public/compare',

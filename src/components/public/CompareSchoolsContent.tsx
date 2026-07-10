@@ -49,7 +49,7 @@ const LEVEL_PILL_LARGE: Record<PerformanceLevel, string> = {
   Utkarsh: 'bg-[#DCFCE7] text-green-800',
 };
 
-const TABS = ['Overview', 'Top by District', 'Compare Schools'] as const;
+const TABS = ['Overview', 'Top Schools by District', 'Compare Schools'] as const;
 type Tab = (typeof TABS)[number];
 
 // Same ranked medal-list treatment as the homepage's "Top 5 Districts" section,
@@ -101,7 +101,7 @@ export function CompareSchoolsContent({ initial }: { initial?: CompareInitialSta
 
       <div className="mt-6">
         {tab === 'Overview' && <OverviewTab />}
-        {tab === 'Top by District' && <TopByDistrictTab />}
+        {tab === 'Top Schools by District' && <TopByDistrictTab />}
         {tab === 'Compare Schools' && <CompareSchoolsTab initial={initial} />}
       </div>
 
@@ -216,13 +216,9 @@ function OverviewTab() {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard
-          title="STATE AVERAGE SQAAF"
-          value="54.2%"
-          subtitle="Across 45 schools (sampled)"
-        />
+        <SummaryCard title="STATE AVERAGE SQAAF" value="54.2%" />
         <SummaryCard title="TOP DISTRICT" value="Lucknow" subtitle="Avg 63.1%" />
-        <SummaryCard title="BEST MANAGEMENT" value="Private" subtitle="Avg 61.5%" />
+        <SummaryCard title="TOP MANAGEMENT TYPE" value="Private" subtitle="Across State" />
       </div>
 
       <div className="mt-6 rounded-xl bg-white p-4 shadow-sm">
@@ -557,13 +553,13 @@ function SummaryCard({
 }: {
   title: string;
   value: string;
-  subtitle: string;
+  subtitle?: string;
 }) {
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{title}</p>
       <p className="mt-1 text-2xl font-bold text-[#1B2A6B]">{value}</p>
-      <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+      {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
     </div>
   );
 }

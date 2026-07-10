@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { useRef } from 'react';
+import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 interface FilterOption {
   code: string;
@@ -66,19 +67,16 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         />
       </div>
 
-      <select
+      <SearchableSelect
         value={selected.district}
-        onChange={(e) => navigate({ district: e.target.value })}
-        className={selectClass}
-        aria-label={t('district')}
-      >
-        <option value="">{t('allDistricts')}</option>
-        {districts.map((d) => (
-          <option key={d.code} value={d.code}>
-            {getName(d)}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => navigate({ district: v })}
+        options={districts.map((d) => ({ value: d.code, label: getName(d) }))}
+        allLabel={t('allDistricts')}
+        searchPlaceholder={t('district')}
+        ariaLabel={t('district')}
+        className="w-[200px]"
+        buttonClassName="py-2.5"
+      />
 
       <select
         value={selected.type}

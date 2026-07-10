@@ -42,6 +42,15 @@ export const SQAAF_DOMAINS = [
   'Inclusiveness and Community Engagement',
 ] as const;
 
+// Per the UPSQAAF Overall Scoring System: 5 domains, 11 sub-domains, weightages sum to 100%.
+export const SQAAF_DOMAIN_WEIGHTAGE: Record<(typeof SQAAF_DOMAINS)[number], number> = {
+  'Infrastructure and Safety': 15,
+  'Administration, HR and Leadership': 20,
+  'Teaching and Learning': 20,
+  'Assessment and Learning Outcomes': 30,
+  'Inclusiveness and Community Engagement': 15,
+};
+
 export const PERFORMANCE_LEVELS = ['Uday', 'Unnat', 'Utkarsh'] as const;
 export type PerformanceLevel = (typeof PERFORMANCE_LEVELS)[number];
 

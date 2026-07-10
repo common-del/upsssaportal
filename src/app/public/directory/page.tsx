@@ -4,8 +4,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
-import { SCHOOLS } from '@/lib/public/dummyData';
-import { DISTRICTS } from '@/lib/public/constants';
+import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 import type { Prisma } from '@prisma/client';
 
@@ -79,7 +78,7 @@ export default async function DirectoryPage(props: {
     });
   } catch {
     usingFallback = true;
-    districts = DISTRICTS.map((name) => ({ code: name, nameEn: name, nameHi: name }));
+    districts = ALL_DISTRICTS.map((name) => ({ code: name, nameEn: name, nameHi: name }));
     rows = SCHOOLS.filter((s) => !district || s.district === district)
       .filter((s) => !category || s.level === category)
       .filter(

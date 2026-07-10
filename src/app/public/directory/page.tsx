@@ -129,7 +129,7 @@ export default async function DirectoryPage(props: {
                   </td>
                   <td className="px-4 py-3">
                     {extra.feeDisclosed ? (
-                      <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      <span className="rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-medium text-[#92400E]">
                         Disclosed
                       </span>
                     ) : (

@@ -324,7 +324,7 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
 export { PERFORMANCE_COLORS };
 
 export const DIRECTORY_LEVEL_BADGE: Record<PerformanceLevel, string> = {
-  Uday: 'bg-[#FCE7F3] text-pink-800',
-  Unnat: 'bg-[#FEF9C3] text-yellow-800',
-  Utkarsh: 'bg-[#DCFCE7] text-green-800',
+  Uday: 'bg-gray-100 text-gray-700',
+  Unnat: 'bg-[#F5B731] text-[#1B2A6B]',
+  Utkarsh: 'bg-[#1B2A6B] text-[#F5B731]',
 };

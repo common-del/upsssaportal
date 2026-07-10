@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { authConfig } from './auth.config';
 
 async function authorizeDemoFirstUser(roles: string[]) {
   const { prisma } = await import('./db');
@@ -22,8 +23,7 @@ const demoCredentialsFields = {
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  ...authConfig,
   providers: [
     Credentials({
       id: 'credentials-sssa',
@@ -58,21 +58,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.districtCode = user.districtCode;
-      }
-      return token;
-    },
-    session({ session, token }) {
-      session.user.id = token.sub!;
-      session.user.role = token.role as string;
-      session.user.districtCode = (token.districtCode as string) ?? null;
-      return session;
-    },
-  },
-  session: { strategy: 'jwt' },
-  pages: { signIn: '/login' },
 });

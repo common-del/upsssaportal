@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
@@ -125,9 +125,11 @@ export default async function DirectoryPage(props: {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <Link href="/public" className="mb-6 inline-flex items-center gap-1.5 text-sm text-[#1B2A6B] hover:underline">
-        <ArrowLeft size={16} /> {tc('back')}
-      </Link>
+      <BackButton
+        fallbackHref="/public"
+        label={tc('back')}
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-[#1B2A6B] hover:underline"
+      />
 
       <h1 className="text-2xl font-bold text-[#1B2A6B] sm:text-3xl">{t('title')}</h1>
 

@@ -1,6 +1,5 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { DisputeForm } from '@/components/public/DisputeForm';
 
@@ -17,13 +16,11 @@ export default async function NewDisputePage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <Link
-        href="/public/feedback"
+      <BackButton
+        fallbackHref="/public/feedback"
+        label={tc('back')}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
-      >
-        <ArrowLeft size={16} />
-        {tc('back')}
-      </Link>
+      />
 
       <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">
         {t('newTitle')}

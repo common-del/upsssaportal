@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -130,7 +131,7 @@ function FindSchoolBanner() {
   );
 }
 
-function CompareReportCard({ school, backQuery }: { school: SchoolRecord; backQuery: string }) {
+function CompareReportCard({ school }: { school: SchoolRecord }) {
   const level = school.performanceLevel;
 
   return (
@@ -193,7 +194,7 @@ function CompareReportCard({ school, backQuery }: { school: SchoolRecord; backQu
 
       <div className="mt-6 border-t border-gray-200 pt-4">
         <Link
-          href={`/public/schools/${school.udise}?from=compare&back=${encodeURIComponent(backQuery)}`}
+          href={`/public/schools/${school.udise}`}
           className="text-sm font-semibold text-[#1B2A6B] hover:underline"
         >
           View Full Profile →
@@ -351,6 +352,9 @@ function TopByDistrictTab() {
 }
 
 function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [district, setDistrict] = useState(
     initial?.district && ALL_DISTRICTS.includes(initial.district) ? initial.district : 'All Districts',
   );
@@ -394,15 +398,18 @@ function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
     });
   }
 
-  const backQuery = useMemo(() => {
+  // Keep the URL in sync with the current filters/selection so that real
+  // browser back/forward navigation lands on this exact comparison, not a
+  // blank Compare Schools page.
+  useEffect(() => {
     const params = new URLSearchParams();
     params.set('tab', 'compare');
     if (selected.length) params.set('schools', selected.join(','));
     if (district !== 'All Districts') params.set('district', district);
     if (level !== 'All Levels') params.set('level', level);
     if (search) params.set('search', search);
-    return params.toString();
-  }, [selected, district, level, search]);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [selected, district, level, search, pathname, router]);
 
   const compareGridClass = cn(
     'mt-8 grid gap-6',
@@ -479,7 +486,7 @@ function CompareSchoolsTab({ initial }: { initial?: CompareInitialState }) {
       {selectedSchools.length >= 2 && (
         <div className={compareGridClass}>
           {selectedSchools.map((school) => (
-            <CompareReportCard key={school.id} school={school} backQuery={backQuery} />
+            <CompareReportCard key={school.id} school={school} />
           ))}
         </div>
       )}

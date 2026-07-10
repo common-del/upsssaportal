@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
-  ArrowLeft,
   BookOpen,
   Building,
   Building2,
@@ -27,6 +25,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { BackButton } from '@/components/common/BackButton';
 import { LevelBadge } from '@/components/public/LevelBadge';
 import {
   levelDescription,
@@ -100,15 +99,7 @@ function CompareBars({
   );
 }
 
-export function SchoolProfileContent({
-  profile,
-  backHref,
-  backLabel,
-}: {
-  profile: SchoolProfileData;
-  backHref: string;
-  backLabel: string;
-}) {
+export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }) {
   const [tab, setTab] = useState<TabId>('Overview');
   const [compareMode, setCompareMode] = useState<'state' | 'district'>('state');
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({});
@@ -121,13 +112,11 @@ export function SchoolProfileContent({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <Link
-        href={backHref}
+      <BackButton
+        fallbackHref="/public/directory"
+        label="Back"
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[#1B2A6B] hover:underline print:hidden"
-      >
-        <ArrowLeft size={16} />
-        {backLabel}
-      </Link>
+      />
 
       <div
         className="relative rounded-xl px-6 py-6 text-white shadow-md"

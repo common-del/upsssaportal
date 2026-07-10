@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Pencil } from 'lucide-react';
-import Link from 'next/link';
+import { BackButton } from '@/components/common/BackButton';
 import { saveFeeDisclosure } from '@/lib/actions/schoolPortal';
 import { SCHOLARSHIP_LABELS, SCHOLARSHIP_SCHEMES } from '@/lib/school/helpers';
 import type { FeeDisclosure, SchoolScholarship, ScholarshipScheme } from '@prisma/client';
@@ -192,13 +192,12 @@ export function FeeDisclosureNotApplicable() {
       <p className="mx-auto mt-4 max-w-lg text-sm text-gray-600">
         Fee Disclosure does not apply to government schools. Public schools in Uttar Pradesh do not charge tuition fees.
       </p>
-      <Link
-        href="/app/school"
-        className="mt-6 inline-block rounded-lg px-4 py-2 text-sm font-medium text-white"
+      <BackButton
+        fallbackHref="/app/school"
+        label="Back to Dashboard"
+        className="mt-6 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white"
         style={{ backgroundColor: NAVY }}
-      >
-        Back to Dashboard
-      </Link>
+      />
     </div>
   );
 }

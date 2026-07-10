@@ -1,6 +1,5 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { MANDALS, districtSqaafStats } from '@/lib/public/dummyData';
 
 export default async function MandalDistrictsPage({
@@ -16,13 +15,11 @@ export default async function MandalDistrictsPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <Link
-        href="/public"
+      <BackButton
+        fallbackHref="/public"
+        label="Back to homepage"
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-[#1B2A6B] hover:underline"
-      >
-        <ArrowLeft size={16} />
-        Back to homepage
-      </Link>
+      />
 
       <h1 className="text-2xl font-bold text-[#1B2A6B] sm:text-3xl">{mandal.name} Mandal</h1>
       <p className="mt-2 text-sm text-gray-600">

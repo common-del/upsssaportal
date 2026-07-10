@@ -1,11 +1,11 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
 import { RunEscalationsButton } from '@/components/tickets/RunEscalationsButton';
+import { BackButton } from '@/components/common/BackButton';
 import type { Prisma } from '@prisma/client';
 
 const PAGE_SIZE = 20;
@@ -77,9 +77,7 @@ export default async function SssaTicketsPage(props: {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <Link href="/app/sssa" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToDashboard')}
-      </Link>
+      <BackButton fallbackHref="/app/sssa" label={t('backToDashboard')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">{t('title')}</h1>

@@ -1,9 +1,8 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { listUsers } from '@/lib/actions/users';
+import { BackButton } from '@/components/common/BackButton';
 import UserListClient from '@/components/users/UserListClient';
 
 export default async function DistrictUsersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -23,9 +22,7 @@ export default async function DistrictUsersPage({ searchParams }: { searchParams
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <Link href="/app/district" className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900">
-        <ArrowLeft size={16} /> {t('backToDashboard')}
-      </Link>
+      <BackButton fallbackHref="/app/district" label={t('backToDashboard')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
       <h1 className="mb-6 text-2xl font-bold text-navy-900">{t('districtTitle')}</h1>
       <UserListClient
         users={serialized} total={total ?? 0} pageSize={pageSize ?? 20} page={page}

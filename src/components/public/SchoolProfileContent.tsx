@@ -100,10 +100,19 @@ function CompareBars({
   );
 }
 
-export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }) {
+export function SchoolProfileContent({
+  profile,
+  cameFromCompare,
+}: {
+  profile: SchoolProfileData;
+  cameFromCompare?: boolean;
+}) {
   const [tab, setTab] = useState<TabId>('Overview');
   const [compareMode, setCompareMode] = useState<'state' | 'district'>('state');
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({});
+
+  const backHref = cameFromCompare ? '/public/compare' : '/public/directory';
+  const backLabel = cameFromCompare ? 'Back to Compare Schools' : 'Back to Schools';
 
   const compareAvg =
     compareMode === 'state'
@@ -114,11 +123,11 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <Link
-        href="/public/directory"
+        href={backHref}
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[#1B2A6B] hover:underline print:hidden"
       >
         <ArrowLeft size={16} />
-        Back to Schools
+        {backLabel}
       </Link>
 
       <div

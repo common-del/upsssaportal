@@ -5,8 +5,10 @@ import { buildSchoolProfileData, getDummySchoolRecord } from '@/lib/public/schoo
 
 export default async function SchoolProfilePage(props: {
   params: Promise<{ udise: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { udise } = await props.params;
+  const { from } = await props.searchParams;
 
   let name = '';
   let district = '';
@@ -39,5 +41,5 @@ export default async function SchoolProfilePage(props: {
 
   const profile = buildSchoolProfileData({ udise, name, district, block });
 
-  return <SchoolProfileContent profile={profile} />;
+  return <SchoolProfileContent profile={profile} cameFromCompare={from === 'compare'} />;
 }

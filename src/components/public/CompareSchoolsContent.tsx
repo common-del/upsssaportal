@@ -185,7 +185,7 @@ function CompareReportCard({ school }: { school: SchoolRecord }) {
 
       <div className="mt-6 border-t border-gray-200 pt-4">
         <Link
-          href={`/public/schools/${school.udise}`}
+          href={`/public/schools/${school.udise}?from=compare`}
           className="text-sm font-semibold text-[#1B2A6B] hover:underline"
         >
           View Full Profile →

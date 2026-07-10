@@ -35,12 +35,6 @@ export default async function DisputeSuccessPage(props: {
         >
           {t('trackBtn')}
         </Link>
-        <Link
-          href="/public/feedback"
-          className="text-sm text-navy-700 hover:text-navy-900 hover:underline"
-        >
-          {t('backToFeedback')}
-        </Link>
       </div>
     </div>
   );

@@ -270,8 +270,7 @@
     "successDesc": "Your dispute has been registered and will be sent to the school for response.",
     "ticketIdLabel": "Ticket ID",
     "saveTicketId": "Save this ticket ID to track your dispute status later.",
-    "trackBtn": "Track Dispute Status",
-    "backToFeedback": "Back to Dispute & Feedback"
+    "trackBtn": "Track Dispute Status"
   },
   "track": {
     "title": "Track Dispute",

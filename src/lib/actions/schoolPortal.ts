@@ -217,34 +217,6 @@ export async function markAllNotificationsRead() {
   return { success: true };
 }
 
-export async function saveNotificationPreferences(data: {
-  emailAlerts: boolean;
-  smsAlerts: boolean;
-  disputeAlerts: boolean;
-  cycleReminders: boolean;
-}) {
-  const ctx = await requireSchoolSession();
-  if (!ctx) return { error: 'Unauthorized' };
-
-  await prisma.notificationPreference.upsert({
-    where: { userId: ctx.userId },
-    create: { userId: ctx.userId, ...data },
-    update: data,
-  });
-  revalidatePath('/app/school/settings');
-  return { success: true };
-}
-
-export async function savePreferredLocale(locale: 'en' | 'hi') {
-  const ctx = await requireSchoolSession();
-  if (!ctx) return { error: 'Unauthorized' };
-
-  await prisma.user.update({
-    where: { id: ctx.userId },
-    data: { preferredLocale: locale },
-  });
-  return { success: true };
-}
 
 export async function createDefaultMandatoryDocsForSchool(schoolUdise: string, category: string) {
   await ensureMandatoryDocuments(schoolUdise, category);

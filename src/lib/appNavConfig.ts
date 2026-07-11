@@ -11,10 +11,13 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: '/app/sssa/block', label: 'Block Analytics' },
   { href: '/app/sssa/cluster', label: 'Cluster Analytics' },
   { href: '/app/sssa/schools', label: 'School Directory' },
+  { href: '/app/sssa/framework', label: 'Assessments Framework' },
+  { href: '/app/sssa/disputes', label: 'Dispute Resolution Management' },
+  { href: '/app/sssa/notifications', label: 'Notifications' },
+  { href: '/app/sssa/activity', label: 'Activity Log' },
+  { href: '/app/sssa/settings', label: 'Settings' },
   { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
-  { href: '/app/sssa/framework', label: 'SQAAF Framework Builder' },
   { href: '/app/sssa/verifiers', label: 'Verifier Assignment' },
-  { href: '/app/sssa/disputes', label: 'Dispute Resolution' },
   { href: '/app/sssa/users', label: 'User Management' },
 ];
 

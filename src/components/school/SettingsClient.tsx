@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { saveNotificationPreferences, savePreferredLocale } from '@/lib/actions/schoolPortal';
+import { saveNotificationPreferences, savePreferredLocale } from '@/lib/actions/accountSettings';
 
 const NAVY = '#1B2A6B';
 
@@ -14,9 +14,21 @@ type Props = {
     disputeAlerts: boolean;
     cycleReminders: boolean;
   } | null;
+  roleLabel?: string;
+  department?: string;
+  scope?: string;
+  settingsPath?: string;
 };
 
-export function SettingsClient({ username, preferredLocale, prefs }: Props) {
+export function SettingsClient({
+  username,
+  preferredLocale,
+  prefs,
+  roleLabel = 'School',
+  department = 'School Education Department, Uttar Pradesh',
+  scope = 'School',
+  settingsPath = '/app/school/settings',
+}: Props) {
   const [locale, setLocale] = useState(preferredLocale ?? 'en');
   const [form, setForm] = useState({
     emailAlerts: prefs?.emailAlerts ?? true,
@@ -38,7 +50,7 @@ export function SettingsClient({ username, preferredLocale, prefs }: Props) {
 
   function handleSavePrefs() {
     startTransition(async () => {
-      await saveNotificationPreferences(form);
+      await saveNotificationPreferences(form, settingsPath);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     });
@@ -65,9 +77,9 @@ export function SettingsClient({ username, preferredLocale, prefs }: Props) {
         <dl className="grid gap-3 sm:grid-cols-2">
           {[
             { label: 'User ID', value: username },
-            { label: 'Role', value: 'School' },
-            { label: 'Department', value: 'School Education Department, Uttar Pradesh' },
-            { label: 'Scope', value: 'School' },
+            { label: 'Role', value: roleLabel },
+            { label: 'Department', value: department },
+            { label: 'Scope', value: scope },
           ].map((r) => (
             <div key={r.label}>
               <dt className="text-xs font-medium uppercase text-gray-500">{r.label}</dt>

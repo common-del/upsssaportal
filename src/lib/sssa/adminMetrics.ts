@@ -427,13 +427,22 @@ export async function buildClusterDashboardData(
   return buildScopedDashboardData(districtCode, blockCode, clusterCode);
 }
 
+const CATEGORY_CODE_TO_DOMAIN: Record<string, string> = {
+  CAT_FEE_FALSE: 'Administration / HR & Leadership',
+  CAT_INFRA_FALSE: 'Infrastructure & Safety of Students',
+  CAT_SAFETY: 'Infrastructure & Safety of Students',
+  CAT_GRADE_DISPUTE: 'Assessment / Learning Outcomes',
+  CAT_STAFF_CONDUCT: 'Administration / HR & Leadership',
+  CAT_OTHER: 'Inclusiveness / Student Well-being',
+};
+
 export async function buildDisputesDashboardData() {
   const tickets = await prisma.ticket.findMany({
     orderBy: { createdAt: 'desc' },
     take: 200,
     include: {
       school: { select: { nameEn: true, district: { select: { nameEn: true } } } },
-      category: { select: { nameEn: true } },
+      category: { select: { code: true, nameEn: true } },
     },
   });
 
@@ -444,15 +453,22 @@ export async function buildDisputesDashboardData() {
     return { label: 'Open', color: 'bg-red-100 text-red-800' };
   };
 
+  const domainFor = (categoryCode: string) =>
+    CATEGORY_CODE_TO_DOMAIN[categoryCode] ?? 'Assessment / Learning Outcomes';
+
   const open = tickets.filter((t) => !['RESOLVED', 'REJECTED'].includes(t.status)).length;
   const resolved = tickets.filter((t) => t.status === 'RESOLVED').length;
   const underReview = tickets.filter((t) => t.status.includes('REVIEW') || t.status.includes('ASSIGNED')).length;
   const clarification = tickets.filter((t) => t.status.includes('CLARIF')).length;
 
-  const categoryCounts = DISPUTE_CATEGORIES_CHART.map((name, i) => ({
-    name,
-    count: Math.floor(tickets.length / DISPUTE_CATEGORIES_CHART.length) + (i % 3),
-  }));
+  const categoryTally: Record<string, number> = {};
+  for (const t of tickets) {
+    categoryTally[t.category.nameEn] = (categoryTally[t.category.nameEn] ?? 0) + 1;
+  }
+  const categoryCounts =
+    tickets.length > 0
+      ? Object.entries(categoryTally).map(([name, count]) => ({ name, count }))
+      : DISPUTE_CATEGORIES_CHART.map((name) => ({ name, count: 0 }));
 
   const tableRows = tickets.slice(0, 50).map((t) => {
     const st = statusMap(t.status);
@@ -460,7 +476,7 @@ export async function buildDisputesDashboardData() {
       id: t.id,
       school: t.school.nameEn,
       district: t.school.district.nameEn,
-      domain: 'Assessment / Learning Outcomes',
+      domain: domainFor(t.category.code),
       category: t.category.nameEn,
       raisedBy: t.submitterName ?? 'External Evaluator',
       raisedAt: t.createdAt.toLocaleDateString('en-IN'),
@@ -475,7 +491,7 @@ export async function buildDisputesDashboardData() {
       id: t.id,
       school: t.school.nameEn,
       issue: t.category.nameEn,
-      domain: 'Infrastructure & Safety',
+      domain: domainFor(t.category.code),
       raisedAt: t.createdAt.toLocaleDateString('en-IN'),
       status: st.label,
       statusColor: st.color,

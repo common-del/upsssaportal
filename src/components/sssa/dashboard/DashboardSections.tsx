@@ -233,11 +233,11 @@ export function DisputeResolutionSection({
 }) {
   const leftData = leftChartTitle.includes('School')
     ? disputes.topSchools
-    : leftChartTitle.includes('Cluster')
-      ? disputes.topClusters
-      : leftChartTitle.includes('Block')
-        ? disputes.topBlocks
-        : disputes.topDistricts;
+    : leftChartTitle.includes('Block')
+      ? disputes.topBlocks
+      : leftChartTitle.includes('District')
+        ? disputes.topDistricts
+        : disputes.topMandals;
 
   const leftChart = leftData.length > 0 ? leftData : [{ name: 'No data', count: 0 }];
   const catChart = disputes.categories.length > 0 ? disputes.categories : [{ name: 'No data', count: 0, pct: 0 }];
@@ -335,28 +335,28 @@ export function ScopeStatCards({
   schoolsLabel,
   totalSchools,
   averageScore,
-  topDistrictBenchmark,
-  topBlock,
-  topCluster,
+  topMandalBenchmark,
+  topDistrictInMandal,
+  topBlockInScope,
 }: {
   schoolsLabel: string;
   totalSchools: number;
   averageScore: number;
-  topDistrictBenchmark: { name: string; avg: number };
-  topBlock: { name: string; avg: number };
-  topCluster: { name: string; avg: number };
+  topMandalBenchmark: { name: string; avg: number };
+  topDistrictInMandal: { name: string; avg: number };
+  topBlockInScope: { name: string; avg: number };
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <ScopeStatCard label={schoolsLabel} value={totalSchools} icon />
       <ScopeStatCard label="Average SQAAF Score" value={`${averageScore}%`} />
       <ScopeStatCard
-        label="Top District (Benchmark)"
-        value={topDistrictBenchmark.name}
-        sub={`${topDistrictBenchmark.avg}%`}
+        label="Top Mandal (Benchmark)"
+        value={topMandalBenchmark.name}
+        sub={`${topMandalBenchmark.avg}%`}
       />
-      <ScopeStatCard label="Top Block (in District)" value={topBlock.name} sub={`${topBlock.avg}%`} />
-      <ScopeStatCard label="Top Cluster (in District)" value={topCluster.name} sub={`${topCluster.avg}%`} />
+      <ScopeStatCard label="Top District (in Mandal)" value={topDistrictInMandal.name} sub={`${topDistrictInMandal.avg}%`} />
+      <ScopeStatCard label="Top Block" value={topBlockInScope.name} sub={`${topBlockInScope.avg}%`} />
     </div>
   );
 }

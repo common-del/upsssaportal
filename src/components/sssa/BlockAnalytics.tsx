@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { DistrictDashboardData, StateDashboardData } from '@/lib/sssa/adminMetrics';
+import type { ScopedDashboardData, StateDashboardData } from '@/lib/sssa/adminMetrics';
 import {
   DisputeResolutionSection,
   InfrastructureGaps,
@@ -14,34 +14,44 @@ import {
 } from '@/components/sssa/dashboard/DashboardSections';
 
 type Props = {
+  initialMandalCode: string;
   initialDistrictCode: string;
   initialBlockCode: string;
+  mandals: StateDashboardData['mandals'];
   districts: StateDashboardData['districts'];
   blocks: StateDashboardData['blocks'];
-  initialData: DistrictDashboardData;
+  initialData: ScopedDashboardData;
 };
 
 export function BlockAnalytics({
+  initialMandalCode,
   initialDistrictCode,
   initialBlockCode,
+  mandals,
   districts,
   blocks,
   initialData,
 }: Props) {
   const router = useRouter();
+  const [mandalCode, setMandalCode] = useState(initialMandalCode);
   const [districtCode, setDistrictCode] = useState(initialDistrictCode);
   const [blockCode, setBlockCode] = useState(initialBlockCode);
   const data = initialData;
 
   const districtName = districts.find((d) => d.code === districtCode)?.nameEn ?? districtCode;
   const blockName = blocks.find((b) => b.code === blockCode)?.nameEn ?? blockCode;
+
+  const districtOptions = useMemo(
+    () => districts.filter((d) => d.mandalCode === mandalCode),
+    [districts, mandalCode],
+  );
   const blockOptions = useMemo(
     () => blocks.filter((b) => b.districtCode === districtCode),
     [blocks, districtCode],
   );
 
-  function reload(nextDistrict: string, nextBlock: string) {
-    router.push(`/app/sssa/block?district=${nextDistrict}&block=${nextBlock}`);
+  function reload(nextMandal: string, nextDistrict: string, nextBlock: string) {
+    router.push(`/app/sssa/block?mandal=${nextMandal}&district=${nextDistrict}&block=${nextBlock}`);
   }
 
   return (
@@ -56,16 +66,35 @@ export function BlockAnalytics({
       <div className="flex flex-wrap gap-3">
         <select
           className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+          value={mandalCode}
+          onChange={(e) => {
+            const nextMandal = e.target.value;
+            const nextDistrict = districts.find((d) => d.mandalCode === nextMandal)?.code ?? '';
+            const nextBlock = blocks.find((b) => b.districtCode === nextDistrict)?.code ?? '';
+            setMandalCode(nextMandal);
+            setDistrictCode(nextDistrict);
+            setBlockCode(nextBlock);
+            reload(nextMandal, nextDistrict, nextBlock);
+          }}
+        >
+          {mandals.map((m) => (
+            <option key={m.code} value={m.code}>
+              {m.nameEn}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
           value={districtCode}
           onChange={(e) => {
             const nextDistrict = e.target.value;
             const nextBlock = blocks.find((b) => b.districtCode === nextDistrict)?.code ?? '';
             setDistrictCode(nextDistrict);
             setBlockCode(nextBlock);
-            reload(nextDistrict, nextBlock);
+            reload(mandalCode, nextDistrict, nextBlock);
           }}
         >
-          {districts.map((d) => (
+          {districtOptions.map((d) => (
             <option key={d.code} value={d.code}>
               {d.nameEn}
             </option>
@@ -76,7 +105,7 @@ export function BlockAnalytics({
           value={blockCode}
           onChange={(e) => {
             setBlockCode(e.target.value);
-            reload(districtCode, e.target.value);
+            reload(mandalCode, districtCode, e.target.value);
           }}
         >
           {blockOptions.map((b) => (
@@ -91,9 +120,9 @@ export function BlockAnalytics({
         schoolsLabel="Schools in Block"
         totalSchools={data.totalSchools}
         averageScore={data.averageScore}
-        topDistrictBenchmark={data.topDistrictBenchmark}
-        topBlock={data.topBlock}
-        topCluster={data.topCluster}
+        topMandalBenchmark={data.topMandalBenchmark}
+        topDistrictInMandal={data.topDistrictInMandal}
+        topBlockInScope={data.topBlockInScope}
       />
 
       <SubmissionProgress workflow={data.workflow} totalSchools={data.totalSchools} />
@@ -105,7 +134,7 @@ export function BlockAnalytics({
       />
       <InfrastructureGaps gaps={data.infraGaps} />
       <PerformanceGaps domainGaps={data.domainGaps} showExport />
-      <DisputeResolutionSection disputes={data.disputes} leftChartTitle="Clusters with highest disputes" />
+      <DisputeResolutionSection disputes={data.disputes} leftChartTitle="Schools with highest disputes" />
     </div>
   );
 }

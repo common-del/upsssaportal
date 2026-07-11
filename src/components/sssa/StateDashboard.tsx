@@ -29,7 +29,7 @@ export function StateDashboard({ data }: { data: StateDashboardData }) {
       <PerformanceGaps domainGaps={data.domainGaps} showExport />
       <DisputeResolutionSection
         disputes={data.disputes}
-        leftChartTitle="Districts with highest disputes"
+        leftChartTitle="Mandals with highest disputes"
       />
     </div>
   );

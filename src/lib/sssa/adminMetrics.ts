@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import {
   DOMAIN_CHART_LABELS,
   DISPUTE_CATEGORIES_CHART,
@@ -16,14 +17,12 @@ export type DisputeAnalytics = {
   pending: number;
   avgResolutionDays: number;
   closurePct: number;
+  topMandals: { name: string; count: number }[];
   topDistricts: { name: string; count: number }[];
   topBlocks: { name: string; count: number }[];
-  topClusters: { name: string; count: number }[];
   topSchools: { name: string; count: number }[];
   categories: { name: string; count: number; pct: number }[];
 };
-
-export type SchoolScope = { districtCode?: string; blockCode?: string; clusterCode?: string };
 
 export type StateDashboardData = {
   cycleName: string;
@@ -36,9 +35,9 @@ export type StateDashboardData = {
   infraGaps: InfraGap[];
   domainGaps: DomainGap[];
   disputes: DisputeAnalytics;
-  districts: { code: string; nameEn: string }[];
+  mandals: { code: string; nameEn: string }[];
+  districts: { code: string; nameEn: string; mandalCode: string | null }[];
   blocks: { code: string; nameEn: string; districtCode: string }[];
-  clusters: { code: string; nameEn: string; blockCode: string; districtCode: string }[];
 };
 
 function pct(count: number, total: number) {
@@ -51,7 +50,7 @@ function hashPct(seed: string, base: number) {
   return Math.min(45, base + (Math.abs(h) % 25));
 }
 
-async function workflowCounts(cycleId: string | null, schoolFilter?: SchoolScope) {
+async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.SchoolWhereInput) {
   const whereSchool = schoolFilter ?? {};
   const total = await prisma.school.count({ where: whereSchool });
   if (!cycleId || total === 0) {
@@ -133,12 +132,20 @@ async function domainGaps(cycleId: string | null, prefix: string): Promise<Domai
   return domains;
 }
 
-async function disputeAnalytics(
-  districtCode?: string,
-  blockCode?: string,
-  clusterCode?: string,
-): Promise<DisputeAnalytics> {
-  const ticketWhere = districtCode ? { districtCode } : {};
+async function disputeAnalytics(scope: {
+  mandalCode?: string;
+  districtCode?: string;
+  blockCode?: string;
+}): Promise<DisputeAnalytics> {
+  const { mandalCode, districtCode, blockCode } = scope;
+  const ticketWhere: Prisma.TicketWhereInput = blockCode
+    ? { school: { blockCode } }
+    : districtCode
+      ? { districtCode }
+      : mandalCode
+        ? { school: { district: { mandalCode } } }
+        : {};
+
   const tickets = await prisma.ticket.findMany({
     where: ticketWhere,
     include: {
@@ -146,24 +153,18 @@ async function disputeAnalytics(
         select: {
           nameEn: true,
           blockCode: true,
-          clusterCode: true,
           block: { select: { nameEn: true } },
-          cluster: { select: { nameEn: true } },
-          district: { select: { nameEn: true } },
+          district: { select: { nameEn: true, mandal: { select: { nameEn: true } } } },
         },
       },
       category: { select: { nameEn: true } },
     },
   });
 
-  const filtered = tickets
-    .filter((t) => !blockCode || t.school.blockCode === blockCode)
-    .filter((t) => !clusterCode || t.school.clusterCode === clusterCode);
-
-  const total = filtered.length;
-  const resolved = filtered.filter((t) => t.status === 'RESOLVED').length;
+  const total = tickets.length;
+  const resolved = tickets.filter((t) => t.status === 'RESOLVED').length;
   const pending = total - resolved;
-  const resolvedWithDates = filtered.filter((t) => t.resolvedAt);
+  const resolvedWithDates = tickets.filter((t) => t.resolvedAt);
   const avgResolutionDays =
     resolvedWithDates.length > 0
       ? Math.round(
@@ -174,19 +175,19 @@ async function disputeAnalytics(
         )
       : 0;
 
+  const mandalCounts: Record<string, number> = {};
   const districtCounts: Record<string, number> = {};
   const blockCounts: Record<string, number> = {};
-  const clusterCounts: Record<string, number> = {};
   const schoolCounts: Record<string, number> = {};
   const catCounts: Record<string, number> = {};
 
-  for (const t of filtered) {
+  for (const t of tickets) {
+    const mName = t.school.district.mandal?.nameEn ?? 'Unknown';
+    mandalCounts[mName] = (mandalCounts[mName] ?? 0) + 1;
     const dName = t.school.district.nameEn;
     districtCounts[dName] = (districtCounts[dName] ?? 0) + 1;
     const bName = t.school.block?.nameEn ?? 'Unknown';
     blockCounts[bName] = (blockCounts[bName] ?? 0) + 1;
-    const cName = t.school.cluster?.nameEn ?? 'Unknown';
-    clusterCounts[cName] = (clusterCounts[cName] ?? 0) + 1;
     schoolCounts[t.school.nameEn] = (schoolCounts[t.school.nameEn] ?? 0) + 1;
     const cat = t.category.nameEn;
     catCounts[cat] = (catCounts[cat] ?? 0) + 1;
@@ -215,15 +216,15 @@ async function disputeAnalytics(
     pending,
     avgResolutionDays,
     closurePct: pct(resolved, total),
+    topMandals: topN(mandalCounts, 5),
     topDistricts: topN(districtCounts, 5),
     topBlocks: topN(blockCounts, 5),
-    topClusters: topN(clusterCounts, 5),
     topSchools: topN(schoolCounts, 5),
     categories,
   };
 }
 
-async function avgScoreFor(cycleId: string | null, schoolWhere: SchoolScope) {
+async function avgScoreFor(cycleId: string | null, schoolWhere: Prisma.SchoolWhereInput) {
   if (!cycleId) return 0;
   const results = await prisma.result.findMany({
     where: { cycleId, finalScorePercent: { not: null }, school: schoolWhere },
@@ -233,7 +234,7 @@ async function avgScoreFor(cycleId: string | null, schoolWhere: SchoolScope) {
   return results.reduce((s, r) => s + (r.finalScorePercent ?? 0), 0) / results.length;
 }
 
-async function performanceCounts(cycleId: string | null, schoolWhere: SchoolScope) {
+async function performanceCounts(cycleId: string | null, schoolWhere: Prisma.SchoolWhereInput) {
   if (!cycleId) return { low: 0, high: 0 };
   const [low, high] = await Promise.all([
     prisma.result.count({ where: { cycleId, finalScorePercent: { lt: 40 }, school: schoolWhere } }),
@@ -244,17 +245,17 @@ async function performanceCounts(cycleId: string | null, schoolWhere: SchoolScop
 
 export async function buildStateDashboardData(): Promise<StateDashboardData> {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
-  const districts = await prisma.district.findMany({
+  const mandals = await prisma.mandal.findMany({
     orderBy: { nameEn: 'asc' },
     select: { code: true, nameEn: true },
+  });
+  const districts = await prisma.district.findMany({
+    orderBy: { nameEn: 'asc' },
+    select: { code: true, nameEn: true, mandalCode: true },
   });
   const blocks = await prisma.block.findMany({
     orderBy: { nameEn: 'asc' },
     select: { code: true, nameEn: true, districtCode: true },
-  });
-  const clusters = await prisma.cluster.findMany({
-    orderBy: { nameEn: 'asc' },
-    select: { code: true, nameEn: true, blockCode: true, districtCode: true },
   });
 
   const totalSchools = await prisma.school.count();
@@ -298,99 +299,110 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
     highPerforming,
     infraGaps: await infraGapsFor(totalSchools, 'state'),
     domainGaps: await domainGaps(cycle?.id ?? null, 'state'),
-    disputes: await disputeAnalytics(),
+    disputes: await disputeAnalytics({}),
+    mandals,
     districts,
     blocks,
-    clusters,
   };
 }
 
-export type DistrictDashboardData = StateDashboardData & {
-  districtRank: number;
-  districtAvg: number;
-  topDistrictBenchmark: { name: string; avg: number };
-  topBlock: { name: string; avg: number };
-  topCluster: { name: string; avg: number };
+export type ScopedDashboardData = StateDashboardData & {
+  mandalRank: number;
+  topMandalBenchmark: { name: string; avg: number };
+  topDistrictInMandal: { name: string; avg: number };
+  topBlockInScope: { name: string; avg: number };
   managementBars: { type: string; score: number; color: string }[];
 };
 
-/** Benchmarks are always relative to the selected district, regardless of any
- * block/cluster drill-down — matches the reference UI where the same three
- * benchmark cards appear unchanged across District/Block/Cluster Analytics. */
+/** Benchmarks are always relative to the selected mandal (and, once a district is
+ * picked, the selected district) — the same three benchmark cards appear unchanged
+ * across Mandal/District/Block Analytics, only narrowing as you drill down. */
 async function computeBenchmarks(
   cycleId: string | null,
-  districtCode: string,
+  mandalCode: string,
+  districtCode: string | undefined,
   state: StateDashboardData,
 ) {
-  const districtAvgs: { code: string; avg: number }[] = [];
-  for (const d of state.districts) {
-    const avg = cycleId ? await avgScoreFor(cycleId, { districtCode: d.code }) : 0;
-    districtAvgs.push({ code: d.code, avg });
-  }
-  districtAvgs.sort((a, b) => b.avg - a.avg);
-  const rank = Math.max(1, districtAvgs.findIndex((x) => x.code === districtCode) + 1);
-  const topDistrict = state.districts.find((d) => d.code === districtAvgs[0]?.code);
+  const mandalAvgs = await Promise.all(
+    state.mandals.map(async (m) => ({
+      code: m.code,
+      name: m.nameEn,
+      avg: cycleId ? await avgScoreFor(cycleId, { district: { mandalCode: m.code } }) : 0,
+    })),
+  );
+  mandalAvgs.sort((a, b) => b.avg - a.avg);
+  const mandalRank = Math.max(1, mandalAvgs.findIndex((x) => x.code === mandalCode) + 1);
+  const topMandal = mandalAvgs[0];
 
-  const blocksInDistrict = state.blocks.filter((b) => b.districtCode === districtCode);
-  const blockAvgs: { name: string; avg: number }[] = [];
-  for (const b of blocksInDistrict) {
-    const avg = cycleId ? await avgScoreFor(cycleId, { blockCode: b.code }) : 0;
-    blockAvgs.push({ name: b.nameEn, avg });
-  }
+  const districtsInMandal = state.districts.filter((d) => d.mandalCode === mandalCode);
+  const districtAvgs = await Promise.all(
+    districtsInMandal.map(async (d) => ({
+      name: d.nameEn,
+      avg: cycleId ? await avgScoreFor(cycleId, { districtCode: d.code }) : 0,
+    })),
+  );
+  districtAvgs.sort((a, b) => b.avg - a.avg);
+
+  const blockScope = districtCode
+    ? state.blocks.filter((b) => b.districtCode === districtCode)
+    : state.blocks.filter((b) => districtsInMandal.some((d) => d.code === b.districtCode));
+  const blockAvgs = await Promise.all(
+    blockScope.map(async (b) => ({
+      name: b.nameEn,
+      avg: cycleId ? await avgScoreFor(cycleId, { blockCode: b.code }) : 0,
+    })),
+  );
   blockAvgs.sort((a, b) => b.avg - a.avg);
 
-  const clustersInDistrict = state.clusters.filter((c) => c.districtCode === districtCode);
-  const clusterAvgs: { name: string; avg: number }[] = [];
-  for (const c of clustersInDistrict) {
-    const avg = cycleId ? await avgScoreFor(cycleId, { clusterCode: c.code }) : 0;
-    clusterAvgs.push({ name: c.nameEn, avg });
-  }
-  clusterAvgs.sort((a, b) => b.avg - a.avg);
-
   return {
-    districtRank: rank,
-    topDistrictBenchmark: {
-      name: topDistrict?.nameEn ?? '—',
+    mandalRank,
+    topMandalBenchmark: {
+      name: topMandal?.name ?? '—',
+      avg: Math.round(topMandal?.avg ?? 0),
+    },
+    topDistrictInMandal: {
+      name: districtAvgs[0]?.name ?? '—',
       avg: Math.round(districtAvgs[0]?.avg ?? 0),
     },
-    topBlock: {
+    topBlockInScope: {
       name: blockAvgs[0]?.name ?? '—',
       avg: Math.round(blockAvgs[0]?.avg ?? 0),
-    },
-    topCluster: {
-      name: clusterAvgs[0]?.name ?? '—',
-      avg: Math.round(clusterAvgs[0]?.avg ?? 0),
     },
   };
 }
 
 async function buildScopedDashboardData(
-  districtCode: string,
+  mandalCode: string,
+  districtCode: string | undefined,
   blockCode: string | undefined,
-  clusterCode: string | undefined,
-): Promise<DistrictDashboardData> {
+): Promise<ScopedDashboardData> {
   const state = await buildStateDashboardData();
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   const cycleId = cycle?.id ?? null;
-  const schoolWhere: SchoolScope = {
-    districtCode,
-    ...(blockCode ? { blockCode } : {}),
-    ...(clusterCode ? { clusterCode } : {}),
-  };
+  const districtsInMandal = state.districts.filter((d) => d.mandalCode === mandalCode).map((d) => d.code);
+
+  const schoolWhere: Prisma.SchoolWhereInput = blockCode
+    ? { blockCode }
+    : districtCode
+      ? { districtCode }
+      : { districtCode: { in: districtsInMandal } };
+
   const totalSchools = await prisma.school.count({ where: schoolWhere });
   const scopedAvg = Math.round(await avgScoreFor(cycleId, schoolWhere));
 
-  const benchmarks = await computeBenchmarks(cycleId, districtCode, state);
+  const benchmarks = await computeBenchmarks(cycleId, mandalCode, districtCode, state);
   const workflow = await workflowCounts(cycleId, schoolWhere);
   const { low: lowPerforming, high: highPerforming } = await performanceCounts(cycleId, schoolWhere);
 
-  const scopeKey = `${districtCode}-${blockCode ?? 'all'}-${clusterCode ?? 'all'}`;
+  const scopeKey = `${mandalCode}-${districtCode ?? 'all'}-${blockCode ?? 'all'}`;
   const managementBars = [
     { type: 'Government', score: 52 + (scopeKey.length % 20), color: '#10B981' },
     { type: 'Govt Aided Schools', score: 48 + (scopeKey.length % 15), color: '#F5B731' },
     { type: 'Private Aided', score: 55 + (scopeKey.length % 12), color: '#F97316' },
     { type: 'Private', score: 60 + (scopeKey.length % 10), color: '#EF4444' },
   ];
+
+  const disputeScope = blockCode ? { blockCode } : districtCode ? { districtCode } : { mandalCode };
 
   return {
     ...state,
@@ -401,30 +413,33 @@ async function buildScopedDashboardData(
     highPerforming,
     infraGaps: await infraGapsFor(totalSchools, scopeKey),
     domainGaps: await domainGaps(cycleId, scopeKey),
-    disputes: await disputeAnalytics(districtCode, blockCode, clusterCode),
-    districtAvg: scopedAvg,
+    disputes: await disputeAnalytics(disputeScope),
     managementBars,
     ...benchmarks,
   };
 }
 
-export async function buildDistrictDashboardData(districtCode: string): Promise<DistrictDashboardData> {
-  return buildScopedDashboardData(districtCode, undefined, undefined);
+export async function buildMandalDashboardData(mandalCode: string): Promise<ScopedDashboardData> {
+  return buildScopedDashboardData(mandalCode, undefined, undefined);
+}
+
+export async function buildDistrictDashboardData(districtCode: string): Promise<ScopedDashboardData> {
+  const district = await prisma.district.findUnique({
+    where: { code: districtCode },
+    select: { mandalCode: true },
+  });
+  return buildScopedDashboardData(district?.mandalCode ?? '', districtCode, undefined);
 }
 
 export async function buildBlockDashboardData(
   districtCode: string,
   blockCode: string,
-): Promise<DistrictDashboardData> {
-  return buildScopedDashboardData(districtCode, blockCode, undefined);
-}
-
-export async function buildClusterDashboardData(
-  districtCode: string,
-  blockCode: string,
-  clusterCode: string,
-): Promise<DistrictDashboardData> {
-  return buildScopedDashboardData(districtCode, blockCode, clusterCode);
+): Promise<ScopedDashboardData> {
+  const district = await prisma.district.findUnique({
+    where: { code: districtCode },
+    select: { mandalCode: true },
+  });
+  return buildScopedDashboardData(district?.mandalCode ?? '', districtCode, blockCode);
 }
 
 const CATEGORY_CODE_TO_DOMAIN: Record<string, string> = {

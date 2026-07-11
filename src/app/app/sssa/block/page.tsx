@@ -4,14 +4,19 @@ import { buildBlockDashboardData, buildStateDashboardData } from '@/lib/sssa/adm
 export default async function BlockAnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ district?: string; block?: string }>;
+  searchParams: Promise<{ mandal?: string; district?: string; block?: string }>;
 }) {
   const params = await searchParams;
   const state = await buildStateDashboardData();
+  const mandalCode =
+    params.mandal && state.mandals.some((m) => m.code === params.mandal)
+      ? params.mandal
+      : (state.mandals[0]?.code ?? '');
+  const districtOptions = state.districts.filter((d) => d.mandalCode === mandalCode);
   const districtCode =
-    params.district && state.districts.some((d) => d.code === params.district)
+    params.district && districtOptions.some((d) => d.code === params.district)
       ? params.district
-      : (state.districts[0]?.code ?? '');
+      : (districtOptions[0]?.code ?? '');
   const blockOptions = state.blocks.filter((b) => b.districtCode === districtCode);
   const blockCode =
     params.block && blockOptions.some((b) => b.code === params.block)
@@ -22,9 +27,11 @@ export default async function BlockAnalyticsPage({
 
   return (
     <BlockAnalytics
-      key={`${districtCode}-${blockCode}`}
+      key={`${mandalCode}-${districtCode}-${blockCode}`}
+      initialMandalCode={mandalCode}
       initialDistrictCode={districtCode}
       initialBlockCode={blockCode}
+      mandals={state.mandals}
       districts={state.districts}
       blocks={state.blocks}
       initialData={data}

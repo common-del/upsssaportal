@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { MANDAL_SEED, DISTRICT_SEED, BLOCK_SEED } from './upGeoData';
 
 const prisma = new PrismaClient();
 
@@ -11,39 +12,12 @@ const seedUsers = [
   { username: 'district1', password: 'district123', role: 'DISTRICT_OFFICIAL', districtCode: 'D001' },
 ];
 
-/* ── Districts ─────────────────────────────────────────── */
-const seedDistricts = [
-  { code: 'D001', nameEn: 'Lucknow', nameHi: 'लखनऊ' },
-  { code: 'D002', nameEn: 'Varanasi', nameHi: 'वाराणसी' },
-];
-
-/* ── Blocks ────────────────────────────────────────────── */
-const seedBlocks = [
-  { code: 'B001', districtCode: 'D001', nameEn: 'Mohanlalganj', nameHi: 'मोहनलालगंज' },
-  { code: 'B002', districtCode: 'D001', nameEn: 'Bakshi Ka Talab', nameHi: 'बक्शी का तालाब' },
-  { code: 'B003', districtCode: 'D002', nameEn: 'Pindra', nameHi: 'पिंडरा' },
-  { code: 'B004', districtCode: 'D002', nameEn: 'Sevapuri', nameHi: 'सेवापुरी' },
-];
-
-/* ── Clusters ──────────────────────────────────────────── */
-const seedClusters = seedBlocks.flatMap((b, i) => [
-  {
-    code: `C${String(i * 2 + 1).padStart(3, '0')}`,
-    districtCode: b.districtCode,
-    blockCode: b.code,
-    nameEn: `${b.nameEn}-I`,
-    nameHi: `${b.nameHi}-I`,
-  },
-  {
-    code: `C${String(i * 2 + 2).padStart(3, '0')}`,
-    districtCode: b.districtCode,
-    blockCode: b.code,
-    nameEn: `${b.nameEn}-II`,
-    nameHi: `${b.nameHi}-II`,
-  },
-]);
-
-/* ── Schools ───────────────────────────────────────────── */
+/* ── Demo schools ──────────────────────────────────────────
+   Only seeded for the 4 blocks that already had demo schools
+   (Lucknow: Mohanlalganj/Bakshi-Ka-Talab, Varanasi: Pindra/Sevapuri) -
+   the other 822 real UP blocks exist for the geography/analytics
+   pages but don't get synthetic school records. */
+const DEMO_BLOCK_CODES = ['B001', 'B002', 'B003', 'B004'];
 const categories = ['Primary', 'Upper Primary', 'Secondary'];
 
 function buildSchools() {
@@ -54,7 +28,6 @@ function buildSchools() {
     category: string;
     districtCode: string;
     blockCode: string;
-    clusterCode: string;
     addressEn: string | null;
     addressHi: string | null;
     publicPhone: string | null;
@@ -62,12 +35,12 @@ function buildSchools() {
     feesRangeMax: number | null;
   }[] = [];
 
-  const districtNameHi: Record<string, string> = { D001: 'लखनऊ', D002: 'वाराणसी' };
-  const districtNameEn: Record<string, string> = { D001: 'Lucknow', D002: 'Varanasi' };
+  const districtByCode = new Map(DISTRICT_SEED.map((d) => [d.code, d]));
+  const demoBlocks = BLOCK_SEED.filter((b) => DEMO_BLOCK_CODES.includes(b.code));
 
-  for (const block of seedBlocks) {
-    const blockIdx = seedBlocks.indexOf(block);
-    const blockClusters = seedClusters.filter((c) => c.blockCode === block.code);
+  for (const block of demoBlocks) {
+    const blockIdx = DEMO_BLOCK_CODES.indexOf(block.code);
+    const district = districtByCode.get(block.districtCode)!;
 
     for (let i = 1; i <= 5; i++) {
       const globalIdx = blockIdx * 5 + i;
@@ -81,9 +54,8 @@ function buildSchools() {
         category: cat,
         districtCode: block.districtCode,
         blockCode: block.code,
-        clusterCode: blockClusters[(i - 1) % blockClusters.length].code,
-        addressEn: i % 2 === 1 ? `${block.nameEn}, ${districtNameEn[block.districtCode]}, Uttar Pradesh` : null,
-        addressHi: i % 2 === 1 ? `${block.nameHi}, ${districtNameHi[block.districtCode]}, उत्तर प्रदेश` : null,
+        addressEn: i % 2 === 1 ? `${block.nameEn}, ${district.nameEn}, Uttar Pradesh` : null,
+        addressHi: i % 2 === 1 ? `${block.nameHi}, ${district.nameHi}, उत्तर प्रदेश` : null,
         publicPhone: i % 3 === 1 ? `+91 522${String(1000000 + globalIdx)}` : null,
         feesRangeMin: i <= 3 ? 0 : 500,
         feesRangeMax: i <= 3 ? 0 : 2500,
@@ -99,7 +71,6 @@ function buildSchools() {
     category: 'Secondary',
     districtCode: 'D001',
     blockCode: 'B001',
-    clusterCode: seedClusters.find((c) => c.blockCode === 'B001')!.code,
     addressEn: 'Mohanlalganj, Lucknow, Uttar Pradesh',
     addressHi: 'मोहनलालगंज, लखनऊ, उत्तर प्रदेश',
     publicPhone: '+91 5221234567',
@@ -153,46 +124,46 @@ async function main() {
     console.log(`  created: ${u.username} (${u.role})`);
   }
 
+  console.log('Seeding mandals…');
+  for (const m of MANDAL_SEED) {
+    await prisma.mandal.upsert({
+      where: { code: m.code },
+      update: { nameEn: m.nameEn, nameHi: m.nameHi },
+      create: m,
+    });
+  }
+  console.log(`  upserted ${MANDAL_SEED.length} mandals`);
+
   console.log('Seeding districts…');
-  for (const d of seedDistricts) {
+  for (const d of DISTRICT_SEED) {
     await prisma.district.upsert({
       where: { code: d.code },
-      update: {},
+      update: { nameEn: d.nameEn, nameHi: d.nameHi, mandalCode: d.mandalCode },
       create: d,
     });
-    console.log(`  upserted: ${d.code} ${d.nameEn}`);
   }
+  console.log(`  upserted ${DISTRICT_SEED.length} districts`);
 
   console.log('Seeding blocks…');
-  for (const b of seedBlocks) {
+  for (const b of BLOCK_SEED) {
     await prisma.block.upsert({
       where: { code: b.code },
-      update: {},
+      update: { nameEn: b.nameEn, nameHi: b.nameHi, districtCode: b.districtCode },
       create: b,
     });
-    console.log(`  upserted: ${b.code} ${b.nameEn}`);
   }
-
-  console.log('Seeding clusters…');
-  for (const c of seedClusters) {
-    await prisma.cluster.upsert({
-      where: { code: c.code },
-      update: {},
-      create: c,
-    });
-    console.log(`  upserted: ${c.code} ${c.nameEn}`);
-  }
+  console.log(`  upserted ${BLOCK_SEED.length} blocks`);
 
   console.log('Seeding schools…');
   const schools = buildSchools();
   for (const s of schools) {
     await prisma.school.upsert({
       where: { udise: s.udise },
-      update: { clusterCode: s.clusterCode },
+      update: {},
       create: s,
     });
-    console.log(`  upserted: ${s.udise} ${s.nameEn}`);
   }
+  console.log(`  upserted ${schools.length} schools`);
 
   console.log('Seeding cycle…');
   await prisma.cycle.upsert({
@@ -209,8 +180,8 @@ async function main() {
       update: {},
       create: d,
     });
-    console.log(`  upserted: ${d.code} ${d.labelEn}`);
   }
+  console.log(`  upserted ${seedDimensions.length} rating dimensions`);
 
   console.log('Seeding dispute categories…');
   for (const c of seedCategories) {
@@ -219,8 +190,8 @@ async function main() {
       update: {},
       create: c,
     });
-    console.log(`  upserted: ${c.code} ${c.nameEn}`);
   }
+  console.log(`  upserted ${seedCategories.length} dispute categories`);
 
   console.log('Done.');
 }

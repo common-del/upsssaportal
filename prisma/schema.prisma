@@ -30,34 +30,32 @@ model User {
   notificationPreference NotificationPreference?
 }
 
+model Mandal {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  nameEn    String
+  nameHi    String
+  districts District[]
+}
+
 model District {
-  id      String   @id @default(cuid())
-  code    String   @unique
-  nameEn  String
-  nameHi  String
-  blocks  Block[]
-  schools School[]
+  id         String   @id @default(cuid())
+  code       String   @unique
+  nameEn     String
+  nameHi     String
+  mandalCode String?
+  mandal     Mandal?  @relation(fields: [mandalCode], references: [code])
+  blocks     Block[]
+  schools    School[]
 }
 
 model Block {
-  id           String    @id @default(cuid())
-  code         String    @unique
-  districtCode String
-  nameEn       String
-  nameHi       String
-  district     District  @relation(fields: [districtCode], references: [code])
-  clusters     Cluster[]
-  schools      School[]
-}
-
-model Cluster {
   id           String   @id @default(cuid())
   code         String   @unique
   districtCode String
-  blockCode    String
   nameEn       String
   nameHi       String
-  block        Block    @relation(fields: [blockCode], references: [code])
+  district     District @relation(fields: [districtCode], references: [code])
   schools      School[]
 }
 
@@ -69,7 +67,6 @@ model School {
   category            String
   districtCode        String
   blockCode           String
-  clusterCode         String?
   addressEn           String?
   addressHi           String?
   publicPhone         String?
@@ -81,7 +78,6 @@ model School {
   ratings             ParentRating[]
   results             Result[]
   block               Block                      @relation(fields: [blockCode], references: [code])
-  cluster             Cluster?                   @relation(fields: [clusterCode], references: [code])
   district            District                   @relation(fields: [districtCode], references: [code])
   selfAssessments     SelfAssessmentSubmission[]
   tickets             Ticket[]

@@ -5,20 +5,42 @@ export type NavItem = {
   hideForGovt?: boolean;
 };
 
-export const ADMIN_NAV_ITEMS: NavItem[] = [
-  { href: '/app/sssa', label: 'State Dashboard', exact: true },
-  { href: '/app/sssa/district', label: 'District Analytics' },
-  { href: '/app/sssa/block', label: 'Block Analytics' },
-  { href: '/app/sssa/cluster', label: 'Cluster Analytics' },
-  { href: '/app/sssa/schools', label: 'School Directory' },
-  { href: '/app/sssa/framework', label: 'Assessments Framework' },
-  { href: '/app/sssa/disputes', label: 'Dispute Resolution Management' },
-  { href: '/app/sssa/notifications', label: 'Notifications' },
-  { href: '/app/sssa/activity', label: 'Activity Log' },
-  { href: '/app/sssa/settings', label: 'Settings' },
-  { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
-  { href: '/app/sssa/verifiers', label: 'Verifier Assignment' },
-  { href: '/app/sssa/users', label: 'User Management' },
+export type NavSection = { label?: string; items: NavItem[] };
+
+export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
+  { items: [{ href: '/app/sssa', label: 'State Dashboard', exact: true }] },
+  {
+    label: 'Analytics',
+    items: [
+      { href: '/app/sssa/mandal', label: 'Mandal Level Analytics' },
+      { href: '/app/sssa/district', label: 'District Analytics' },
+      { href: '/app/sssa/block', label: 'Block Analytics' },
+    ],
+  },
+  {
+    label: 'Directory & Disputes',
+    items: [
+      { href: '/app/sssa/schools', label: 'School Directory' },
+      { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
+      { href: '/app/sssa/framework', label: 'Assessments Framework' },
+      { href: '/app/sssa/disputes', label: 'Dispute Resolution Management' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { href: '/app/sssa/verifiers', label: 'Verifier Assignment' },
+      { href: '/app/sssa/users', label: 'User Management' },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { href: '/app/sssa/notifications', label: 'Notifications' },
+      { href: '/app/sssa/activity', label: 'Activity Log' },
+      { href: '/app/sssa/settings', label: 'Settings' },
+    ],
+  },
 ];
 
 export const DISTRICT_NAV_ITEMS: NavItem[] = [

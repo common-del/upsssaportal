@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import type { StateDashboardData, DistrictDashboardData } from '@/lib/sssa/adminMetrics';
+import type { StateDashboardData, ScopedDashboardData } from '@/lib/sssa/adminMetrics';
 import {
   DisputeResolutionSection,
   HeroCards,
@@ -19,7 +19,7 @@ type Props = {
   districtName: string;
   blockCode: string;
   stateData: StateDashboardData;
-  districtData: DistrictDashboardData | null;
+  districtData: ScopedDashboardData | null;
   isDistrictAdmin: boolean;
   userDistrictCode?: string;
 };
@@ -151,9 +151,9 @@ export function UnifiedDashboard({
           <ManagementTypeChart bars={districtData.managementBars} />
           <div className="grid gap-4 sm:grid-cols-3">
             {[
-              { label: 'Top District (Benchmark)', value: districtData.topDistrictBenchmark.name, sub: `${districtData.topDistrictBenchmark.avg}%` },
-              { label: 'Top Block in District', value: districtData.topBlock.name, sub: `${districtData.topBlock.avg}%` },
-              { label: 'Top Cluster in District', value: districtData.topCluster.name, sub: `${districtData.topCluster.avg}%` },
+              { label: 'Top Mandal (Benchmark)', value: districtData.topMandalBenchmark.name, sub: `${districtData.topMandalBenchmark.avg}%` },
+              { label: 'Top District in Mandal', value: districtData.topDistrictInMandal.name, sub: `${districtData.topDistrictInMandal.avg}%` },
+              { label: 'Top Block in District', value: districtData.topBlockInScope.name, sub: `${districtData.topBlockInScope.avg}%` },
             ].map((c) => (
               <div key={c.label} className="rounded-2xl bg-white p-4 shadow-sm">
                 <p className="text-xs font-medium uppercase text-gray-500">{c.label}</p>
@@ -188,7 +188,7 @@ export function UnifiedDashboard({
             ? 'Schools with highest disputes'
             : localScope === 'district'
               ? 'Blocks with highest disputes'
-              : 'Districts with highest disputes'
+              : 'Mandals with highest disputes'
         }
       />
     </div>

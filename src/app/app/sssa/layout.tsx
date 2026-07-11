@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { SssaAdminLayout } from '@/components/sssa/SssaTopNav';
+import { SssaAdminLayout } from '@/components/sssa/SssaSidebarShell';
 import { unreadNotificationCount } from '@/lib/unreadNotifications';
 
 export default async function SssaLayout({ children }: { children: React.ReactNode }) {

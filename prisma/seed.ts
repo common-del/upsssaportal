@@ -25,6 +25,24 @@ const seedBlocks = [
   { code: 'B004', districtCode: 'D002', nameEn: 'Sevapuri', nameHi: 'सेवापुरी' },
 ];
 
+/* ── Clusters ──────────────────────────────────────────── */
+const seedClusters = seedBlocks.flatMap((b, i) => [
+  {
+    code: `C${String(i * 2 + 1).padStart(3, '0')}`,
+    districtCode: b.districtCode,
+    blockCode: b.code,
+    nameEn: `${b.nameEn}-I`,
+    nameHi: `${b.nameHi}-I`,
+  },
+  {
+    code: `C${String(i * 2 + 2).padStart(3, '0')}`,
+    districtCode: b.districtCode,
+    blockCode: b.code,
+    nameEn: `${b.nameEn}-II`,
+    nameHi: `${b.nameHi}-II`,
+  },
+]);
+
 /* ── Schools ───────────────────────────────────────────── */
 const categories = ['Primary', 'Upper Primary', 'Secondary'];
 
@@ -36,6 +54,7 @@ function buildSchools() {
     category: string;
     districtCode: string;
     blockCode: string;
+    clusterCode: string;
     addressEn: string | null;
     addressHi: string | null;
     publicPhone: string | null;
@@ -47,8 +66,10 @@ function buildSchools() {
   const districtNameEn: Record<string, string> = { D001: 'Lucknow', D002: 'Varanasi' };
 
   for (const block of seedBlocks) {
+    const blockIdx = seedBlocks.indexOf(block);
+    const blockClusters = seedClusters.filter((c) => c.blockCode === block.code);
+
     for (let i = 1; i <= 5; i++) {
-      const blockIdx = seedBlocks.indexOf(block);
       const globalIdx = blockIdx * 5 + i;
       const udise = `0901${String(blockIdx + 1).padStart(3, '0')}${String(i).padStart(4, '0')}`;
       const cat = categories[(i - 1) % 3];
@@ -60,6 +81,7 @@ function buildSchools() {
         category: cat,
         districtCode: block.districtCode,
         blockCode: block.code,
+        clusterCode: blockClusters[(i - 1) % blockClusters.length].code,
         addressEn: i % 2 === 1 ? `${block.nameEn}, ${districtNameEn[block.districtCode]}, Uttar Pradesh` : null,
         addressHi: i % 2 === 1 ? `${block.nameHi}, ${districtNameHi[block.districtCode]}, उत्तर प्रदेश` : null,
         publicPhone: i % 3 === 1 ? `+91 522${String(1000000 + globalIdx)}` : null,
@@ -77,6 +99,7 @@ function buildSchools() {
     category: 'Secondary',
     districtCode: 'D001',
     blockCode: 'B001',
+    clusterCode: seedClusters.find((c) => c.blockCode === 'B001')!.code,
     addressEn: 'Mohanlalganj, Lucknow, Uttar Pradesh',
     addressHi: 'मोहनलालगंज, लखनऊ, उत्तर प्रदेश',
     publicPhone: '+91 5221234567',
@@ -150,12 +173,22 @@ async function main() {
     console.log(`  upserted: ${b.code} ${b.nameEn}`);
   }
 
+  console.log('Seeding clusters…');
+  for (const c of seedClusters) {
+    await prisma.cluster.upsert({
+      where: { code: c.code },
+      update: {},
+      create: c,
+    });
+    console.log(`  upserted: ${c.code} ${c.nameEn}`);
+  }
+
   console.log('Seeding schools…');
   const schools = buildSchools();
   for (const s of schools) {
     await prisma.school.upsert({
       where: { udise: s.udise },
-      update: {},
+      update: { clusterCode: s.clusterCode },
       create: s,
     });
     console.log(`  upserted: ${s.udise} ${s.nameEn}`);

@@ -4,26 +4,22 @@ import { buildDistrictDashboardData, buildStateDashboardData } from '@/lib/sssa/
 export default async function DistrictAnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ district?: string; block?: string }>;
+  searchParams: Promise<{ district?: string }>;
 }) {
   const params = await searchParams;
   const state = await buildStateDashboardData();
   const districtCode =
     params.district && state.districts.some((d) => d.code === params.district)
       ? params.district
-      : state.districts[0]?.code ?? '';
-  const blockCode = params.block ?? '';
+      : (state.districts[0]?.code ?? '');
 
-  const data = districtCode
-    ? await buildDistrictDashboardData(districtCode, blockCode || undefined)
-    : await buildDistrictDashboardData(state.districts[0]?.code ?? '', undefined);
+  const data = await buildDistrictDashboardData(districtCode);
 
   return (
     <DistrictAnalytics
-      key={`${districtCode}-${blockCode}`}
+      key={districtCode}
       initialDistrictCode={districtCode}
       districts={state.districts}
-      blocks={state.blocks}
       initialData={data}
     />
   );

@@ -30,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: 'SSSA System',
       credentials: demoCredentialsFields,
       async authorize() {
-        return authorizeDemoFirstUser(['SSSA_ADMIN', 'admin', 'DISTRICT_ADMIN', 'DISTRICT_OFFICIAL']);
+        return authorizeDemoFirstUser(['SSSA_ADMIN', 'admin']);
       },
     }),
     Credentials({

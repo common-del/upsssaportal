@@ -1,7 +1,7 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import type { DistrictDashboardData, StateDashboardData } from '@/lib/sssa/adminMetrics';
 import {
   DisputeResolutionSection,
@@ -15,27 +15,41 @@ import {
 
 type Props = {
   initialDistrictCode: string;
+  initialBlockCode: string;
   districts: StateDashboardData['districts'];
+  blocks: StateDashboardData['blocks'];
   initialData: DistrictDashboardData;
 };
 
-export function DistrictAnalytics({ initialDistrictCode, districts, initialData }: Props) {
+export function BlockAnalytics({
+  initialDistrictCode,
+  initialBlockCode,
+  districts,
+  blocks,
+  initialData,
+}: Props) {
   const router = useRouter();
   const [districtCode, setDistrictCode] = useState(initialDistrictCode);
+  const [blockCode, setBlockCode] = useState(initialBlockCode);
   const data = initialData;
 
   const districtName = districts.find((d) => d.code === districtCode)?.nameEn ?? districtCode;
+  const blockName = blocks.find((b) => b.code === blockCode)?.nameEn ?? blockCode;
+  const blockOptions = useMemo(
+    () => blocks.filter((b) => b.districtCode === districtCode),
+    [blocks, districtCode],
+  );
 
-  function reload(nextDistrict: string) {
-    router.push(`/app/sssa/district?district=${nextDistrict}`);
+  function reload(nextDistrict: string, nextBlock: string) {
+    router.push(`/app/sssa/block?district=${nextDistrict}&block=${nextBlock}`);
   }
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">District Analytics</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Block Analytics</h1>
         <p className="mt-1 text-sm text-gray-600">
-          District: {districtName} (Rank {data.districtRank} of {districts.length || 75})
+          Block: {blockName} ({districtName})
         </p>
       </header>
 
@@ -44,8 +58,11 @@ export function DistrictAnalytics({ initialDistrictCode, districts, initialData 
           className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
           value={districtCode}
           onChange={(e) => {
-            setDistrictCode(e.target.value);
-            reload(e.target.value);
+            const nextDistrict = e.target.value;
+            const nextBlock = blocks.find((b) => b.districtCode === nextDistrict)?.code ?? '';
+            setDistrictCode(nextDistrict);
+            setBlockCode(nextBlock);
+            reload(nextDistrict, nextBlock);
           }}
         >
           {districts.map((d) => (
@@ -54,10 +71,24 @@ export function DistrictAnalytics({ initialDistrictCode, districts, initialData 
             </option>
           ))}
         </select>
+        <select
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+          value={blockCode}
+          onChange={(e) => {
+            setBlockCode(e.target.value);
+            reload(districtCode, e.target.value);
+          }}
+        >
+          {blockOptions.map((b) => (
+            <option key={b.code} value={b.code}>
+              {b.nameEn}
+            </option>
+          ))}
+        </select>
       </div>
 
       <ScopeStatCards
-        schoolsLabel="Schools in District"
+        schoolsLabel="Schools in Block"
         totalSchools={data.totalSchools}
         averageScore={data.averageScore}
         topDistrictBenchmark={data.topDistrictBenchmark}
@@ -70,11 +101,11 @@ export function DistrictAnalytics({ initialDistrictCode, districts, initialData 
       <PerformanceHighlights
         low={data.lowPerforming}
         high={data.highPerforming}
-        filterQuery={`district=${districtCode}`}
+        filterQuery={`district=${districtCode}&block=${blockCode}`}
       />
       <InfrastructureGaps gaps={data.infraGaps} />
       <PerformanceGaps domainGaps={data.domainGaps} showExport />
-      <DisputeResolutionSection disputes={data.disputes} leftChartTitle="Blocks with highest disputes" />
+      <DisputeResolutionSection disputes={data.disputes} leftChartTitle="Clusters with highest disputes" />
     </div>
   );
 }

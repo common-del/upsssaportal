@@ -231,9 +231,10 @@ export function DisputeResolutionSection({
   disputes: DisputeAnalytics;
   leftChartTitle: string;
 }) {
-  const leftData =
-    leftChartTitle.includes('School')
-      ? disputes.topSchools
+  const leftData = leftChartTitle.includes('School')
+    ? disputes.topSchools
+    : leftChartTitle.includes('Cluster')
+      ? disputes.topClusters
       : leftChartTitle.includes('Block')
         ? disputes.topBlocks
         : disputes.topDistricts;
@@ -326,6 +327,57 @@ export function ManagementTypeChart({
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+export function ScopeStatCards({
+  schoolsLabel,
+  totalSchools,
+  averageScore,
+  topDistrictBenchmark,
+  topBlock,
+  topCluster,
+}: {
+  schoolsLabel: string;
+  totalSchools: number;
+  averageScore: number;
+  topDistrictBenchmark: { name: string; avg: number };
+  topBlock: { name: string; avg: number };
+  topCluster: { name: string; avg: number };
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <ScopeStatCard label={schoolsLabel} value={totalSchools} icon />
+      <ScopeStatCard label="Average SQAAF Score" value={`${averageScore}%`} />
+      <ScopeStatCard
+        label="Top District (Benchmark)"
+        value={topDistrictBenchmark.name}
+        sub={`${topDistrictBenchmark.avg}%`}
+      />
+      <ScopeStatCard label="Top Block (in District)" value={topBlock.name} sub={`${topBlock.avg}%`} />
+      <ScopeStatCard label="Top Cluster (in District)" value={topCluster.name} sub={`${topCluster.avg}%`} />
+    </div>
+  );
+}
+
+function ScopeStatCard({
+  label,
+  value,
+  sub,
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon?: boolean;
+}) {
+  return (
+    <div className="relative rounded-2xl bg-white p-4 shadow-sm">
+      {icon && <Building2 className="absolute right-3 top-3 h-6 w-6 text-gray-300" />}
+      <p className="text-xs font-medium uppercase text-gray-500">{label}</p>
+      <p className="mt-1 text-xl font-bold text-gray-900">{value}</p>
+      {sub && <p className="text-sm text-gray-600">{sub}</p>}
     </div>
   );
 }

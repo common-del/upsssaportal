@@ -23,6 +23,10 @@ export default async function SchoolSettingsPage() {
       username={user.username}
       preferredLocale={user.preferredLocale}
       prefs={user.notificationPreference}
+      roleLabel="School"
+      department="School Education Department, Uttar Pradesh"
+      scope="School"
+      settingsPath="/app/school/settings"
     />
   );
 }

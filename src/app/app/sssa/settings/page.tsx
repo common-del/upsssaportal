@@ -3,10 +3,9 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { SettingsClient } from '@/components/school/SettingsClient';
 
-export default async function VerifierSettingsPage() {
+export default async function SssaSettingsPage() {
   const session = await auth();
-  if (!session) redirect('/login?tab=verifier');
-  if (session.user.role !== 'VERIFIER') redirect('/');
+  if (!session) redirect('/login?tab=official');
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id! },
@@ -16,17 +15,17 @@ export default async function VerifierSettingsPage() {
       notificationPreference: true,
     },
   });
-  if (!user) redirect('/login?tab=verifier');
+  if (!user) redirect('/login?tab=official');
 
   return (
     <SettingsClient
       username={user.username}
       preferredLocale={user.preferredLocale}
       prefs={user.notificationPreference}
-      roleLabel="Verifier"
+      roleLabel="Official"
       department="School Education Department, Uttar Pradesh"
-      scope="Assigned Schools"
-      settingsPath="/app/verifier/settings"
+      scope="State"
+      settingsPath="/app/sssa/settings"
     />
   );
 }

@@ -1,6 +1,10 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { buildStateDashboardData, buildDistrictDashboardData } from '@/lib/sssa/adminMetrics';
+import {
+  buildBlockDashboardData,
+  buildDistrictDashboardData,
+  buildStateDashboardData,
+} from '@/lib/sssa/adminMetrics';
 import { UnifiedDashboard } from '@/components/sssa/UnifiedDashboard';
 
 export default async function DashboardPage({
@@ -40,7 +44,9 @@ export default async function DashboardPage({
   let districtData = null;
   let districtName = '';
   if (scope === 'district' && scopeDistrict) {
-    districtData = await buildDistrictDashboardData(scopeDistrict, blockCode || undefined);
+    districtData = blockCode
+      ? await buildBlockDashboardData(scopeDistrict, blockCode)
+      : await buildDistrictDashboardData(scopeDistrict);
     districtName = stateData.districts.find((d) => d.code === scopeDistrict)?.nameEn ?? scopeDistrict;
   }
 

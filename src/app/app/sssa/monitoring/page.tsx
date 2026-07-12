@@ -42,6 +42,7 @@ export default async function MonitoringPage({
   const filterBlock = sp.block ?? '';
   const filterStatus = sp.status ?? '';
   const filterSa = sp.sa ?? '';
+  const filterPerformance = sp.performance === 'low' || sp.performance === 'high' ? sp.performance : '';
   const searchQ = sp.q ?? '';
 
   // Fetch districts and blocks for filters
@@ -53,7 +54,7 @@ export default async function MonitoringPage({
   ]);
 
   let schoolsData: {
-    rows: { udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string; category: string; saStatus: string; saScore: number | null; verifierScore: number | null; ratingAvg: number | null; ratingCount: number }[];
+    rows: { udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string; category: string; saStatus: string; saScore: number | null; verifierScore: number | null; finalScore: number | null; ratingAvg: number | null; ratingCount: number }[];
     total: number;
   } = { rows: [], total: 0 };
 
@@ -71,6 +72,23 @@ export default async function MonitoringPage({
         { nameHi: { contains: searchQ, mode: 'insensitive' } },
         { udise: { contains: searchQ } },
       ];
+    }
+
+    // Resolve the performance filter to a concrete udise list first (via the
+    // real, finalized Result score) so pagination below stays accurate -
+    // otherwise a school matching "low"/"high" could fall outside the current
+    // page before the filter is even applied.
+    const finalScoreByUdise = new Map<string, number>();
+    if (filterPerformance) {
+      const matches = await prisma.result.findMany({
+        where: {
+          cycleId: cycle.id,
+          finalScorePercent: filterPerformance === 'low' ? { lt: 40 } : { gte: 76 },
+        },
+        select: { schoolUdise: true, finalScorePercent: true },
+      });
+      for (const m of matches) finalScoreByUdise.set(m.schoolUdise, m.finalScorePercent!);
+      where.udise = { in: matches.map((m) => m.schoolUdise) };
     }
 
     const [schoolRows, total] = await Promise.all([
@@ -97,6 +115,17 @@ export default async function MonitoringPage({
     const scores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, udises) : {};
     const vScores = framework ? await getBatchVerificationScores(cycle.id, framework.id, udises) : {};
 
+    // Final (Result) scores - reuse what the performance-filter query already
+    // fetched, otherwise fetch fresh for this page's schools.
+    let finalScores = finalScoreByUdise;
+    if (!filterPerformance) {
+      const results = await prisma.result.findMany({
+        where: { cycleId: cycle.id, schoolUdise: { in: udises }, finalScorePercent: { not: null } },
+        select: { schoolUdise: true, finalScorePercent: true },
+      });
+      finalScores = new Map(results.map((r) => [r.schoolUdise, r.finalScorePercent!]));
+    }
+
     // Batch ratings
     const ratings = await getBatchRatingAggregates(udises);
 
@@ -116,6 +145,7 @@ export default async function MonitoringPage({
         saStatus,
         saScore: saStatus === 'submitted' ? (sc?.scorePercent ?? null) : null,
         verifierScore: vs?.scorePercent ?? null,
+        finalScore: finalScores.get(s.udise) ?? null,
         ratingAvg: rt?.avg ?? null,
         ratingCount: rt?.count ?? 0,
       };
@@ -241,6 +271,7 @@ export default async function MonitoringPage({
         filterBlock={filterBlock}
         filterStatus={filterStatus}
         filterSa={filterSa}
+        filterPerformance={filterPerformance}
         searchQ={searchQ}
         page={page}
         pageSize={PAGE_SIZE}

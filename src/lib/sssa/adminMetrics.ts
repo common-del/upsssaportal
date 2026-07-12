@@ -237,8 +237,12 @@ async function avgScoreFor(cycleId: string | null, schoolWhere: Prisma.SchoolWhe
 async function performanceCounts(cycleId: string | null, schoolWhere: Prisma.SchoolWhereInput) {
   if (!cycleId) return { low: 0, high: 0 };
   const [low, high] = await Promise.all([
-    prisma.result.count({ where: { cycleId, finalScorePercent: { lt: 40 }, school: schoolWhere } }),
-    prisma.result.count({ where: { cycleId, finalScorePercent: { gte: 76 }, school: schoolWhere } }),
+    prisma.result.count({
+      where: { cycleId, verifierScorePercent: { not: null }, finalScorePercent: { lt: 40 }, school: schoolWhere },
+    }),
+    prisma.result.count({
+      where: { cycleId, verifierScorePercent: { not: null }, finalScorePercent: { gte: 76 }, school: schoolWhere },
+    }),
   ]);
   return { low, high };
 }
@@ -276,16 +280,19 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
   }
 
   const workflow = await workflowCounts(cycle?.id ?? null);
+  // A result only counts as low/high performing when it's backed by a
+  // verifier score - a school can't be "performing" one way or another off
+  // of self-assessment alone.
   const lowPerforming =
     cycle && totalSchools > 0
       ? await prisma.result.count({
-          where: { cycleId: cycle.id, finalScorePercent: { lt: 40 } },
+          where: { cycleId: cycle.id, verifierScorePercent: { not: null }, finalScorePercent: { lt: 40 } },
         })
       : 0;
   const highPerforming =
     cycle && totalSchools > 0
       ? await prisma.result.count({
-          where: { cycleId: cycle.id, finalScorePercent: { gte: 76 } },
+          where: { cycleId: cycle.id, verifierScorePercent: { not: null }, finalScorePercent: { gte: 76 } },
         })
       : 0;
 

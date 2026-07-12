@@ -8,7 +8,7 @@ import { useCallback } from 'react';
 
 type SchoolRow = {
   udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string;
-  category: string; saStatus: string; saScore: number | null; verifierScore: number | null; ratingAvg: number | null; ratingCount: number;
+  category: string; saStatus: string; saScore: number | null; verifierScore: number | null; finalScore: number | null; ratingAvg: number | null; ratingCount: number;
 };
 
 type DistrictRow = {
@@ -20,7 +20,7 @@ type FilterItem = { code: string; nameEn: string; nameHi: string };
 
 export default function MonitoringClient({
   view, schoolsData, districtData, districts, blocks,
-  filterDistrict, filterBlock, filterStatus, filterSa, searchQ,
+  filterDistrict, filterBlock, filterStatus, filterSa, filterPerformance, searchQ,
   page, pageSize, totalSchools,
 }: {
   view: string;
@@ -28,7 +28,7 @@ export default function MonitoringClient({
   districtData: DistrictRow[];
   districts: FilterItem[];
   blocks: FilterItem[];
-  filterDistrict: string; filterBlock: string; filterStatus: string; filterSa: string; searchQ: string;
+  filterDistrict: string; filterBlock: string; filterStatus: string; filterSa: string; filterPerformance: string; searchQ: string;
   page: number; pageSize: number; totalSchools: number;
 }) {
   const t = useTranslations('monitoring');
@@ -93,6 +93,20 @@ export default function MonitoringClient({
 
       {view === 'schools' ? (
         <div className="mt-4">
+          {filterPerformance && (
+            <div className="mb-3 flex items-center justify-between rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-sm text-navy-800">
+              <span className="font-medium">
+                {filterPerformance === 'low' ? t('performanceFilterLow') : t('performanceFilterHigh')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setParam('performance', '')}
+                className="font-medium text-navy-700 hover:underline"
+              >
+                {t('clearFilter')}
+              </button>
+            </div>
+          )}
           {/* Filters */}
           <div className="flex flex-wrap gap-2">
             <select value={filterDistrict} onChange={(e) => setParam('district', e.target.value)} className={selectClass}>
@@ -165,7 +179,9 @@ export default function MonitoringClient({
                       <td className="px-3 py-2.5 text-right font-medium">
                         {s.verifierScore !== null ? `${s.verifierScore}%` : '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-right text-text-secondary">—</td>
+                      <td className="px-3 py-2.5 text-right font-medium">
+                        {s.finalScore !== null ? `${s.finalScore}%` : '—'}
+                      </td>
                     </tr>
                   ))
                 )}

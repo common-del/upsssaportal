@@ -109,11 +109,11 @@ export function PerformanceHighlights({
   high: number;
   filterQuery?: string;
 }) {
-  const q = filterQuery ? `?${filterQuery}` : '';
+  const base = filterQuery ? `${filterQuery}&` : '';
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Link
-        href={`/app/sssa/monitoring${q}`}
+        href={`/app/sssa/monitoring?${base}performance=low`}
         className="flex items-center justify-between rounded-2xl border-l-4 border-red-500 bg-white p-6 shadow-sm transition hover:shadow-md"
       >
         <div>
@@ -124,7 +124,7 @@ export function PerformanceHighlights({
         <ArrowRight className="h-6 w-6 text-gray-400" />
       </Link>
       <Link
-        href={`/app/sssa/monitoring${q}`}
+        href={`/app/sssa/monitoring?${base}performance=high`}
         className="flex items-center justify-between rounded-2xl border-l-4 border-green-500 bg-white p-6 shadow-sm transition hover:shadow-md"
       >
         <div>

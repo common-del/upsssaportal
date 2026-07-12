@@ -74,20 +74,20 @@ export default async function MonitoringPage({
       ];
     }
 
-    // Resolve the performance filter to a concrete udise list first (via the
-    // real, finalized Result score) so pagination below stays accurate -
-    // otherwise a school matching "low"/"high" could fall outside the current
-    // page before the filter is even applied.
-    const finalScoreByUdise = new Map<string, number>();
+    // Resolve the performance filter to a concrete udise list first so
+    // pagination below stays accurate - otherwise a school matching "low"/
+    // "high" could fall outside the current page before the filter is even
+    // applied. A final score only counts here if it's backed by a verifier
+    // score - a result can't be "final" off of self-assessment alone.
     if (filterPerformance) {
       const matches = await prisma.result.findMany({
         where: {
           cycleId: cycle.id,
+          verifierScorePercent: { not: null },
           finalScorePercent: filterPerformance === 'low' ? { lt: 40 } : { gte: 76 },
         },
-        select: { schoolUdise: true, finalScorePercent: true },
+        select: { schoolUdise: true },
       });
-      for (const m of matches) finalScoreByUdise.set(m.schoolUdise, m.finalScorePercent!);
       where.udise = { in: matches.map((m) => m.schoolUdise) };
     }
 
@@ -115,16 +115,13 @@ export default async function MonitoringPage({
     const scores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, udises) : {};
     const vScores = framework ? await getBatchVerificationScores(cycle.id, framework.id, udises) : {};
 
-    // Final (Result) scores - reuse what the performance-filter query already
-    // fetched, otherwise fetch fresh for this page's schools.
-    let finalScores = finalScoreByUdise;
-    if (!filterPerformance) {
-      const results = await prisma.result.findMany({
-        where: { cycleId: cycle.id, schoolUdise: { in: udises }, finalScorePercent: { not: null } },
-        select: { schoolUdise: true, finalScorePercent: true },
-      });
-      finalScores = new Map(results.map((r) => [r.schoolUdise, r.finalScorePercent!]));
-    }
+    // Final (Result) scores - only counted when backed by a verifier score
+    // (Result.verifierScorePercent), same rule as the performance filter above.
+    const results = await prisma.result.findMany({
+      where: { cycleId: cycle.id, schoolUdise: { in: udises }, verifierScorePercent: { not: null } },
+      select: { schoolUdise: true, finalScorePercent: true },
+    });
+    const finalScores = new Map(results.map((r) => [r.schoolUdise, r.finalScorePercent]));
 
     // Batch ratings
     const ratings = await getBatchRatingAggregates(udises);

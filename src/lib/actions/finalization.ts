@@ -278,19 +278,18 @@ export async function computeAndStoreResult(cycleId: string, schoolUdise: string
   if (vSubmission) for (const r of vSubmission.responses) vMap.set(r.parameterId, r.selectedOptionKey);
   const verifierScorePercent = vSubmission ? computeScore(vMap) : null;
 
-  // Final = verifier + appeal overrides, or SA if no verifier (pilot mode)
-  let finalMap: Map<string, string>;
+  // Final = verifier + appeal overrides. A school can't be finalized until a
+  // verifier has actually scored it - no self-assessment-only fallback.
+  let finalScorePercent: number | null = null;
   if (vSubmission) {
-    finalMap = new Map(vMap);
+    const finalMap = new Map(vMap);
     if (appeal) {
       for (const item of appeal.items) {
         finalMap.set(item.parameterId, item.schoolSelectedOptionKey);
       }
     }
-  } else {
-    finalMap = new Map(saMap);
+    finalScorePercent = computeScore(finalMap);
   }
-  const finalScorePercent = (saSubmission || vSubmission) ? computeScore(finalMap) : null;
 
   // Grade band
   let gradeBandCode: string | null = null;

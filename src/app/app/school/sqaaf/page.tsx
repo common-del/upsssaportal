@@ -16,9 +16,9 @@ export default async function SqaafUpdatePage() {
   const schoolUdise = session.user.name!;
   const t = await getTranslations('selfAssessment');
 
-  const data = await getActiveFrameworkForSchool(schoolUdise);
+  const initial = await getActiveFrameworkForSchool(schoolUdise);
 
-  if (!data) {
+  if (!initial) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">SQAAF Update</h1>
@@ -29,8 +29,16 @@ export default async function SqaafUpdatePage() {
     );
   }
 
-  const { framework, cycleId, cycleName, totalApplicable } = data;
-  const submission = await getOrCreateSubmission(cycleId, schoolUdise, framework.id);
+  const submission = await getOrCreateSubmission(initial.cycleId, schoolUdise, initial.framework.id);
+  const answeredParameterIds = submission.responses.map((r) => r.parameterId);
+
+  // Re-fetch with the school's actually-answered parameters kept visible, even if
+  // the framework or category applicability changed since the school submitted.
+  const data = answeredParameterIds.length > 0
+    ? (await getActiveFrameworkForSchool(schoolUdise, answeredParameterIds)) ?? initial
+    : initial;
+
+  const { framework, cycleName, totalApplicable } = data;
 
   const responseMap: Record<string, { selectedOptionKey: string; notes: string | null }> = {};
   for (const r of submission.responses) {

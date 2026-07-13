@@ -15,9 +15,9 @@ export default async function EvidenceManagerPage({
 
   const schoolUdise = session.user.name!;
   const sp = await searchParams;
-  const data = await getActiveFrameworkForSchool(schoolUdise);
+  const initial = await getActiveFrameworkForSchool(schoolUdise);
 
-  if (!data) {
+  if (!initial) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Evidence Manager</h1>
@@ -28,7 +28,11 @@ export default async function EvidenceManagerPage({
     );
   }
 
-  const submission = await getOrCreateSubmission(data.cycleId, schoolUdise, data.framework.id);
+  const submission = await getOrCreateSubmission(initial.cycleId, schoolUdise, initial.framework.id);
+  const answeredParameterIds = submission.responses.map((r) => r.parameterId);
+  const data = answeredParameterIds.length > 0
+    ? (await getActiveFrameworkForSchool(schoolUdise, answeredParameterIds)) ?? initial
+    : initial;
 
   const evidenceLinks = await prisma.evidenceLink.findMany({
     where: { kind: 'SELF_RESPONSE', saSubmissionId: submission.id },

@@ -9,7 +9,10 @@ const CATEGORY_TO_CODE: Record<string, string> = {
   Secondary: 'SECONDARY',
 };
 
-export async function getActiveFrameworkForSchool(schoolUdise: string) {
+export async function getActiveFrameworkForSchool(
+  schoolUdise: string,
+  answeredParameterIds: string[] = [],
+) {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return null;
 
@@ -25,21 +28,22 @@ export async function getActiveFrameworkForSchool(schoolUdise: string) {
   if (!school) return null;
 
   const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const answeredSet = new Set(answeredParameterIds);
 
+  // Not filtered by isActive at the query level: a parameter/domain that gets
+  // deactivated or re-scoped after a school has already answered it must not
+  // vanish from that school's own submitted record.
   const fullFramework = await prisma.framework.findUnique({
     where: { id: framework.id },
     include: {
       cycle: { select: { id: true, name: true } },
       domains: {
-        where: { isActive: true },
         orderBy: { order: 'asc' },
         include: {
           subDomains: {
-            where: { isActive: true },
             orderBy: { order: 'asc' },
             include: {
               parameters: {
-                where: { isActive: true },
                 orderBy: { order: 'asc' },
                 include: {
                   options: { where: { isActive: true }, orderBy: { order: 'asc' } },
@@ -53,18 +57,23 @@ export async function getActiveFrameworkForSchool(schoolUdise: string) {
   });
   if (!fullFramework) return null;
 
-  // Filter parameters by applicability
   const filtered = {
     ...fullFramework,
-    domains: fullFramework.domains.map((d) => ({
-      ...d,
-      subDomains: d.subDomains.map((sd) => ({
-        ...sd,
-        parameters: sd.parameters.filter((p) =>
-          (p.applicability as string[]).includes(categoryCode),
-        ),
-      })).filter((sd) => sd.parameters.length > 0),
-    })).filter((d) => d.subDomains.length > 0),
+    domains: fullFramework.domains
+      .map((d) => ({
+        ...d,
+        subDomains: d.subDomains
+          .map((sd) => ({
+            ...sd,
+            parameters: sd.parameters.filter(
+              (p) =>
+                answeredSet.has(p.id) ||
+                (p.isActive && (p.applicability as string[]).includes(categoryCode)),
+            ),
+          }))
+          .filter((sd) => sd.parameters.length > 0),
+      }))
+      .filter((d) => d.subDomains.length > 0),
   };
 
   const totalApplicable = filtered.domains.reduce(

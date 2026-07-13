@@ -237,8 +237,9 @@ async function main() {
   console.log('✓ District admins');
 
   // 7. Cycle
-  // One-time diagnostic: is there a populated framework sitting on some other
-  // (non-active) cycle? Read-only, no writes.
+  // Diagnostic (read-only): surface every cycle/framework and how many domains each
+  // framework has, so an empty active framework is obvious in the logs instead of
+  // silently producing empty self-assessments for every school.
   const allCyclesDiag = await prisma.cycle.findMany({
     select: {
       id: true,

@@ -237,6 +237,30 @@ async function main() {
   console.log('✓ District admins');
 
   // 7. Cycle
+  // One-time diagnostic: is there a populated framework sitting on some other
+  // (non-active) cycle? Read-only, no writes.
+  const allCyclesDiag = await prisma.cycle.findMany({
+    select: {
+      id: true,
+      name: true,
+      isActive: true,
+      frameworks: { select: { id: true, status: true, domains: { select: { id: true } } } },
+    },
+  });
+  for (const c of allCyclesDiag) {
+    console.log(
+      `ℹ Cycle "${c.name}" (${c.id}) isActive=${c.isActive}: framework=${c.frameworks?.id ?? 'none'} ` +
+      `status=${c.frameworks?.status ?? 'n/a'} domains=${c.frameworks?.domains.length ?? 0}`,
+    );
+  }
+  const allFrameworksDiag = await prisma.framework.findMany({
+    select: { id: true, cycleId: true, status: true, domains: { select: { id: true } } },
+  });
+  console.log(`ℹ Total frameworks in DB: ${allFrameworksDiag.length}`);
+  for (const f of allFrameworksDiag) {
+    console.log(`  - framework ${f.id} (cycleId=${f.cycleId}, status=${f.status}): ${f.domains.length} domains`);
+  }
+
   let cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) {
     cycle = await prisma.cycle.upsert({

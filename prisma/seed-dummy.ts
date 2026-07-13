@@ -33,6 +33,18 @@ const SCHOOL_TYPE_WEIGHTS = [0.6, 0.15, 0.15, 0.1]; // cumulative
 
 const LEVELS = ['PRIMARY', 'UPPER_PRIMARY', 'SECONDARY'] as const;
 
+// Mirrors src/lib/actions/selfAssessment.ts's CATEGORY_TO_CODE. Note this script's
+// School.category values (GOVT/GOVT_AIDED/PRIVATE_AIDED/PRIVATE, an ownership type)
+// don't match these keys ('Primary'/'Upper Primary'/'Secondary', a grade level) - that's
+// a pre-existing overload of the same field elsewhere in the app, not something this
+// script introduces. It falls back to PRIMARY for every school here, exactly like
+// production does for any school whose category isn't one of these three labels.
+const CATEGORY_TO_CODE_LEVEL: Record<string, string> = {
+  Primary: 'PRIMARY',
+  'Upper Primary': 'UPPER_PRIMARY',
+  Secondary: 'SECONDARY',
+};
+
 const DISPUTE_CATEGORY_CODES = [
   { code: 'EVD_MISMATCH', nameEn: 'Evidence Mismatch', nameHi: 'साक्ष्य बेमेल' },
   { code: 'SCORE_MISMATCH', nameEn: 'Score Mismatch', nameHi: 'स्कोर बेमेल' },
@@ -248,6 +260,102 @@ async function main() {
   }
   console.log('✓ Cycle + Framework');
 
+  const schoolCategoryMap: Record<string, string> = {};
+  for (const s of schoolRecords) schoolCategoryMap[s.udise] = s.category;
+
+  // Real framework parameters + rubric/weights, used to (a) generate responses that
+  // actually exist for schools this script marks SUBMITTED/UNDER_REVIEW/VERIFIED, and
+  // (b) score them with the exact same formula the app uses everywhere else, so no
+  // Result row here ever shows a number that wasn't actually computed from real
+  // responses (mirrors src/lib/actions/finalization.ts's computeAndStoreResult).
+  const allParams = await prisma.parameter.findMany({
+    where: { frameworkId: framework.id, isActive: true },
+    select: {
+      id: true,
+      applicability: true,
+      subDomain: { select: { domainId: true } },
+      options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { key: true } },
+    },
+  });
+  const rubrics = await prisma.rubricMapping.findMany({
+    where: { frameworkId: framework.id },
+    select: { parameterId: true, optionKey: true, score: true },
+  });
+  const domainWeights = await prisma.sqaafDomain.findMany({
+    where: { frameworkId: framework.id, isActive: true },
+    select: { id: true, weightPercent: true },
+  });
+  const gradeBands = await prisma.gradeBand.findMany({ where: { frameworkId: framework.id }, orderBy: { order: 'asc' } });
+
+  console.log(
+    `ℹ Framework ${framework.id}: ${allParams.length} active parameters, ${rubrics.length} rubric mappings, ` +
+    `${domainWeights.length} weighted domains, ${gradeBands.length} grade bands.`,
+  );
+  if (allParams.length === 0) {
+    console.log('⚠ No active parameters on this framework — self-assessment/verification response backfill will be a no-op.');
+  }
+  if (rubrics.length === 0) {
+    console.log('⚠ No rubric mappings on this framework — computed scores will come back null until scoring is configured.');
+  }
+
+  const rubricMap = new Map<string, number>();
+  for (const r of rubrics) rubricMap.set(`${r.parameterId}:${r.optionKey}`, r.score);
+  const domainWeightMap = new Map<string, number>();
+  for (const d of domainWeights) domainWeightMap.set(d.id, d.weightPercent ?? 0);
+
+  function applicableParamsFor(schoolCategory: string) {
+    const categoryCode = CATEGORY_TO_CODE_LEVEL[schoolCategory] ?? 'PRIMARY';
+    return allParams.filter((p) => (p.applicability as string[]).includes(categoryCode));
+  }
+
+  function computeScore(responseMap: Map<string, string>, applicable: typeof allParams) {
+    const domainGroups = new Map<string, { achieved: number; possible: number }>();
+    for (const p of applicable) {
+      const domainId = p.subDomain.domainId;
+      if (!domainGroups.has(domainId)) domainGroups.set(domainId, { achieved: 0, possible: 0 });
+      const group = domainGroups.get(domainId)!;
+      const maxScore = Math.max(0, ...p.options.map((o) => rubricMap.get(`${p.id}:${o.key}`) ?? 0));
+      group.possible += maxScore;
+      const key = responseMap.get(p.id);
+      if (key) group.achieved += rubricMap.get(`${p.id}:${key}`) ?? 0;
+    }
+    let weightedSum = 0, totalWeight = 0;
+    for (const [domainId, group] of domainGroups) {
+      const weight = domainWeightMap.get(domainId) ?? 0;
+      if (weight > 0 && group.possible > 0) {
+        weightedSum += (group.achieved / group.possible) * weight;
+        totalWeight += weight;
+      }
+    }
+    return totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100 * 10) / 10 : null;
+  }
+
+  // Skews toward the higher-scoring end of a parameter's options (assumed ordered
+  // low -> high) so demo schools read as reasonably-performing rather than random noise.
+  function pickOptionKey(options: { key: string }[]): string | null {
+    if (options.length === 0) return null;
+    const weights = options.map((_, i) => i + 1);
+    const total = weights.reduce((a, b) => a + b, 0);
+    const r = Math.random() * total;
+    let cum = 0;
+    for (let i = 0; i < options.length; i++) {
+      cum += weights[i]!;
+      if (r < cum) return options[i]!.key;
+    }
+    return options[options.length - 1]!.key;
+  }
+
+  // Verifier mostly agrees with the school, occasionally picks a neighboring option —
+  // gives the dispute/appeal flows something realistic to disagree about.
+  function verifierPickOptionKey(options: { key: string }[], selfKey: string | null): string | null {
+    if (options.length === 0) return null;
+    const idx = selfKey ? options.findIndex((o) => o.key === selfKey) : -1;
+    if (idx === -1) return pickOptionKey(options);
+    if (Math.random() < 0.7) return selfKey;
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    return options[Math.min(options.length - 1, Math.max(0, idx + dir))]!.key;
+  }
+
   // 8. Self assessments — distribute statuses across 200 schools
   const SA_STATUSES = ['NOT_STARTED', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'VERIFIED'] as const;
   const SA_WEIGHTS = [0.3, 0.2, 0.25, 0.15, 0.1];
@@ -269,9 +377,10 @@ async function main() {
   });
 
   const submittableStatuses = new Set(['SUBMITTED', 'UNDER_REVIEW', 'VERIFIED']);
+  const submittedOrLaterUdises = [...submittedSchools, ...underReviewSchools, ...verifiedSchools];
 
   for (const batch of chunk(saRecords, 50)) {
-    await prisma.$transaction(
+    const upserted = await prisma.$transaction(
       batch
         .filter((r) => r.status !== 'NOT_STARTED')
         .map((r) =>
@@ -289,21 +398,57 @@ async function main() {
           }),
         ),
     );
+    for (const s of upserted) saIdMap[s.schoolUdise] = s.id;
   }
   console.log('✓ Self Assessments');
 
+  // 8b. Backfill real responses for schools this script marked SUBMITTED/UNDER_REVIEW/
+  // VERIFIED but that don't have any yet (previously these were fake-submitted with zero
+  // underlying answers, so a school's own read-only view had nothing to show).
+  const saResponseMaps: Record<string, Map<string, string>> = {};
+  let saBackfilled = 0;
+  if (allParams.length > 0) {
+    const submissionIds = submittedOrLaterUdises.map((u) => saIdMap[u]).filter((id): id is string => !!id);
+    const existingCounts = await prisma.selfAssessmentResponse.groupBy({
+      by: ['submissionId'],
+      where: { submissionId: { in: submissionIds } },
+      _count: { id: true },
+    });
+    const alreadyAnswered = new Set(existingCounts.filter((c) => c._count.id > 0).map((c) => c.submissionId));
+
+    for (const udise of submittedOrLaterUdises) {
+      const submissionId = saIdMap[udise];
+      if (!submissionId || alreadyAnswered.has(submissionId)) continue;
+
+      const responseMap = new Map<string, string>();
+      const rows = allParams
+        .map((p) => {
+          const key = pickOptionKey(p.options);
+          if (key) responseMap.set(p.id, key);
+          return key ? { submissionId, parameterId: p.id, selectedOptionKey: key } : null;
+        })
+        .filter((r): r is { submissionId: string; parameterId: string; selectedOptionKey: string } => !!r);
+
+      if (rows.length > 0) {
+        await prisma.selfAssessmentResponse.createMany({ data: rows, skipDuplicates: true });
+        saResponseMaps[udise] = responseMap;
+        saBackfilled++;
+      }
+    }
+  }
+  console.log(`✓ Self-Assessment responses backfilled for ${saBackfilled} schools`);
+
   // 9. Verifier assignments — for UNDER_REVIEW + VERIFIED, distribute among verifiers in same district
   const allAssignableUdises = [...underReviewSchools, ...verifiedSchools];
-  const assignmentUdises = new Set<string>();
+  const assignmentIdMap: Record<string, string> = {};
 
   for (const batch of chunk(allAssignableUdises, 50)) {
-    await prisma.$transaction(
+    const upserted = await prisma.$transaction(
       batch.map((udise) => {
         const distCode = schoolDistrictMap[udise]!;
         const distVerifiers = verifierIds[distCode]!;
         const verifierIdx = Math.floor(Math.random() * distVerifiers.length);
         const verifierUserId = distVerifiers[verifierIdx]!;
-        assignmentUdises.add(udise);
         return prisma.verifierAssignment.upsert({
           where: { cycleId_schoolUdise: { cycleId: cycle!.id, schoolUdise: udise } },
           create: {
@@ -316,38 +461,106 @@ async function main() {
         });
       }),
     );
+    for (const a of upserted) assignmentIdMap[a.schoolUdise] = a.id;
   }
   console.log('✓ Verifier Assignments');
 
-  // 10. Results for VERIFIED schools — self + verifier scores across 5 domains
-  const resultRecords = verifiedSchools.map((udise) => {
-    const selfScore = faker.number.float({ min: 30, max: 95, fractionDigits: 1 });
-    const delta = faker.number.float({ min: -15, max: 15, fractionDigits: 1 });
-    const verifierScore = Math.min(100, Math.max(0, selfScore + delta));
-    const finalScore = (selfScore + verifierScore) / 2;
-    return { udise, selfScore, verifierScore, finalScore };
-  });
+  // 9b. Backfill verification submissions + responses for UNDER_REVIEW/VERIFIED schools
+  // that don't have one yet — mirrors the school's self-assessment with some deliberate
+  // disagreement, instead of a Result row with a verifierScorePercent but no verifier
+  // submission behind it.
+  let verificationBackfilled = 0;
+  if (allParams.length > 0) {
+    const existingVSubs = await prisma.verificationSubmission.findMany({
+      where: { cycleId: cycle.id, schoolUdise: { in: allAssignableUdises } },
+      select: { schoolUdise: true },
+    });
+    const alreadyVerified = new Set(existingVSubs.map((v) => v.schoolUdise));
 
-  for (const batch of chunk(resultRecords, 50)) {
-    await prisma.$transaction(
-      batch.map((r) =>
-        prisma.result.upsert({
-          where: { cycleId_schoolUdise: { cycleId: cycle!.id, schoolUdise: r.udise } },
-          create: {
-            cycleId: cycle!.id,
-            schoolUdise: r.udise,
-            frameworkId: framework!.id,
-            selfScorePercent: r.selfScore,
-            verifierScorePercent: r.verifierScore,
-            finalScorePercent: r.finalScore,
-            publishedAt: new Date(),
-          },
-          update: {},
-        }),
-      ),
-    );
+    for (const udise of allAssignableUdises) {
+      if (alreadyVerified.has(udise)) continue;
+      const assignmentId = assignmentIdMap[udise];
+      const assignment = assignmentId
+        ? await prisma.verifierAssignment.findUnique({ where: { id: assignmentId } })
+        : null;
+      if (!assignment) continue;
+
+      const vSubmission = await prisma.verificationSubmission.create({
+        data: {
+          cycleId: cycle.id,
+          schoolUdise: udise,
+          frameworkId: framework.id,
+          assignmentId: assignment.id,
+          verifierUserId: assignment.verifierUserId,
+          status: 'SUBMITTED',
+          startedAt: new Date(Date.now() - faker.number.int({ min: 5, max: 25 }) * 86400000),
+          submittedAt: new Date(Date.now() - faker.number.int({ min: 1, max: 10 }) * 86400000),
+        },
+      });
+
+      const selfMap = saResponseMaps[udise];
+      const rows = allParams
+        .map((p) => {
+          const key = verifierPickOptionKey(p.options, selfMap?.get(p.id) ?? null);
+          return key ? { submissionId: vSubmission.id, parameterId: p.id, selectedOptionKey: key } : null;
+        })
+        .filter((r): r is { submissionId: string; parameterId: string; selectedOptionKey: string } => !!r);
+
+      if (rows.length > 0) {
+        await prisma.verificationResponse.createMany({ data: rows, skipDuplicates: true });
+        verificationBackfilled++;
+      }
+    }
   }
-  console.log('✓ Results');
+  console.log(`✓ Verification submissions backfilled for ${verificationBackfilled} schools`);
+
+  // 10. Results — computed from the real responses above with the same formula the
+  // rest of the app uses, for every school that has a self-assessment submission.
+  // finalScorePercent (and gradeBandCode) only get set when a verifier submission
+  // exists — no self-assessment-only fallback, matching computeAndStoreResult.
+  let resultsComputed = 0;
+  let resultsWithFinalScore = 0;
+  for (const udise of submittedOrLaterUdises) {
+    const applicable = applicableParamsFor(schoolCategoryMap[udise] ?? '');
+
+    const saMap = saResponseMaps[udise] ?? new Map<string, string>();
+    const selfScorePercent = computeScore(saMap, applicable);
+
+    let verifierScorePercent: number | null = null;
+    let finalScorePercent: number | null = null;
+    if (underReviewSchools.includes(udise) || verifiedSchools.includes(udise)) {
+      const vSub = await prisma.verificationSubmission.findFirst({
+        where: { cycleId: cycle.id, schoolUdise: udise, status: 'SUBMITTED' },
+        include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
+      });
+      if (vSub) {
+        const vMap = new Map(vSub.responses.map((r) => [r.parameterId, r.selectedOptionKey]));
+        verifierScorePercent = computeScore(vMap, applicable);
+        finalScorePercent = verifierScorePercent;
+      }
+    }
+
+    let gradeBandCode: string | null = null;
+    if (finalScorePercent != null && gradeBands.length > 0) {
+      for (let i = 0; i < gradeBands.length; i++) {
+        const band = gradeBands[i]!;
+        const isLast = i === gradeBands.length - 1;
+        if (finalScorePercent >= band.minPercent && (isLast ? finalScorePercent <= band.maxPercent : finalScorePercent < band.maxPercent)) {
+          gradeBandCode = band.key;
+          break;
+        }
+      }
+    }
+
+    await prisma.result.upsert({
+      where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise: udise } },
+      create: { cycleId: cycle.id, schoolUdise: udise, frameworkId: framework.id, selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode, publishedAt: new Date() },
+      update: { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode },
+    });
+    resultsComputed++;
+    if (finalScorePercent != null) resultsWithFinalScore++;
+  }
+  console.log(`✓ Results computed for ${resultsComputed} schools (${resultsWithFinalScore} with a real final score)`);
 
   // 11. Disputes — 25 linked to VERIFIED schools
   const disputeSchools = faker.helpers.arrayElements(verifiedSchools, Math.min(25, verifiedSchools.length));

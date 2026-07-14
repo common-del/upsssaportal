@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/diagnose.ts || true; next build",
+    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/seed-dummy.ts || true; next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",

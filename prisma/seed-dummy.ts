@@ -427,13 +427,24 @@ async function main() {
   }
   console.log('✓ Self Assessments');
 
-  // 8b. Backfill real responses for schools this script marked SUBMITTED/UNDER_REVIEW/
-  // VERIFIED but that don't have any yet (previously these were fake-submitted with zero
-  // underlying answers, so a school's own read-only view had nothing to show).
+  // 8b. Backfill real responses for every school whose SelfAssessmentSubmission is actually
+  // SUBMITTED in the database but that doesn't have any responses yet (previously these were
+  // fake-submitted with zero underlying answers, so a school's own read-only view had nothing
+  // to show). Sourced from the DB rather than this run's freshly-randomized saStatusMap/
+  // submittedOrLaterUdises, since those are re-rolled with Math.random() on every run and the
+  // upserts above use `update: {}` - a school SUBMITTED by a previous run stays SUBMITTED in the
+  // DB even when this run's re-roll no longer picks it, and it must still get backfilled.
+  const actualSubmittedSubs = await prisma.selfAssessmentSubmission.findMany({
+    where: { cycleId: cycle.id, status: 'SUBMITTED' },
+    select: { id: true, schoolUdise: true },
+  });
+  const actualSubmittedUdises = actualSubmittedSubs.map((s) => s.schoolUdise);
+  for (const s of actualSubmittedSubs) saIdMap[s.schoolUdise] = s.id;
+
   const saResponseMaps: Record<string, Map<string, string>> = {};
   let saBackfilled = 0;
   if (allParams.length > 0) {
-    const submissionIds = submittedOrLaterUdises.map((u) => saIdMap[u]).filter((id): id is string => !!id);
+    const submissionIds = actualSubmittedUdises.map((u) => saIdMap[u]).filter((id): id is string => !!id);
     const existingCounts = await prisma.selfAssessmentResponse.groupBy({
       by: ['submissionId'],
       where: { submissionId: { in: submissionIds } },
@@ -441,7 +452,7 @@ async function main() {
     });
     const alreadyAnswered = new Set(existingCounts.filter((c) => c._count.id > 0).map((c) => c.submissionId));
 
-    for (const udise of submittedOrLaterUdises) {
+    for (const udise of actualSubmittedUdises) {
       const submissionId = saIdMap[udise];
       if (!submissionId || alreadyAnswered.has(submissionId)) continue;
 
@@ -545,24 +556,32 @@ async function main() {
   // exists — no self-assessment-only fallback, matching computeAndStoreResult.
   let resultsComputed = 0;
   let resultsWithFinalScore = 0;
-  for (const udise of submittedOrLaterUdises) {
+  for (const udise of actualSubmittedUdises) {
     const applicable = applicableParamsFor(schoolCategoryMap[udise] ?? '');
 
-    const saMap = saResponseMaps[udise] ?? new Map<string, string>();
+    // Read responses back from the DB rather than the in-memory saResponseMaps cache -
+    // that cache only holds entries for schools backfilled *this run*, so a school backfilled
+    // by an earlier run would otherwise fall back to an empty map and score as 0.
+    const submissionId = saIdMap[udise];
+    const saResponseRows = submissionId
+      ? await prisma.selfAssessmentResponse.findMany({
+          where: { submissionId },
+          select: { parameterId: true, selectedOptionKey: true },
+        })
+      : [];
+    const saMap = new Map(saResponseRows.map((r) => [r.parameterId, r.selectedOptionKey]));
     const selfScorePercent = computeScore(saMap, applicable);
 
     let verifierScorePercent: number | null = null;
     let finalScorePercent: number | null = null;
-    if (underReviewSchools.includes(udise) || verifiedSchools.includes(udise)) {
-      const vSub = await prisma.verificationSubmission.findFirst({
-        where: { cycleId: cycle.id, schoolUdise: udise, status: 'SUBMITTED' },
-        include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
-      });
-      if (vSub) {
-        const vMap = new Map(vSub.responses.map((r) => [r.parameterId, r.selectedOptionKey]));
-        verifierScorePercent = computeScore(vMap, applicable);
-        finalScorePercent = verifierScorePercent;
-      }
+    const vSub = await prisma.verificationSubmission.findFirst({
+      where: { cycleId: cycle.id, schoolUdise: udise, status: 'SUBMITTED' },
+      include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
+    });
+    if (vSub) {
+      const vMap = new Map(vSub.responses.map((r) => [r.parameterId, r.selectedOptionKey]));
+      verifierScorePercent = computeScore(vMap, applicable);
+      finalScorePercent = verifierScorePercent;
     }
 
     let gradeBandCode: string | null = null;

@@ -142,55 +142,6 @@ export async function uploadMandatoryDocument(
   return { success: true };
 }
 
-export async function stubUploadEvidence(data: {
-  parameterId: string;
-  fileName: string;
-  saSubmissionId: string;
-}) {
-  const ctx = await requireSchoolSession();
-  if (!ctx) return { error: 'Unauthorized' };
-
-  // TODO: integrate Vercel Blob for actual file storage.
-  const asset = await prisma.evidenceAsset.create({
-    data: {
-      blobUrl: `stub://${data.fileName}`,
-      fileName: data.fileName,
-      fileType: 'application/pdf',
-      fileSize: 0,
-      uploadedByUserId: ctx.userId,
-    },
-  });
-
-  await prisma.evidenceLink.create({
-    data: {
-      assetId: asset.id,
-      kind: 'SELF_RESPONSE',
-      saSubmissionId: data.saSubmissionId,
-      parameterId: data.parameterId,
-    },
-  });
-
-  revalidatePath('/app/school/evidence');
-  revalidatePath('/app/school/sqaaf');
-  return { success: true, id: asset.id };
-}
-
-export async function deleteStubEvidence(assetId: string) {
-  const ctx = await requireSchoolSession();
-  if (!ctx) return { error: 'Unauthorized' };
-
-  const asset = await prisma.evidenceAsset.findUnique({
-    where: { id: assetId },
-    include: { links: { include: { saSubmission: true } } },
-  });
-  if (!asset || asset.uploadedByUserId !== ctx.userId) return { error: 'Not found' };
-  if (asset.links?.saSubmission?.schoolUdise !== ctx.schoolUdise) return { error: 'Forbidden' };
-
-  await prisma.evidenceAsset.delete({ where: { id: assetId } });
-  revalidatePath('/app/school/evidence');
-  return { success: true };
-}
-
 export async function markNotificationRead(notificationId: string) {
   const ctx = await requireSchoolSession();
   if (!ctx) return { error: 'Unauthorized' };

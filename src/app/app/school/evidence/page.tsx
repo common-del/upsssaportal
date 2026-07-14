@@ -83,8 +83,10 @@ export default async function EvidenceManagerPage({
   return (
     <EvidenceManagerClient
       saSubmissionId={submission.id}
+      userId={session.user.id!}
       parameters={parameters}
       rows={rows}
+      disabled={submission.status === 'SUBMITTED'}
       initialParameterFilter={sp.parameterId}
     />
   );

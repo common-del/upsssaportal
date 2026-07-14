@@ -186,8 +186,9 @@ export default function EvidenceChecklistModal({
                         )}
                       </div>
                       {!disabled && !stagedFile && (
-                        <label className="shrink-0 cursor-pointer rounded-md border border-dashed border-gray-300 p-2 text-gray-500 hover:border-navy-400 hover:text-navy-700" title={t('attach')}>
-                          <Paperclip size={16} />
+                        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-navy-600 px-3 py-2 text-xs font-medium text-navy-700 hover:bg-navy-50">
+                          <Paperclip size={14} />
+                          {t('checklistUpload')}
                           <input
                             type="file"
                             accept={ALLOWED_EXT}

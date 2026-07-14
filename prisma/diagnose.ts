@@ -15,7 +15,7 @@ async function main() {
       where: { schoolUdise: lynch.udise, cycleId: cycle?.id },
     });
     const respCount = sub
-      ? await prisma.selfAssessmentResponse.count({ where: { saSubmissionId: sub.id } })
+      ? await prisma.selfAssessmentResponse.count({ where: { submissionId: sub.id } })
       : 0;
     console.log('Lynch submission:', sub?.status, 'responses:', respCount);
     // For schools, User.username === School.udise (the login is the udise itself)

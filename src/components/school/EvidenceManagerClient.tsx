@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { Fragment, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { upload } from '@vercel/blob/client';
-import { Trash2, RefreshCw, Search, Paperclip, Loader2 } from 'lucide-react';
+import { Trash2, RefreshCw, Search, Paperclip, Loader2, ChevronDown, ChevronRight, FileText, Image as ImageIcon } from 'lucide-react';
 import { createEvidence, deleteEvidence } from '@/lib/actions/evidence';
 
 const NAVY = '#1B2A6B';
@@ -48,7 +48,9 @@ export function EvidenceManagerClient({
   const [search, setSearch] = useState(initialParameterFilter ? '' : '');
   const [busyParamId, setBusyParamId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [expandedParamIds, setExpandedParamIds] = useState<Set<string>>(new Set());
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const replaceTargets = useRef<Record<string, string | undefined>>({});
 
   const domains = useMemo(() => {
     const map = new Map<string, string>();
@@ -64,27 +66,42 @@ export function EvidenceManagerClient({
     return Array.from(map.keys());
   }, [parameters, domainFilter]);
 
-  const uploadedParamIds = new Set(rows.map((r) => r.parameterId));
+  const filesByParam = useMemo(() => {
+    const map = new Map<string, EvidenceRow[]>();
+    for (const row of rows) {
+      const list = map.get(row.parameterId) ?? [];
+      list.push(row);
+      map.set(row.parameterId, list);
+    }
+    return map;
+  }, [rows]);
 
-  const filteredRows = rows.filter((r) => {
-    const param = parameters.find((p) => p.id === r.parameterId);
-    if (domainFilter && param?.domainId !== domainFilter) return false;
-    if (subDomainFilter && param?.subDomainLabel !== subDomainFilter) return false;
-    if (search && !r.fileName.toLowerCase().includes(search.toLowerCase()) &&
-        !r.parameterLabel.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
-
-  const missingParams = parameters.filter((p) => {
-    if (uploadedParamIds.has(p.id)) return false;
+  const filteredParams = parameters.filter((p) => {
+    const files = filesByParam.get(p.id) ?? [];
     if (domainFilter && p.domainId !== domainFilter) return false;
     if (subDomainFilter && p.subDomainLabel !== subDomainFilter) return false;
-    if (search && !p.label.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter === 'uploaded' && files.length === 0) return false;
+    if (statusFilter === 'missing' && files.length > 0) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchesParam = p.label.toLowerCase().includes(q);
+      const matchesFile = files.some((f) => f.fileName.toLowerCase().includes(q));
+      if (!matchesParam && !matchesFile) return false;
+    }
     return true;
   });
 
-  const showMissing = statusFilter === 'missing' || statusFilter === 'all';
-  const showUploaded = statusFilter === 'uploaded' || statusFilter === 'all';
+  function toggleExpanded(parameterId: string) {
+    setExpandedParamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(parameterId)) next.delete(parameterId);
+      else next.add(parameterId);
+      return next;
+    });
+  }
+
+  const fileIcon = (fileName: string) =>
+    /\.pdf$/i.test(fileName) ? <FileText size={14} className="text-red-500" /> : <ImageIcon size={14} className="text-blue-500" />;
 
   async function uploadFor(parameterId: string, file: File) {
     setError('');
@@ -108,7 +125,8 @@ export function EvidenceManagerClient({
     return res.file;
   }
 
-  function handlePickFile(parameterId: string) {
+  function handlePickFile(parameterId: string, replacingAssetId?: string) {
+    replaceTargets.current[parameterId] = replacingAssetId;
     fileInputs.current[parameterId]?.click();
   }
 
@@ -217,105 +235,123 @@ export function EvidenceManagerClient({
               <th className="px-4 py-3">Domain</th>
               <th className="px-4 py-3">Sub-Domain</th>
               <th className="px-4 py-3">Parameter</th>
-              <th className="px-4 py-3">File name</th>
-              <th className="px-4 py-3">Uploaded date</th>
+              <th className="px-4 py-3">Evidence</th>
               <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {showUploaded && filteredRows.map((row) => (
-              <tr key={row.assetId}>
-                <td className="px-4 py-3 text-gray-700">{row.domainLabel}</td>
-                <td className="px-4 py-3 text-gray-700">{row.subDomainLabel}</td>
-                <td className="px-4 py-3 text-gray-900">{row.parameterLabel}</td>
-                <td className="px-4 py-3 font-mono text-xs">{row.fileName}</td>
-                <td className="px-4 py-3 text-gray-500">{row.uploadedAt}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-3">
-                    {!disabled && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={busyParamId === row.parameterId || busyParamId === row.assetId}
-                          onClick={() => handlePickFile(row.parameterId)}
-                          className="text-xs font-medium text-[#1B2A6B] hover:underline disabled:opacity-50"
-                        >
-                          {busyParamId === row.parameterId ? (
-                            <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                          ) : (
-                            <RefreshCw className="mr-1 inline h-3 w-3" />
-                          )}
-                          Replace
-                        </button>
-                        <input
-                          ref={(el) => { fileInputs.current[row.parameterId] = el; }}
-                          type="file"
-                          accept={ALLOWED_EXT}
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            handleFileSelected(row.parameterId, file, row.assetId);
-                            e.target.value = '';
-                          }}
-                        />
-                        <button
-                          type="button"
-                          disabled={busyParamId === row.assetId}
-                          onClick={() => handleDelete(row.assetId)}
-                          className="text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
-                        >
-                          {busyParamId === row.assetId ? (
-                            <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="mr-1 inline h-3 w-3" />
-                          )}
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {showMissing && missingParams.map((p) => (
-              <tr key={`missing-${p.id}`} className="bg-amber-50/30">
-                <td className="px-4 py-3 text-gray-700">{p.domainLabel}</td>
-                <td className="px-4 py-3 text-gray-700">{p.subDomainLabel}</td>
-                <td className="px-4 py-3 text-gray-900">{p.label}</td>
-                <td className="px-4 py-3 text-gray-400 italic">—</td>
-                <td className="px-4 py-3 text-gray-400">—</td>
-                <td className="px-4 py-3">
-                  {!disabled && (
-                    <>
+            {filteredParams.map((p) => {
+              const files = filesByParam.get(p.id) ?? [];
+              const expanded = expandedParamIds.has(p.id);
+              return (
+                <Fragment key={p.id}>
+                  <tr className={files.length === 0 ? 'bg-amber-50/30' : undefined}>
+                    <td className="px-4 py-3 text-gray-700">{p.domainLabel}</td>
+                    <td className="px-4 py-3 text-gray-700">{p.subDomainLabel}</td>
+                    <td className="px-4 py-3 text-gray-900">{p.label}</td>
+                    <td className="px-4 py-3">
+                      {files.length > 0 ? (
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          {files.length} file{files.length > 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-xs italic text-gray-400">No evidence</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <button
                         type="button"
-                        disabled={busyParamId === p.id}
-                        onClick={() => handlePickFile(p.id)}
-                        className="text-xs font-medium text-[#1B2A6B] hover:underline disabled:opacity-50"
+                        onClick={() => toggleExpanded(p.id)}
+                        className="flex items-center gap-1 text-xs font-medium text-[#1B2A6B] hover:underline"
                       >
-                        {busyParamId === p.id ? (
-                          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                        ) : (
-                          <Paperclip className="mr-1 inline h-3 w-3" />
-                        )}
-                        Upload
+                        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        View Details
                       </button>
-                      <input
-                        ref={(el) => { fileInputs.current[p.id] = el; }}
-                        type="file"
-                        accept={ALLOWED_EXT}
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          handleFileSelected(p.id, file);
-                          e.target.value = '';
-                        }}
-                      />
-                    </>
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr key={`${p.id}-details`}>
+                      <td colSpan={5} className="bg-gray-50 px-6 py-4">
+                        <div className="space-y-3">
+                          {files.length > 0 && (
+                            <div className="space-y-2">
+                              {files.map((f) => (
+                                <div
+                                  key={f.assetId}
+                                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2"
+                                >
+                                  {fileIcon(f.fileName)}
+                                  <span className="flex-1 truncate font-mono text-xs text-gray-700">{f.fileName}</span>
+                                  <span className="text-xs text-gray-400">{f.uploadedAt}</span>
+                                  {!disabled && (
+                                    <div className="flex shrink-0 gap-3">
+                                      <button
+                                        type="button"
+                                        disabled={busyParamId === p.id || busyParamId === f.assetId}
+                                        onClick={() => handlePickFile(p.id, f.assetId)}
+                                        className="text-xs font-medium text-[#1B2A6B] hover:underline disabled:opacity-50"
+                                      >
+                                        {busyParamId === p.id ? (
+                                          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <RefreshCw className="mr-1 inline h-3 w-3" />
+                                        )}
+                                        Replace
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={busyParamId === f.assetId}
+                                        onClick={() => handleDelete(f.assetId)}
+                                        className="text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+                                      >
+                                        {busyParamId === f.assetId ? (
+                                          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="mr-1 inline h-3 w-3" />
+                                        )}
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {!disabled && (
+                            <button
+                              type="button"
+                              disabled={busyParamId === p.id}
+                              onClick={() => handlePickFile(p.id)}
+                              className="flex items-center gap-1.5 rounded-lg border border-navy-600 px-3 py-2 text-xs font-medium text-navy-700 hover:bg-navy-50 disabled:opacity-50"
+                            >
+                              {busyParamId === p.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Paperclip size={14} />
+                              )}
+                              Upload
+                            </button>
+                          )}
+                          <input
+                            ref={(el) => { fileInputs.current[p.id] = el; }}
+                            type="file"
+                            accept={ALLOWED_EXT}
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              const replacingAssetId = replaceTargets.current[p.id];
+                              replaceTargets.current[p.id] = undefined;
+                              handleFileSelected(p.id, file, replacingAssetId);
+                              e.target.value = '';
+                            }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -232,6 +232,8 @@ model Parameter {
   applicability     Json
   inputType         String                   @default("SINGLE_SELECT")
   evidenceRequired  Boolean                  @default(false)
+  evidenceChecklistEn Json                   @default("[]")
+  evidenceChecklistHi Json                   @default("[]")
   dataSources       Json                     @default("[\"Manual\"]")
   isActive          Boolean                  @default(true)
   appealItems       AppealItem[]

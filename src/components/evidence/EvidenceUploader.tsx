@@ -17,7 +17,7 @@ export type EvidenceFile = {
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 const ALLOWED_EXT = '.pdf,.jpg,.jpeg,.png';
 const MAX_SIZE = 10 * 1024 * 1024;
-const MAX_FILES = 3;
+const DEFAULT_MAX_FILES = 3;
 
 export default function EvidenceUploader({
   files: initialFiles,
@@ -25,12 +25,14 @@ export default function EvidenceUploader({
   kind,
   opts,
   disabled,
+  maxFiles = DEFAULT_MAX_FILES,
 }: {
   files: EvidenceFile[];
   userId: string;
   kind: 'SELF_RESPONSE' | 'VERIFICATION_RESPONSE' | 'APPEAL_ITEM';
   opts: { saSubmissionId?: string; vSubmissionId?: string; parameterId?: string; appealItemId?: string };
   disabled?: boolean;
+  maxFiles?: number;
 }) {
   const t = useTranslations('evidence');
   const [files, setFiles] = useState<EvidenceFile[]>(initialFiles);
@@ -53,8 +55,8 @@ export default function EvidenceUploader({
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
-    if (files.length >= MAX_FILES) {
-      setError(t('maxFiles'));
+    if (files.length >= maxFiles) {
+      setError(t('maxFiles', { count: maxFiles }));
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
@@ -118,7 +120,7 @@ export default function EvidenceUploader({
         </div>
       )}
 
-      {!disabled && files.length < MAX_FILES && (
+      {!disabled && files.length < maxFiles && (
         <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-border px-2.5 py-1.5 text-xs text-text-secondary hover:border-navy-400 hover:text-navy-700 transition">
           {uploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
           {uploading ? t('uploading') : t('attach')}
@@ -130,7 +132,7 @@ export default function EvidenceUploader({
       {error && <p className="mt-1 text-[11px] text-red-600">{error}</p>}
 
       {!disabled && files.length === 0 && (
-        <p className="mt-0.5 text-[10px] text-text-secondary">{t('hint')}</p>
+        <p className="mt-0.5 text-[10px] text-text-secondary">{t('hint', { count: maxFiles })}</p>
       )}
     </div>
   );

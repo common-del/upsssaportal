@@ -1,18 +1,18 @@
 'use client';
 
 import { useState, useTransition, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Save, Send, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, ChevronLeft, Paperclip, Circle } from 'lucide-react';
 import { saveResponses, submitSubmission } from '@/lib/actions/selfAssessment';
-import EvidenceUploader, { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
+import { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
+import EvidenceChecklistModal from '@/components/evidence/EvidenceChecklistModal';
 import { cn } from '@/lib/cn';
 
 type Option = { key: string; labelEn: string; labelHi: string };
 type Parameter = {
   id: string; code: string; titleEn: string; titleHi: string;
-  evidenceRequired: boolean; options: Option[];
+  evidenceRequired: boolean; evidenceChecklistEn: string[]; evidenceChecklistHi: string[]; options: Option[];
 };
 type SubDomain = { id: string; code: string; titleEn: string; titleHi: string; parameters: Parameter[] };
 type Domain = { id: string; code: string; titleEn: string; titleHi: string; subDomains: SubDomain[] };
@@ -77,7 +77,12 @@ export default function SelfAssessmentForm({
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(framework.domains.map((d, i) => [d.id, i === 0])),
   );
+  const [evidenceMap, setEvidenceMap] = useState<EvidenceMap>(existingEvidence);
+  const [evidenceModalParamId, setEvidenceModalParamId] = useState<string | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+
+  const allParameters = framework.domains.flatMap((d) => d.subDomains.flatMap((sd) => sd.parameters));
+  const evidenceModalParam = evidenceModalParamId ? allParameters.find((p) => p.id === evidenceModalParamId) ?? null : null;
 
   const answeredCount = Object.values(responses).filter((r) => r.selectedOptionKey).length;
   const progressPct = totalApplicable > 0 ? Math.round((answeredCount / totalApplicable) * 100) : 0;
@@ -236,12 +241,18 @@ export default function SelfAssessmentForm({
           })}
         </div>
 
-        <Link
-          href={`/app/school/evidence?parameterId=${param.id}`}
+        <button
+          type="button"
+          onClick={() => setEvidenceModalParamId(param.id)}
           className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-[#1B2A6B] hover:bg-gray-50"
         >
-          <Paperclip size={14} /> Upload Evidence
-        </Link>
+          <Paperclip size={14} /> {t('uploadEvidence')}
+          {(evidenceMap[param.id]?.length ?? 0) > 0 && (
+            <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+              {evidenceMap[param.id]!.length}
+            </span>
+          )}
+        </button>
 
         <textarea
           value={resp?.notes ?? ''}
@@ -252,16 +263,6 @@ export default function SelfAssessmentForm({
           rows={2}
           className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm disabled:opacity-60"
         />
-
-        {param.evidenceRequired && (
-          <EvidenceUploader
-            files={existingEvidence[param.id] ?? []}
-            userId={userId}
-            kind="SELF_RESPONSE"
-            opts={{ saSubmissionId: submissionId, parameterId: param.id }}
-            disabled={isSubmitted}
-          />
-        )}
       </div>
     );
   }
@@ -565,6 +566,24 @@ export default function SelfAssessmentForm({
           </button>
           {saveMsg && <span className="text-sm text-green-600">{saveMsg}</span>}
         </div>
+      )}
+
+      {evidenceModalParam && (
+        <EvidenceChecklistModal
+          parameterId={evidenceModalParam.id}
+          titleEn={evidenceModalParam.titleEn}
+          titleHi={evidenceModalParam.titleHi}
+          checklist={evidenceModalParam.evidenceChecklistEn.map((en, i) => ({
+            en,
+            hi: evidenceModalParam.evidenceChecklistHi[i] ?? '',
+          }))}
+          existingFiles={evidenceMap[evidenceModalParam.id] ?? []}
+          userId={userId}
+          saSubmissionId={submissionId}
+          disabled={isSubmitted}
+          onClose={() => setEvidenceModalParamId(null)}
+          onFilesChange={(files) => setEvidenceMap((prev) => ({ ...prev, [evidenceModalParam.id]: files }))}
+        />
       )}
     </div>
   );

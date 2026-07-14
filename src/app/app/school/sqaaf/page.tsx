@@ -81,6 +81,8 @@ export default async function SqaafUpdatePage() {
           titleEn: p.titleEn,
           titleHi: p.titleHi,
           evidenceRequired: p.evidenceRequired,
+          evidenceChecklistEn: p.evidenceChecklistEn as string[],
+          evidenceChecklistHi: p.evidenceChecklistHi as string[],
           options: p.options.map((o) => ({
             key: o.key,
             labelEn: o.labelEn,

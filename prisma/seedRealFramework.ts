@@ -10,8 +10,10 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { REAL_FRAMEWORK_DATA } from './realFrameworkData';
+import { REAL_FRAMEWORK_EVIDENCE_DATA } from './realFrameworkEvidenceData';
 
 const prisma = new PrismaClient();
+const evidenceByCode = new Map(REAL_FRAMEWORK_EVIDENCE_DATA.map((e) => [e.code, e]));
 
 function pickOptionKey(): { key: string; score: number } {
   // Skews toward the higher-scoring levels so the demo account reads as a
@@ -47,7 +49,7 @@ async function main() {
   console.log(`Target framework: ${framework.id} (cycle ${targetCycle.id})`);
 
   // 2. Domains -> sub-domains -> parameters -> options -> rubric mappings
-  let domainCount = 0, subDomainCount = 0, paramCount = 0, optionCount = 0, rubricCount = 0;
+  let domainCount = 0, subDomainCount = 0, paramCount = 0, optionCount = 0, rubricCount = 0, evidenceItemCount = 0;
 
   for (const d of REAL_FRAMEWORK_DATA) {
     const domain = await prisma.sqaafDomain.upsert({
@@ -80,6 +82,10 @@ async function main() {
       subDomainCount++;
 
       for (const p of sd.parameters) {
+        const checklist = evidenceByCode.get(p.code);
+        const evidenceChecklistEn = checklist?.itemsEn ?? [];
+        const evidenceChecklistHi = checklist?.itemsHi ?? [];
+
         const parameter = await prisma.parameter.upsert({
           where: { frameworkId_code: { frameworkId: framework.id, code: p.code } },
           create: {
@@ -91,6 +97,8 @@ async function main() {
             order: p.order,
             applicability: p.applicability,
             evidenceRequired: p.evidenceRequired,
+            evidenceChecklistEn,
+            evidenceChecklistHi,
           },
           update: {
             subDomainId: subDomain.id,
@@ -99,9 +107,12 @@ async function main() {
             order: p.order,
             applicability: p.applicability,
             evidenceRequired: p.evidenceRequired,
+            evidenceChecklistEn,
+            evidenceChecklistHi,
           },
         });
         paramCount++;
+        evidenceItemCount += evidenceChecklistEn.length;
 
         for (const o of p.options) {
           await prisma.parameterOption.upsert({
@@ -121,7 +132,7 @@ async function main() {
       }
     }
   }
-  console.log(`Domains: ${domainCount}, SubDomains: ${subDomainCount}, Parameters: ${paramCount}, Options: ${optionCount}, RubricMappings: ${rubricCount}`);
+  console.log(`Domains: ${domainCount}, SubDomains: ${subDomainCount}, Parameters: ${paramCount}, Options: ${optionCount}, RubricMappings: ${rubricCount}, EvidenceChecklistItems: ${evidenceItemCount}`);
 
   // 3. Grade bands (percent thresholds match the low/high-performing cutoffs
   // already used elsewhere in the app: <40 / >=76).

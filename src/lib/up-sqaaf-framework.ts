@@ -117,10 +117,10 @@ export const DISPUTE_CATEGORIES_TABLE = [
 ] as const;
 
 export const WORKFLOW_STAGES = [
+  { key: 'not_started', label: 'Not Started', color: '#9CA3AF' },
   { key: 'submitted', label: 'Submitted Self Evaluation', color: '#3B82F6' },
   { key: 'under_review', label: 'Under External Review', color: '#14B8A6' },
   { key: 'inconsistencies', label: 'Inconsistencies Found in External Evaluation', color: '#EF4444' },
   { key: 'draft', label: 'Draft', color: '#A855F7' },
   { key: 'verified', label: 'Verified', color: '#10B981' },
-  { key: 'not_started', label: 'Not Started', color: '#9CA3AF' },
 ] as const;

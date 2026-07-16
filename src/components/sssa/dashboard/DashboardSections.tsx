@@ -28,7 +28,7 @@ import { DOMAIN_CHART_LABELS } from '@/lib/up-sqaaf-framework';
 const NAVY = '#1B2A6B';
 const YELLOW = '#F5B731';
 
-const STAGE_ICONS = [Send, FileEdit, FileWarning, FileEdit, CheckCircle2, Circle] as const;
+const STAGE_ICONS = [Circle, Send, FileEdit, FileWarning, FileEdit, CheckCircle2] as const;
 
 export function HeroCards({
   totalSchools,

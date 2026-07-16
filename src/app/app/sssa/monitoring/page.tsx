@@ -38,6 +38,7 @@ export default async function MonitoringPage({
   // Determine view mode
   const view = sp.view === 'district' ? 'district' : 'schools';
   const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+  const filterMandal = sp.mandal ?? '';
   const filterDistrict = sp.district ?? '';
   const filterBlock = sp.block ?? '';
   const filterStatus = sp.status ?? '';
@@ -45,9 +46,15 @@ export default async function MonitoringPage({
   const filterPerformance = sp.performance === 'low' || sp.performance === 'high' ? sp.performance : '';
   const searchQ = sp.q ?? '';
 
-  // Fetch districts and blocks for filters
+  // Fetch districts and blocks for filters - scoped to the mandal when a Mandal-level
+  // dashboard tile links in with ?mandal=... (previously ignored entirely, so a Mandal
+  // dashboard's Low/High Performing link silently showed the unscoped statewide list).
   const [districts, blocks] = await Promise.all([
-    prisma.district.findMany({ orderBy: { nameEn: 'asc' }, select: { code: true, nameEn: true, nameHi: true } }),
+    prisma.district.findMany({
+      where: filterMandal ? { mandalCode: filterMandal } : undefined,
+      orderBy: { nameEn: 'asc' },
+      select: { code: true, nameEn: true, nameHi: true },
+    }),
     filterDistrict
       ? prisma.block.findMany({ where: { districtCode: filterDistrict }, orderBy: { nameEn: 'asc' }, select: { code: true, nameEn: true, nameHi: true } })
       : Promise.resolve([]),
@@ -65,6 +72,7 @@ export default async function MonitoringPage({
   if (view === 'schools') {
     const where: Prisma.SchoolWhereInput = {};
     if (filterDistrict) where.districtCode = filterDistrict;
+    else if (filterMandal) where.districtCode = { in: districts.map((d) => d.code) };
     if (filterBlock) where.blockCode = filterBlock;
     if (searchQ) {
       where.OR = [

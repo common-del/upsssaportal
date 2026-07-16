@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; next build",
+    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/seedMockPerformanceSchools.ts || true; next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:dummy": "tsx prisma/seed-dummy.ts",
     "db:seed:real-framework": "tsx prisma/seedRealFramework.ts",
+    "db:seed:mock-performance": "tsx prisma/seedMockPerformanceSchools.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

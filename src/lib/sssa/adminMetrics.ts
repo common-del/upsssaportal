@@ -95,14 +95,15 @@ async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.Scho
     Math.max(0, Math.round(submitted * 0.08)),
   );
   const underReview = Math.max(0, assignments - inconsistencies);
-  const selfReported = Math.max(0, total - drafts - startedDrafts - submitted - underReview);
+  // Schools with no self-assessment submission row at all yet (haven't started) fold into
+  // "Draft" rather than getting their own bucket - they haven't submitted either way.
+  const notStarted = Math.max(0, total - drafts - startedDrafts - submitted - underReview);
 
   const counts = [
-    selfReported,
     submitted - underReview > 0 ? submitted - underReview : submitted,
     underReview,
     inconsistencies,
-    drafts + startedDrafts,
+    drafts + startedDrafts + notStarted,
   ];
 
   return WORKFLOW_STAGES.map((s, i) => ({

@@ -291,6 +291,7 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
     inconsistencies: 10348,
     draft: 85411,
     verified: 10042,
+    not_started: 90457,
   };
   const mockTotal = Object.values(MOCK_STATEWIDE_WORKFLOW_COUNTS).reduce((a, b) => a + b, 0);
   const workflow = WORKFLOW_STAGES.map((s) => ({

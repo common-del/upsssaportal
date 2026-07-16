@@ -117,7 +117,6 @@ export const DISPUTE_CATEGORIES_TABLE = [
 ] as const;
 
 export const WORKFLOW_STAGES = [
-  { key: 'self_reported', label: 'Self Reported', color: '#9CA3AF' },
   { key: 'submitted', label: 'Submitted Self Evaluation', color: '#3B82F6' },
   { key: 'under_review', label: 'Under External Review', color: '#14B8A6' },
   { key: 'inconsistencies', label: 'Inconsistencies Found in External Evaluation', color: '#EF4444' },

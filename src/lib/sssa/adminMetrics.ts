@@ -285,13 +285,14 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
   // looks like at real Uttar Pradesh scale rather than the ~222 schools currently seeded for
   // development. Mandal/District/Block dashboards below are unaffected and keep showing real,
   // computed counts.
+  // Scaled proportionally from the earlier figures so the total lands on 2,48,998.
   const MOCK_STATEWIDE_WORKFLOW_COUNTS: Record<string, number> = {
-    submitted: 70759,
-    under_review: 30989,
-    inconsistencies: 10348,
-    draft: 85411,
-    verified: 10042,
-    not_started: 90457,
+    submitted: 59121,
+    under_review: 25894,
+    inconsistencies: 8647,
+    draft: 71361,
+    verified: 8391,
+    not_started: 75584,
   };
   const mockTotal = Object.values(MOCK_STATEWIDE_WORKFLOW_COUNTS).reduce((a, b) => a + b, 0);
   const workflow = WORKFLOW_STAGES.map((s) => ({

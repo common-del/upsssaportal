@@ -66,19 +66,17 @@ async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.Scho
     ...(schoolUdises ? { schoolUdise: { in: schoolUdises } } : {}),
   };
 
-  const [drafts, startedDrafts, submitted, assignments, highDelta] = await Promise.all([
-    prisma.selfAssessmentSubmission.count({
-      where: { ...saWhere, status: 'DRAFT', startedAt: null },
+  const [submittedSubs, assignedRows, highDelta] = await Promise.all([
+    prisma.selfAssessmentSubmission.findMany({
+      where: { ...saWhere, status: 'SUBMITTED' },
+      select: { schoolUdise: true },
     }),
-    prisma.selfAssessmentSubmission.count({
-      where: { ...saWhere, status: 'DRAFT', startedAt: { not: null } },
-    }),
-    prisma.selfAssessmentSubmission.count({ where: { ...saWhere, status: 'SUBMITTED' } }),
-    prisma.verifierAssignment.count({
+    prisma.verifierAssignment.findMany({
       where: {
         cycleId,
         ...(schoolUdises ? { schoolUdise: { in: schoolUdises } } : {}),
       },
+      select: { schoolUdise: true },
     }),
     prisma.result.count({
       where: {
@@ -90,21 +88,24 @@ async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.Scho
     }),
   ]);
 
+  // Under Review / Inconsistencies are only meaningful for schools that actually submitted -
+  // computed as a real intersection rather than two independent counts, so this can never
+  // show more "under review" than "submitted" (which independent counts drifting apart could).
+  const submittedUdises = new Set(submittedSubs.map((s) => s.schoolUdise));
+  const assignedUdises = new Set(assignedRows.map((a) => a.schoolUdise));
+  const submitted = submittedUdises.size;
+  const assignedSubmitted = [...assignedUdises].filter((u) => submittedUdises.has(u)).length;
+
   const inconsistencies = Math.min(
     highDelta,
     Math.max(0, Math.round(submitted * 0.08)),
   );
-  const underReview = Math.max(0, assignments - inconsistencies);
-  // Schools with no self-assessment submission row at all yet (haven't started) fold into
-  // "Draft" rather than getting their own bucket - they haven't submitted either way.
-  const notStarted = Math.max(0, total - drafts - startedDrafts - submitted - underReview);
+  const underReview = Math.max(0, assignedSubmitted - inconsistencies);
+  const awaitingVerifier = Math.max(0, submitted - assignedSubmitted);
+  // Everything that hasn't submitted yet (whether truly not started or a saved draft).
+  const draft = Math.max(0, total - submitted);
 
-  const counts = [
-    submitted - underReview > 0 ? submitted - underReview : submitted,
-    underReview,
-    inconsistencies,
-    drafts + startedDrafts + notStarted,
-  ];
+  const counts = [awaitingVerifier, underReview, inconsistencies, draft];
 
   return WORKFLOW_STAGES.map((s, i) => ({
     ...s,

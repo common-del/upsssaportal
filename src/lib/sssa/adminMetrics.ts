@@ -281,7 +281,23 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
     }
   }
 
-  const workflow = await workflowCounts(cycle?.id ?? null);
+  // Demo/mockup figures only for the top-level statewide dashboard, illustrating what this
+  // looks like at real Uttar Pradesh scale rather than the ~222 schools currently seeded for
+  // development. Mandal/District/Block dashboards below are unaffected and keep showing real,
+  // computed counts.
+  const MOCK_STATEWIDE_WORKFLOW_COUNTS: Record<string, number> = {
+    submitted: 70759,
+    under_review: 30989,
+    inconsistencies: 10348,
+    draft: 85411,
+    verified: 10042,
+  };
+  const mockTotal = Object.values(MOCK_STATEWIDE_WORKFLOW_COUNTS).reduce((a, b) => a + b, 0);
+  const workflow = WORKFLOW_STAGES.map((s) => ({
+    ...s,
+    count: MOCK_STATEWIDE_WORKFLOW_COUNTS[s.key] ?? 0,
+    pct: pct(MOCK_STATEWIDE_WORKFLOW_COUNTS[s.key] ?? 0, mockTotal),
+  }));
   // A result only counts as low/high performing when it's backed by a
   // verifier score - a school can't be "performing" one way or another off
   // of self-assessment alone.

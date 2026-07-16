@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Building2,
+  CheckCircle2,
   ClipboardList,
   FileEdit,
   FileWarning,
@@ -26,7 +27,7 @@ import { DOMAIN_CHART_LABELS } from '@/lib/up-sqaaf-framework';
 const NAVY = '#1B2A6B';
 const YELLOW = '#F5B731';
 
-const STAGE_ICONS = [Send, FileEdit, FileWarning, FileEdit] as const;
+const STAGE_ICONS = [Send, FileEdit, FileWarning, FileEdit, CheckCircle2] as const;
 
 export function HeroCards({
   totalSchools,
@@ -83,7 +84,7 @@ export function SubmissionProgress({
           />
         ))}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {workflow.map((w, i) => {
           const Icon = STAGE_ICONS[i] ?? ClipboardList;
           return (

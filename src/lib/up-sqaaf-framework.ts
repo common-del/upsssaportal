@@ -121,4 +121,5 @@ export const WORKFLOW_STAGES = [
   { key: 'under_review', label: 'Under External Review', color: '#14B8A6' },
   { key: 'inconsistencies', label: 'Inconsistencies Found in External Evaluation', color: '#EF4444' },
   { key: 'draft', label: 'Draft', color: '#A855F7' },
+  { key: 'verified', label: 'Verified', color: '#10B981' },
 ] as const;

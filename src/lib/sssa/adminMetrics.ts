@@ -264,7 +264,7 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
     select: { code: true, nameEn: true, districtCode: true },
   });
 
-  const totalSchools = await prisma.school.count();
+  let totalSchools = await prisma.school.count();
   let averageScore = 0;
   let lastCycleDelta: number | null = null;
 
@@ -299,6 +299,9 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
     count: MOCK_STATEWIDE_WORKFLOW_COUNTS[s.key] ?? 0,
     pct: pct(MOCK_STATEWIDE_WORKFLOW_COUNTS[s.key] ?? 0, mockTotal),
   }));
+  // "Total Schools" on this dashboard matches the mock workflow breakdown above it, instead
+  // of the real ~222 seeded schools, so the two numbers don't visibly contradict each other.
+  totalSchools = mockTotal;
   // A result only counts as low/high performing when it's backed by a
   // verifier score - a school can't be "performing" one way or another off
   // of self-assessment alone.

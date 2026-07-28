@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/public', label: 'Homepage' },
   { href: '/public/directory', label: 'School Directory' },
   { href: '/public/compare', label: 'Compare Schools' },
+  { href: '/public/reports', label: 'State Reports' },
   { href: '/public/about', label: 'About' },
 ] as const;
 
@@ -29,13 +30,8 @@ export function PublicNav() {
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F5B731] text-sm font-bold text-[#1B2A6B]">
             UP
           </div>
-          <div>
-            <div className="text-base font-semibold leading-tight sm:text-lg">
-              SSSA Uttar Pradesh
-            </div>
-            <p className="text-xs text-white/80 sm:text-sm">
-              School Education Department, Uttar Pradesh
-            </p>
+          <div className="text-base font-semibold leading-tight sm:text-lg">
+            State School Standards Authority Uttar Pradesh
           </div>
         </Link>
 

@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   TrendingUp,
+  ClipboardList,
   Compass,
 } from 'lucide-react';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
@@ -58,6 +59,13 @@ const DID_YOU_KNOW = [
     tint: 'rgba(47,111,176,0.12)',
     title: 'Scores are verified after self-assessment',
     desc: "An independent evaluator checks every school's self-assessment.",
+  },
+  {
+    icon: ClipboardList,
+    color: '#C9911A',
+    tint: 'rgba(201,145,26,0.12)',
+    title: 'Schools get a plan to move up',
+    desc: 'Schools that need to improve receive a customised improvement plan to help them reach the next tier.',
   },
 ] as const;
 

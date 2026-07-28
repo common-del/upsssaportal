@@ -7,22 +7,18 @@ import {
   Building2,
   GraduationCap,
   BadgeCheck,
-  GitCompareArrows,
   AlertTriangle,
   Sparkles,
   ClipboardCheck,
   ShieldCheck,
   CalendarClock,
   Compass,
-  FileCheck2,
-  ScanSearch,
 } from 'lucide-react';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
 import {
   ALL_DISTRICTS,
   districtSqaafStats,
 } from '@/lib/public/dummyData';
-import { SQAAF_DOMAINS, SQAAF_DOMAIN_WEIGHTAGE } from '@/lib/public/constants';
 import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 // Statewide totals — 2,48,998 total schools in UP
@@ -77,33 +73,6 @@ const DID_YOU_KNOW = [
     tint: 'rgba(229,106,79,0.12)',
     title: 'Assessed every academic year',
     desc: "SQAAF runs each cycle, so a school's tier reflects where it stands now — not years ago.",
-  },
-] as const;
-
-const WHAT_YOU_CAN_DO = [
-  {
-    href: '/public/directory',
-    icon: ScanSearch,
-    title: "Check your child's school",
-    desc: "Search the directory and see its current SQAAF tier and full report card.",
-  },
-  {
-    href: '/public/compare',
-    icon: GitCompareArrows,
-    title: 'Compare two or more schools',
-    desc: 'Weigh schools side by side across all 5 SQAAF domains before deciding.',
-  },
-  {
-    href: '/public/find',
-    icon: Compass,
-    title: 'Find a new school',
-    desc: "Choosing for the first time? Answer a few questions to find schools nearby.",
-  },
-  {
-    href: '/public/dispute/new',
-    icon: AlertTriangle,
-    title: "Raise a concern",
-    desc: "Think a school's record is wrong? File a grievance for review.",
   },
 ] as const;
 
@@ -172,51 +141,16 @@ export function HomeContent() {
               self-assessment and lands in one of three tiers based on its score.
             </p>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              <div className="rounded-lg bg-[#FCE7F3] p-3">
-                <p className="font-bold text-[#1B2A6B]">Uday</p>
-                <p className="text-xs font-medium text-gray-700">Upto 55%</p>
-                <p className="mt-1 text-xs text-gray-600">Needs improvement</p>
-              </div>
-              <div className="rounded-lg bg-[#FEF9C3] p-3">
-                <p className="font-bold text-[#1B2A6B]">Unnat</p>
-                <p className="text-xs font-medium text-gray-700">55% to 80%</p>
-                <p className="mt-1 text-xs text-gray-600">Performing satisfactorily</p>
-              </div>
-              <div className="rounded-lg bg-[#DCFCE7] p-3">
-                <p className="font-bold text-[#1B2A6B]">Utkarsh</p>
-                <p className="text-xs font-medium text-gray-700">Above 80%</p>
-                <p className="mt-1 text-xs text-gray-600">Exemplary performance</p>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                How a school gets its score
-              </p>
-              <ol className="mt-2 space-y-2">
-                <li className="flex items-start gap-2.5 text-sm text-gray-600">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#EEF0F8] text-[10px] font-bold text-[#1B2A6B]">
-                    1
-                  </span>
-                  <span>School completes a self-assessment across 5 quality domains.</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-gray-600">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#EEF0F8] text-[10px] font-bold text-[#1B2A6B]">
-                    2
-                  </span>
-                  <span>A trained external evaluator independently reviews it.</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-gray-600">
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#EEF0F8] text-[10px] font-bold text-[#1B2A6B]">
-                    3
-                  </span>
-                  <span>
-                    A final score is computed once both are in — the goal is to show where a
-                    school stands, not to penalize it.
-                  </span>
-                </li>
-              </ol>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full bg-[#FCE7F3] px-3 py-1 text-xs font-bold text-[#1B2A6B]">
+                Uday · Upto 55%
+              </span>
+              <span className="rounded-full bg-[#FEF9C3] px-3 py-1 text-xs font-bold text-[#1B2A6B]">
+                Unnat · 55–80%
+              </span>
+              <span className="rounded-full bg-[#DCFCE7] px-3 py-1 text-xs font-bold text-[#1B2A6B]">
+                Utkarsh · Above 80%
+              </span>
             </div>
 
             <Link
@@ -311,59 +245,6 @@ export function HomeContent() {
           </Link>{' '}
           page.
         </p>
-      </section>
-
-      {/* Report card reading guide — what the 5 SQAAF domains actually measure */}
-      <section className="mt-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex items-center gap-2">
-          <FileCheck2 size={18} className="text-[#1B2A6B]" />
-          <h2 className="text-base font-semibold text-gray-900">
-            How to Read Your School&apos;s Report Card
-          </h2>
-        </div>
-        <p className="mt-1.5 text-xs text-gray-500">
-          Every school&apos;s SQAAF score is built from 5 domains, each weighted differently.
-        </p>
-        <div className="mt-4 space-y-2.5">
-          {SQAAF_DOMAINS.map((domain) => (
-            <div key={domain} className="flex items-center gap-3">
-              <span className="w-40 shrink-0 text-xs font-medium text-gray-700 sm:w-56 sm:text-sm">
-                {domain}
-              </span>
-              <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-                <span
-                  className="block h-full rounded-full bg-[#1B2A6B]"
-                  style={{ width: `${SQAAF_DOMAIN_WEIGHTAGE[domain]}%` }}
-                />
-              </span>
-              <span className="w-9 shrink-0 text-right text-xs font-bold text-gray-900">
-                {SQAAF_DOMAIN_WEIGHTAGE[domain]}%
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* What you can do — actionable, not just navigational */}
-      <section className="mt-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-base font-semibold text-gray-900">What You Can Do</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {WHAT_YOU_CAN_DO.map(({ href, title, desc, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-start gap-3 rounded-xl border border-gray-200 p-4 transition-colors hover:border-[#1B2A6B]/40 hover:bg-gray-50"
-            >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF0F8] text-[#1B2A6B]">
-                <Icon size={17} />
-              </span>
-              <span>
-                <span className="block text-sm font-bold text-gray-900">{title}</span>
-                <span className="mt-0.5 block text-xs text-gray-500">{desc}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
       </section>
 
       {/* Grievance redressal — promoted, visible without deep scrolling */}

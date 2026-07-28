@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
+import { generateSchoolName, type MockSchoolCategory } from './indianSchoolNames';
 
 const prisma = new PrismaClient();
 
@@ -62,7 +63,9 @@ async function main() {
     return;
   }
 
-  const blocks = await prisma.block.findMany({ select: { code: true, districtCode: true } });
+  const blocks = await prisma.block.findMany({
+    select: { code: true, districtCode: true, nameEn: true, nameHi: true },
+  });
   const districts = await prisma.district.findMany({ select: { code: true, nameEn: true, nameHi: true } });
   if (blocks.length === 0 || districts.length === 0) {
     console.log('No districts/blocks found - aborting.');
@@ -79,12 +82,20 @@ async function main() {
       const block = blocks[Math.floor(Math.random() * blocks.length)]!;
       const distNameEn = districtNameEnMap.get(block.districtCode) ?? '';
       const distNameHi = districtNameHiMap.get(block.districtCode) ?? distNameEn;
+      const category = weightedPick([...SCHOOL_TYPES], SCHOOL_TYPE_WEIGHTS) as MockSchoolCategory;
+      const { nameEn, nameHi } = generateSchoolName(
+        category,
+        distNameEn,
+        distNameHi,
+        block.nameEn,
+        block.nameHi,
+      );
       seq++;
       rows.push({
         udise: `${MOCK_UDISE_PREFIX}${String(seq).padStart(8, '0')}`,
-        nameEn: `${faker.company.name()} School, ${distNameEn}`,
-        nameHi: `${faker.company.name()} स्कूल, ${distNameHi}`,
-        category: weightedPick([...SCHOOL_TYPES], SCHOOL_TYPE_WEIGHTS),
+        nameEn,
+        nameHi,
+        category,
         districtCode: block.districtCode,
         blockCode: block.code,
         band,

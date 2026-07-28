@@ -14,6 +14,7 @@
     "db:seed:dummy": "tsx prisma/seed-dummy.ts",
     "db:seed:real-framework": "tsx prisma/seedRealFramework.ts",
     "db:seed:mock-performance": "tsx prisma/seedMockPerformanceSchools.ts",
+    "db:backfill:mock-school-names": "tsx prisma/backfillMockSchoolNames.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

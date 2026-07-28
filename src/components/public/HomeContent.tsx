@@ -13,12 +13,16 @@ import {
   ClipboardCheck,
   ShieldCheck,
   CalendarClock,
+  Compass,
+  FileCheck2,
+  ScanSearch,
 } from 'lucide-react';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
 import {
   ALL_DISTRICTS,
   districtSqaafStats,
 } from '@/lib/public/dummyData';
+import { SQAAF_DOMAINS, SQAAF_DOMAIN_WEIGHTAGE } from '@/lib/public/constants';
 import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 // Statewide totals — 2,48,998 total schools in UP
@@ -42,27 +46,6 @@ function districtTotals(district: string) {
   const other = Math.max(0, stats.totalSchools - stats.govt - stats.aided - stats.private);
   return { government: stats.govt, aided: stats.aided, private: stats.private, other };
 }
-
-const QUICK_ACCESS = [
-  {
-    href: '/public/directory',
-    title: 'School Directory',
-    description: 'Search and explore all schools',
-    icon: Search,
-  },
-  {
-    href: '/public/find',
-    title: 'Find the Right School for Your Child',
-    description: 'Answer a few questions to find matching schools',
-    icon: GraduationCap,
-  },
-  {
-    href: '/public/compare',
-    title: 'Compare Schools',
-    description: 'Side-by-side school comparison',
-    icon: GitCompareArrows,
-  },
-] as const;
 
 // Grounded in the real SQAAF rules already established elsewhere on the site
 // (About page, self-assessment/verification flow) - not invented statistics.
@@ -97,6 +80,33 @@ const DID_YOU_KNOW = [
   },
 ] as const;
 
+const WHAT_YOU_CAN_DO = [
+  {
+    href: '/public/directory',
+    icon: ScanSearch,
+    title: "Check your child's school",
+    desc: "Search the directory and see its current SQAAF tier and full report card.",
+  },
+  {
+    href: '/public/compare',
+    icon: GitCompareArrows,
+    title: 'Compare two or more schools',
+    desc: 'Weigh schools side by side across all 5 SQAAF domains before deciding.',
+  },
+  {
+    href: '/public/find',
+    icon: Compass,
+    title: 'Find a new school',
+    desc: "Choosing for the first time? Answer a few questions to find schools nearby.",
+  },
+  {
+    href: '/public/dispute/new',
+    icon: AlertTriangle,
+    title: "Raise a concern",
+    desc: "Think a school's record is wrong? File a grievance for review.",
+  },
+] as const;
+
 export function HomeContent() {
   const [district, setDistrict] = useState('All Districts');
 
@@ -111,28 +121,30 @@ export function HomeContent() {
       <div className="grid gap-5 lg:grid-cols-2 lg:items-stretch">
         <section className="flex flex-col justify-center rounded-2xl bg-[#1B2A6B] p-7 text-white sm:p-9">
           <span className="text-xs font-bold uppercase tracking-wide text-[#F5B731]">
-            SQAAF · Quality Monitoring &amp; Accreditation
+            SQAAF · School Quality Assessment and Accreditation Framework
           </span>
           <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
             Every school&apos;s quality, in your hands.
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-white/85 sm:text-base">
-            Find your child&apos;s school, understand its SQAAF standing, and see what it means for
-            their learning.
+            Most parents are here to check a school they already know — that comes first.
           </p>
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-6">
             <Link
-              href="/public/find"
+              href="/public/directory"
               className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-[#F5B731] px-6 text-sm font-bold text-[#1B2A6B] shadow-sm transition hover:opacity-90 sm:text-base"
             >
               <Search size={17} />
-              Find the Right School for Your Child
+              Check Your School&apos;s Rating
             </Link>
+          </div>
+          <div className="mt-3 flex justify-center">
             <Link
-              href="/public/reports"
-              className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-white/35 bg-white/10 px-6 text-sm font-bold text-white transition hover:bg-white/20 sm:text-base"
+              href="/public/find"
+              className="flex items-center gap-1.5 rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-white/10"
             >
-              Explore State Reports
+              <Compass size={13} />
+              Help me choose a school for my child
             </Link>
           </div>
         </section>
@@ -147,51 +159,69 @@ export function HomeContent() {
       <section className="mt-5 rounded-2xl bg-white p-6 shadow-sm md:p-7">
         <div className="grid gap-6 md:grid-cols-[11fr_9fr] md:gap-0">
           <div className="md:pr-8">
-            <h2 className="text-lg font-bold text-gray-900">About the Authority</h2>
+            <h2 className="text-lg font-bold text-gray-900">
+              About State School Standards Authority (SSSA)
+            </h2>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">
               The State School Standards Authority, Uttar Pradesh is an independent body (set up
               under India&apos;s NEP 2020) that sets and monitors quality standards for schools
               statewide. Every school completes a{' '}
               <strong className="text-gray-800">
-                Uttar Pradesh School Quality Assessment and Accreditation Framework
+                School Quality Assessment and Accreditation Framework (SQAAF)
               </strong>{' '}
               self-assessment and lands in one of three tiers based on its score.
             </p>
-            <details className="group mt-3">
-              <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-bold text-[#1B2A6B] underline underline-offset-2 [&::-webkit-details-marker]:hidden">
-                Read more about the framework and tiers
-                <span aria-hidden className="transition-transform group-open:rotate-90">›</span>
-              </summary>
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-gray-600">
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-lg bg-[#FCE7F3] p-3">
-                    <p className="font-bold text-[#1B2A6B]">Uday</p>
-                    <p className="text-xs font-medium text-gray-700">Upto 55%</p>
-                    <p className="mt-1 text-xs text-gray-600">Needs improvement</p>
-                  </div>
-                  <div className="rounded-lg bg-[#FEF9C3] p-3">
-                    <p className="font-bold text-[#1B2A6B]">Unnat</p>
-                    <p className="text-xs font-medium text-gray-700">55% to 80%</p>
-                    <p className="mt-1 text-xs text-gray-600">Performing satisfactorily</p>
-                  </div>
-                  <div className="rounded-lg bg-[#DCFCE7] p-3">
-                    <p className="font-bold text-[#1B2A6B]">Utkarsh</p>
-                    <p className="text-xs font-medium text-gray-700">Above 80%</p>
-                    <p className="mt-1 text-xs text-gray-600">Exemplary performance</p>
-                  </div>
-                </div>
-                <p>
-                  Assessment happens in three steps: schools complete a self-assessment across 5
-                  quality domains, a trained external evaluator independently reviews it, and a
-                  final score is computed once both are in. The goal isn&apos;t to penalize
-                  schools — it&apos;s to help every school see clearly where it stands and move
-                  up a tier over time.
-                </p>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-lg bg-[#FCE7F3] p-3">
+                <p className="font-bold text-[#1B2A6B]">Uday</p>
+                <p className="text-xs font-medium text-gray-700">Upto 55%</p>
+                <p className="mt-1 text-xs text-gray-600">Needs improvement</p>
               </div>
-            </details>
+              <div className="rounded-lg bg-[#FEF9C3] p-3">
+                <p className="font-bold text-[#1B2A6B]">Unnat</p>
+                <p className="text-xs font-medium text-gray-700">55% to 80%</p>
+                <p className="mt-1 text-xs text-gray-600">Performing satisfactorily</p>
+              </div>
+              <div className="rounded-lg bg-[#DCFCE7] p-3">
+                <p className="font-bold text-[#1B2A6B]">Utkarsh</p>
+                <p className="text-xs font-medium text-gray-700">Above 80%</p>
+                <p className="mt-1 text-xs text-gray-600">Exemplary performance</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                How a school gets its score
+              </p>
+              <ol className="mt-2 space-y-2">
+                <li className="flex items-start gap-2.5 text-sm text-gray-600">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#EEF0F8] text-[10px] font-bold text-[#1B2A6B]">
+                    1
+                  </span>
+                  <span>School completes a self-assessment across 5 quality domains.</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-gray-600">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#EEF0F8] text-[10px] font-bold text-[#1B2A6B]">
+                    2
+                  </span>
+                  <span>A trained external evaluator independently reviews it.</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-gray-600">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#EEF0F8] text-[10px] font-bold text-[#1B2A6B]">
+                    3
+                  </span>
+                  <span>
+                    A final score is computed once both are in — the goal is to show where a
+                    school stands, not to penalize it.
+                  </span>
+                </li>
+              </ol>
+            </div>
+
             <Link
               href="/public/about"
-              className="mt-3 inline-block text-sm font-medium text-[#1B2A6B] underline hover:no-underline"
+              className="mt-4 inline-block text-sm font-medium text-[#1B2A6B] underline hover:no-underline"
             >
               Learn more about the Authority and its assessment framework
             </Link>
@@ -283,19 +313,54 @@ export function HomeContent() {
         </p>
       </section>
 
-      {/* Quick access */}
+      {/* Report card reading guide — what the 5 SQAAF domains actually measure */}
       <section className="mt-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-base font-semibold text-gray-900">Quick Access</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {QUICK_ACCESS.map(({ href, title, description, icon: Icon }) => (
+        <div className="flex items-center gap-2">
+          <FileCheck2 size={18} className="text-[#1B2A6B]" />
+          <h2 className="text-base font-semibold text-gray-900">
+            How to Read Your School&apos;s Report Card
+          </h2>
+        </div>
+        <p className="mt-1.5 text-xs text-gray-500">
+          Every school&apos;s SQAAF score is built from 5 domains, each weighted differently.
+        </p>
+        <div className="mt-4 space-y-2.5">
+          {SQAAF_DOMAINS.map((domain) => (
+            <div key={domain} className="flex items-center gap-3">
+              <span className="w-40 shrink-0 text-xs font-medium text-gray-700 sm:w-56 sm:text-sm">
+                {domain}
+              </span>
+              <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                <span
+                  className="block h-full rounded-full bg-[#1B2A6B]"
+                  style={{ width: `${SQAAF_DOMAIN_WEIGHTAGE[domain]}%` }}
+                />
+              </span>
+              <span className="w-9 shrink-0 text-right text-xs font-bold text-gray-900">
+                {SQAAF_DOMAIN_WEIGHTAGE[domain]}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* What you can do — actionable, not just navigational */}
+      <section className="mt-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-base font-semibold text-gray-900">What You Can Do</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {WHAT_YOU_CAN_DO.map(({ href, title, desc, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className="rounded-xl border border-gray-200 p-4 transition-colors hover:border-[#1B2A6B]/40 hover:bg-gray-50"
+              className="flex items-start gap-3 rounded-xl border border-gray-200 p-4 transition-colors hover:border-[#1B2A6B]/40 hover:bg-gray-50"
             >
-              <Icon size={20} className="text-[#1B2A6B]" />
-              <p className="mt-2.5 text-sm font-bold text-gray-900">{title}</p>
-              <p className="mt-1 text-xs text-gray-500">{description}</p>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF0F8] text-[#1B2A6B]">
+                <Icon size={17} />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-gray-900">{title}</span>
+                <span className="mt-0.5 block text-xs text-gray-500">{desc}</span>
+              </span>
             </Link>
           ))}
         </div>

@@ -79,19 +79,17 @@ export function HomeContent() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* Hero + explainer film */}
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-stretch">
-        <section className="flex flex-col justify-center rounded-2xl bg-[#1B2A6B] p-7 text-white sm:p-9">
-          <span className="text-xs font-bold uppercase tracking-wide text-[#F5B731]">
-            SQAAF · School Quality Assessment and Accreditation Framework
-          </span>
-          <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
+      {/* Hero + explainer film — one merged navy card */}
+      <div className="grid overflow-hidden rounded-2xl bg-[#1B2A6B] shadow-sm lg:grid-cols-2">
+        <section className="flex flex-col justify-center p-7 text-white sm:p-9">
+          <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
             Every school&apos;s quality, in your hands.
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-white/85 sm:text-base">
-            Most parents are here to check a school they already know — that comes first.
+          <p className="mt-3.5 text-sm leading-relaxed text-white/85 sm:text-base">
+            See how your school is rated on the School Quality Assessment and Accreditation
+            Framework (SQAAF).
           </p>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-col gap-2.5">
             <Link
               href="/public/directory"
               className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-[#F5B731] px-6 text-sm font-bold text-[#1B2A6B] shadow-sm transition hover:opacity-90 sm:text-base"
@@ -99,21 +97,19 @@ export function HomeContent() {
               <Search size={17} />
               Check Your School&apos;s Rating
             </Link>
-          </div>
-          <div className="mt-3 flex justify-center">
             <Link
               href="/public/find"
-              className="flex items-center gap-1.5 rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-white/10"
+              className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/5 px-6 text-sm font-bold text-white transition hover:bg-white/10 sm:text-base"
             >
-              <Compass size={13} />
-              Help me choose a school for my child
+              <Compass size={17} />
+              Help Me Choose a School for My Child
             </Link>
           </div>
         </section>
 
         <ExplainerFilm
           title="What SQAAF Means for Your Child's School"
-          description="A short film on the three performance tiers and how to read them"
+          description="A short film on the three performance tiers — Uday, Unnat, and Utkarsh — and what they mean for your child's school."
         />
       </div>
 

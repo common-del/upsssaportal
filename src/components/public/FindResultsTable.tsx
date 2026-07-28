@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LevelBadge } from '@/components/public/LevelBadge';
+import { TierStars } from '@/components/public/TierStars';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
 import type { PerformanceLevel } from '@/lib/public/constants';
 import type { SchoolType } from '@/lib/public/constants';
@@ -52,7 +53,10 @@ export function FindResultsTable({ rows }: { rows: FindResultRow[] }) {
                 <td className="px-4 py-3">{row.blockName}</td>
                 <td className="px-4 py-3">{extra.type as SchoolType}</td>
                 <td className="px-4 py-3">
-                  <LevelBadge level={extra.performanceLevel as PerformanceLevel} />
+                  <div className="flex items-center gap-2">
+                    <LevelBadge level={extra.performanceLevel as PerformanceLevel} />
+                    <TierStars level={extra.performanceLevel as PerformanceLevel} size={12} />
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   {extra.feeDisclosed ? (

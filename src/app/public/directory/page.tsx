@@ -3,6 +3,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
+import { TierStars } from '@/components/public/TierStars';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
@@ -183,11 +184,14 @@ export default async function DirectoryPage(props: {
                   <td className="hidden px-4 py-3 lg:table-cell">{r.blockName}</td>
                   <td className="px-4 py-3">{r.type}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[r.performanceLevel]}`}
-                    >
-                      {r.performanceLevel}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[r.performanceLevel]}`}
+                      >
+                        {r.performanceLevel}
+                      </span>
+                      <TierStars level={r.performanceLevel} size={12} />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     {r.feeDisclosed ? (

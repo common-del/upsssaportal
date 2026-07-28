@@ -8,10 +8,8 @@ import {
   GraduationCap,
   BadgeCheck,
   AlertTriangle,
-  Sparkles,
-  ClipboardCheck,
   ShieldCheck,
-  CalendarClock,
+  TrendingUp,
   Compass,
 } from 'lucide-react';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
@@ -43,36 +41,23 @@ function districtTotals(district: string) {
   return { government: stats.govt, aided: stats.aided, private: stats.private, other };
 }
 
-// Grounded in the real SQAAF rules already established elsewhere on the site
-// (About page, self-assessment/verification flow) - not invented statistics.
+// Grounded in the real SQAAF domain weightages (constants.ts) and the
+// self-assessment/verification flow already established elsewhere on the
+// site - not invented statistics.
 const DID_YOU_KNOW = [
   {
-    icon: Sparkles,
-    color: '#E0A100',
-    tint: 'rgba(242,176,30,0.14)',
-    title: "A tier isn't a punishment",
-    desc: 'Uday means "needs improvement," not "failing" — every school can move up a tier over time.',
+    icon: TrendingUp,
+    color: '#7E3AC4',
+    tint: 'rgba(126,58,196,0.12)',
+    title: 'Learning outcomes count the most',
+    desc: "Assessment and Learning Outcomes carries 30% of a school's score — more than any other domain.",
   },
   {
     icon: ShieldCheck,
     color: '#2F6FB0',
     tint: 'rgba(47,111,176,0.12)',
-    title: 'Scores are independently verified',
-    desc: "A trained external evaluator reviews every school's self-assessment before a final score is given.",
-  },
-  {
-    icon: ClipboardCheck,
-    color: '#15803D',
-    tint: 'rgba(21,128,61,0.12)',
-    title: 'You can raise a concern',
-    desc: "Disagree with a school's record? Grievance redressal is open to every parent.",
-  },
-  {
-    icon: CalendarClock,
-    color: '#E56A4F',
-    tint: 'rgba(229,106,79,0.12)',
-    title: 'Assessed every academic year',
-    desc: "SQAAF runs each cycle, so a school's tier reflects where it stands now — not years ago.",
+    title: 'Scores are verified after self-assessment',
+    desc: "An independent evaluator checks every school's self-assessment.",
   },
 ] as const;
 

@@ -16,21 +16,19 @@ export function ExplainerFilm({ title, description, videoId, minutes = '1 min' }
   const [playing, setPlaying] = useState(false);
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
-      <div className="border-b border-gray-100 bg-[#EEF0F8] px-4 py-2.5">
-        <h2 className="text-base font-bold text-gray-900">{title}</h2>
-        <p className="mt-0.5 text-xs text-gray-500">{description}</p>
-      </div>
+    <section className="flex flex-col justify-center border-t border-white/10 p-7 text-white sm:p-9 lg:border-l lg:border-t-0">
+      <h2 className="text-base font-bold">{title}</h2>
+      <p className="mt-1 text-xs text-white/70">{description}</p>
 
       {!videoId ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 bg-gray-50 px-6 py-10 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-200 text-gray-400">
+        <div className="mt-5 flex flex-col items-center gap-2 rounded-xl bg-white/5 px-6 py-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white/70">
             <Play size={22} />
           </div>
-          <p className="text-sm font-medium text-gray-500">Video coming soon</p>
+          <p className="text-sm font-medium text-white/60">Video coming soon</p>
         </div>
       ) : playing ? (
-        <div className="aspect-video w-full bg-black">
+        <div className="mt-5 aspect-video w-full overflow-hidden rounded-xl bg-black">
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`}
             title={title}
@@ -44,7 +42,7 @@ export function ExplainerFilm({ title, description, videoId, minutes = '1 min' }
           type="button"
           onClick={() => setPlaying(true)}
           aria-label={title}
-          className="group relative block aspect-video w-full bg-black"
+          className="group relative mt-5 block aspect-video w-full overflow-hidden rounded-xl bg-black"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

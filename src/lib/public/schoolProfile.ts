@@ -46,6 +46,20 @@ export function scoreToLevel(score: number): PerformanceLevel {
   return 'Utkarsh';
 }
 
+// First-cycle rating: 1 star for Uday, 2 for Unnat, 3 for Utkarsh. A simple
+// tier-based scale rather than a continuous score-based one, since there's no
+// prior-cycle history yet to smooth a finer-grained rating against.
+export function tierStars(level: PerformanceLevel): 1 | 2 | 3 {
+  switch (level) {
+    case 'Uday':
+      return 1;
+    case 'Unnat':
+      return 2;
+    case 'Utkarsh':
+      return 3;
+  }
+}
+
 export function levelDescription(level: PerformanceLevel): string {
   switch (level) {
     case 'Uday':

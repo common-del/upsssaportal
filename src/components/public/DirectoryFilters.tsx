@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { SearchableSelect } from '@/components/public/SearchableSelect';
 
 interface FilterOption {
@@ -31,6 +31,7 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getName = (item: FilterOption) => (locale === 'hi' ? item.nameHi : item.nameEn);
 
@@ -42,6 +43,19 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
     }
     router.push(`${pathname}?${params.toString()}`);
   }
+
+  // Instant-feeling search: auto-navigates a beat after typing stops, so
+  // parents don't have to press Enter to see results update.
+  function handleSearchInput(value: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => navigate({ q: value }), 400);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const selectClass =
     'rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-text-primary focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]';
@@ -60,8 +74,12 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
           defaultValue={selected.q}
           placeholder={t('searchPlaceholder')}
           className="w-full rounded-lg border border-border bg-white py-2.5 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-secondary/60 focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]"
+          onChange={(e) => handleSearchInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') navigate({ q: (e.target as HTMLInputElement).value });
+            if (e.key === 'Enter') {
+              if (debounceRef.current) clearTimeout(debounceRef.current);
+              navigate({ q: (e.target as HTMLInputElement).value });
+            }
           }}
           aria-label={t('searchPlaceholder')}
         />

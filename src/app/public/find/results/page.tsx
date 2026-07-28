@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { computeAge, ageToGrade, gradeLabel } from '@/lib/age-to-grade';
@@ -227,21 +226,6 @@ export default async function FindResultsPage(props: {
         </div>
       </div>
 
-      {block && districtName && (
-        <p className="mt-3 text-sm text-gray-600">
-          Showing schools in {blockName || 'this block'} only.{' '}
-          <Link
-            href={`/public/find/results?${new URLSearchParams({
-              district,
-              ...(districtName ? { districtName } : {}),
-            }).toString()}`}
-            className="font-medium text-[#1B2A6B] underline hover:no-underline"
-          >
-            Show all of {districtName} instead →
-          </Link>
-        </p>
-      )}
-
       <p className="mt-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
         Grade-based filtering is not available in demo data. All schools in the selected area are
         shown.
@@ -269,15 +253,7 @@ export default async function FindResultsPage(props: {
           <FindResultsTable rows={rows} />
         </div>
       ) : (
-        <div className="mt-8 text-center text-gray-600">
-          <p>No schools found for the selected area.</p>
-          <Link
-            href="/public/directory"
-            className="mt-2 inline-block font-medium text-[#1B2A6B] underline hover:no-underline"
-          >
-            Browse the full school directory instead →
-          </Link>
-        </div>
+        <p className="mt-8 text-center text-gray-600">No schools found for the selected area.</p>
       )}
     </div>
   );

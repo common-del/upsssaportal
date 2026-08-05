@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Search, MapPin, Lightbulb, ChevronRight, Star } from 'lucide-react';
+import { Search, MapPin, Lightbulb, ChevronRight, Star, AlertTriangle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { TierStars } from '@/components/public/TierStars';
@@ -90,6 +90,7 @@ export function DirectoryFilters({
   const blockName = blocks.find((b) => b.code === selected.block);
 
   const visibleNearby = nearbySchools.filter((s) => s.distanceKm <= radiusTier);
+  const nextRadiusTier = RADIUS_TIERS_KM.find((k) => k > radiusTier);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -131,22 +132,33 @@ export function DirectoryFilters({
             }`}
           >
             <MapPin size={15} />
-            Schools near me
+            {t('nearMe')}
           </button>
         </div>
-        <p className="mt-2 text-xs text-text-secondary">
-          Search by school name or UDISE code, or use Schools near me.
-        </p>
+        <p className="mt-2 text-xs text-text-secondary">{t('searchHelp')}</p>
 
         {nearMe ? (
           <div className="mt-3">
             <p className="text-sm font-semibold text-gray-900">
-              Schools near you · within {radiusTier} km
+              {t('nearbyHeading', { radius: radiusTier })}
             </p>
-            <p className="mt-0.5 text-[11px] text-text-secondary">
-              Distances shown are illustrative — exact school locations aren&apos;t in the system
-              yet.
-            </p>
+            {/* Distances here are generated, not measured. A parent reading "3.2 km
+                away" will act on it, so the caveat is a full notice rather than
+                small print - see nearbyDummyData.ts. */}
+            <div
+              role="note"
+              className="mt-2 flex gap-2 rounded-lg border border-amber-400 bg-amber-50 p-2.5"
+            >
+              <AlertTriangle size={16} className="mt-px shrink-0 text-amber-700" />
+              <span>
+                <span className="block text-xs font-bold text-amber-900">
+                  {t('nearbyCaveatTitle')}
+                </span>
+                <span className="mt-0.5 block text-xs text-amber-900">
+                  {t('nearbyCaveatBody')}
+                </span>
+              </span>
+            </div>
             <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto pr-1">
               {visibleNearby.map((s) => (
                 <li key={s.udise}>
@@ -159,7 +171,8 @@ export function DirectoryFilters({
                         {s.name}
                       </span>
                       <span className="mt-0.5 block text-xs text-gray-500">
-                        {s.districtName} · {s.blockName} · {s.distanceKm} km away
+                        {s.districtName} · {s.blockName} ·{' '}
+                        {t('nearbyAway', { distance: s.distanceKm })}
                       </span>
                       <span className="mt-1 flex items-center gap-2">
                         <TierStars level={s.performanceLevel} size={12} />
@@ -174,21 +187,17 @@ export function DirectoryFilters({
               ))}
               {visibleNearby.length === 0 && (
                 <li className="rounded-lg border border-gray-200 p-3 text-sm text-gray-500">
-                  No schools within {radiusTier} km yet — try expanding the radius.
+                  {t('nearbyEmpty', { radius: radiusTier })}
                 </li>
               )}
             </ul>
-            {radiusTier < RADIUS_TIERS_KM[RADIUS_TIERS_KM.length - 1] && (
+            {nextRadiusTier !== undefined && (
               <button
                 type="button"
-                onClick={() => {
-                  const next = RADIUS_TIERS_KM.find((k) => k > radiusTier);
-                  if (next) setRadiusTier(next);
-                }}
+                onClick={() => setRadiusTier(nextRadiusTier)}
                 className="mt-2 w-full rounded-lg border border-dashed border-[#C9911A] py-2 text-xs font-bold text-[#C9911A] hover:bg-amber-50"
               >
-                ⊕ Expand to{' '}
-                {RADIUS_TIERS_KM.find((k) => k > radiusTier)} km
+                ⊕ {t('expandRadius', { radius: nextRadiusTier })}
               </button>
             )}
           </div>
@@ -198,11 +207,8 @@ export function DirectoryFilters({
               <Lightbulb size={16} className="text-white" />
             </span>
             <span>
-              <span className="block text-sm font-bold text-gray-900">Tip for Parents</span>
-              <span className="mt-0.5 block text-xs text-gray-600">
-                Search for your child&apos;s school by name, or browse by district and block, to
-                see its report card.
-              </span>
+              <span className="block text-sm font-bold text-gray-900">{t('tipTitle')}</span>
+              <span className="mt-0.5 block text-xs text-gray-600">{t('tipBody')}</span>
             </span>
           </div>
         )}
@@ -212,7 +218,7 @@ export function DirectoryFilters({
       <div className="rounded-xl bg-white p-4 shadow-sm">
         {!selected.district && (
           <>
-            <p className="text-sm font-semibold text-gray-900">1. Choose your district</p>
+            <p className="text-sm font-semibold text-gray-900">{t('stepDistrict')}</p>
             <div className="mt-2 grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
               {districts.map((d) => (
                 <button
@@ -240,15 +246,13 @@ export function DirectoryFilters({
                 onClick={() => navigate({ district: '', block: '' })}
                 className="font-semibold text-[#1B2A6B] underline underline-offset-2"
               >
-                Change
+                {t('change')}
               </button>
             </p>
-            <p className="mt-2 text-sm font-semibold text-gray-900">2. Choose your block</p>
+            <p className="mt-2 text-sm font-semibold text-gray-900">{t('stepBlock')}</p>
             <div className="mt-2 grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1">
               {blocksForDistrict.length === 0 ? (
-                <p className="col-span-2 text-sm text-gray-500">
-                  No blocks found — showing all schools in this district instead.
-                </p>
+                <p className="col-span-2 text-sm text-gray-500">{t('noBlocks')}</p>
               ) : (
                 blocksForDistrict.map((b) => (
                   <button
@@ -264,8 +268,9 @@ export function DirectoryFilters({
               )}
             </div>
             <p className="mt-2 text-xs text-text-secondary">
-              Or see every school in {districtName ? getName(districtName) : selected.district} in
-              the list below ↓
+              {t('browseWholeDistrict', {
+                district: districtName ? getName(districtName) : selected.district,
+              })}
             </p>
           </>
         )}
@@ -283,12 +288,12 @@ export function DirectoryFilters({
                 onClick={() => navigate({ block: '' })}
                 className="font-semibold text-[#1B2A6B] underline underline-offset-2"
               >
-                Change
+                {t('change')}
               </button>
             </p>
             <p className="mt-2 flex items-center gap-1.5 text-sm text-gray-600">
               <Star size={14} className="text-[#C9911A]" />
-              See matching schools in the list below ↓
+              {t('seeMatching')}
             </p>
           </>
         )}

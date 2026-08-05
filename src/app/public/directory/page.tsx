@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
@@ -125,7 +126,7 @@ export default async function DirectoryPage(props: {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-8">
       <BackButton
         fallbackHref="/public"
         label={tc('back')}
@@ -140,7 +141,7 @@ export default async function DirectoryPage(props: {
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-4 shadow-sm">
+      <div className="mt-6">
         <DirectoryFilters
           districts={districts}
           selected={{ district, category, type, performance, q }}
@@ -153,69 +154,69 @@ export default async function DirectoryPage(props: {
       </p>
 
       {total > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[960px] text-left text-sm">
-            <thead className="bg-surface text-xs uppercase text-text-secondary">
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[1080px] text-left text-sm">
+            <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-text-secondary">
               <tr>
-                <th className="px-4 py-3 font-medium">{t('name')}</th>
-                <th className="px-4 py-3 font-medium">{t('udise')}</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">{t('district')}</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">{t('block')}</th>
-                <th className="px-4 py-3 font-medium">{t('type')}</th>
-                <th className="px-4 py-3 font-medium">Level</th>
-                <th className="px-4 py-3 font-medium">Fee</th>
-                <th className="px-4 py-3 font-medium">Accreditation</th>
-                <th className="px-4 py-3 font-medium" />
+                <th className="px-3 py-3 font-semibold">{t('name')}</th>
+                <th className="px-3 py-3 font-semibold">{t('udise')}</th>
+                <th className="px-3 py-3 font-semibold">{t('district')}</th>
+                <th className="px-3 py-3 font-semibold">{t('block')}</th>
+                <th className="px-3 py-3 font-semibold">{t('type')}</th>
+                <th className="px-3 py-3 font-semibold">Level</th>
+                <th className="px-3 py-3 font-semibold">Fee</th>
+                <th className="px-3 py-3 font-semibold">SQAAF Status</th>
+                <th className="px-3 py-3 font-semibold" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-gray-100">
               {pageRows.map((r) => (
-                <tr key={r.id} className="hover:bg-surface/60">
-                  <td className="px-4 py-3">
+                <tr key={r.id} className="transition-colors hover:bg-surface/60">
+                  <td className="min-w-[210px] px-3 py-5">
                     <Link
                       href={`/public/schools/${r.udise}`}
-                      className="font-medium text-[#1B2A6B] hover:underline"
+                      className="font-semibold text-[#1B2A6B] hover:underline"
                     >
                       {hi ? r.nameHi : r.nameEn}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{r.udise}</td>
-                  <td className="hidden px-4 py-3 md:table-cell">{r.districtName}</td>
-                  <td className="hidden px-4 py-3 lg:table-cell">{r.blockName}</td>
-                  <td className="px-4 py-3">{r.type}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-5 font-mono text-xs text-text-secondary">{r.udise}</td>
+                  <td className="whitespace-nowrap px-3 py-5">{r.districtName}</td>
+                  <td className="whitespace-nowrap px-3 py-5">{r.blockName}</td>
+                  <td className="whitespace-nowrap px-3 py-5">{r.type}</td>
+                  <td className="px-3 py-5">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[r.performanceLevel]}`}
+                        className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[r.performanceLevel]}`}
                       >
                         {r.performanceLevel}
                       </span>
                       <TierStars level={r.performanceLevel} size={12} />
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-5">
                     {r.feeDisclosed ? (
-                      <span className="rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-medium text-[#92400E]">
+                      <span className="whitespace-nowrap rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-medium text-[#92400E]">
                         Disclosed
                       </span>
                     ) : (
-                      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                      <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                         Not Disclosed
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-5">
                     {r.accreditation === 'SQAAF Verified' ? (
                       <span className="whitespace-nowrap rounded-full bg-[#F5B731] px-2.5 py-0.5 text-xs font-semibold text-[#1B2A6B]">
                         SQAAF Verified
                       </span>
                     ) : (
-                      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                      <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                         Pending
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="whitespace-nowrap px-3 py-5 text-right">
                     <Link
                       href={`/public/schools/${r.udise}`}
                       className="text-sm font-medium text-[#1B2A6B] hover:underline"
@@ -231,27 +232,33 @@ export default async function DirectoryPage(props: {
       )}
 
       {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between text-sm">
+        <div className="mt-6 flex items-center justify-center gap-4 text-sm">
           {page > 1 ? (
             <Link
               href={pageHref(page - 1)}
-              className="rounded-lg border border-border px-4 py-2 text-[#1B2A6B] transition-colors hover:bg-surface"
+              aria-label={t('prev')}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1B2A6B] transition-colors hover:bg-surface"
             >
-              {t('prev')}
+              <ChevronLeft size={18} />
             </Link>
           ) : (
-            <span />
+            <span className="inline-flex h-9 w-9 items-center justify-center text-gray-300">
+              <ChevronLeft size={18} />
+            </span>
           )}
           <span className="text-text-secondary">{t('page', { page, totalPages })}</span>
           {page < totalPages ? (
             <Link
               href={pageHref(page + 1)}
-              className="rounded-lg border border-border px-4 py-2 text-[#1B2A6B] transition-colors hover:bg-surface"
+              aria-label={t('next')}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#1B2A6B] transition-colors hover:bg-surface"
             >
-              {t('next')}
+              <ChevronRight size={18} />
             </Link>
           ) : (
-            <span />
+            <span className="inline-flex h-9 w-9 items-center justify-center text-gray-300">
+              <ChevronRight size={18} />
+            </span>
           )}
         </div>
       )}

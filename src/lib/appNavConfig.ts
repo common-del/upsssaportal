@@ -41,18 +41,29 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       { href: '/app/sssa/settings', label: 'Settings' },
     ],
   },
+  {
+    label: 'Help',
+    items: [
+      { href: '/app/sssa/help/sqaaf', label: 'How to fill SQAAF' },
+      { href: '/app/sssa/faq', label: 'FAQ' },
+    ],
+  },
 ];
 
 export const DISTRICT_NAV_ITEMS: NavItem[] = [
   { href: '/app/district', label: 'Dashboard', exact: true },
   { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
   { href: '/app/district/tickets', label: 'Dispute Resolution' },
+  { href: '/app/district/help/sqaaf', label: 'How to fill SQAAF' },
+  { href: '/app/district/faq', label: 'FAQ' },
 ];
 
 export const DISTRICT_ADMIN_DASHBOARD_NAV_ITEMS: NavItem[] = [
   { href: '/app/dashboard', label: 'Dashboard', exact: true },
   { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
   { href: '/app/sssa/disputes', label: 'Dispute Resolution' },
+  { href: '/app/dashboard/help/sqaaf', label: 'How to fill SQAAF' },
+  { href: '/app/dashboard/faq', label: 'FAQ' },
 ];
 
 export const SCHOOL_NAV_ITEMS: NavItem[] = [
@@ -62,11 +73,15 @@ export const SCHOOL_NAV_ITEMS: NavItem[] = [
   { href: '/app/school/documents', label: 'Mandatory Required Documents' },
   { href: '/app/school/fee-disclosure', label: 'Fee Disclosure', hideForGovt: true },
   { href: '/app/school/report-card', label: 'School Report Card' },
+  { href: '/app/school/help/sqaaf', label: 'How to fill SQAAF' },
+  { href: '/app/school/faq', label: 'FAQ' },
   { href: '/app/school/settings', label: 'Settings' },
 ];
 
 export const VERIFIER_NAV_ITEMS: NavItem[] = [
   { href: '/app/verifier', label: 'My Assignments', exact: true },
+  { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
+  { href: '/app/verifier/faq', label: 'FAQ' },
   { href: '/app/verifier/settings', label: 'Settings' },
 ];
 

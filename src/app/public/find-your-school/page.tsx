@@ -2,6 +2,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { FindYourSchoolFlow, type FindSchoolRow } from '@/components/public/FindYourSchoolFlow';
+import { ParentActionStrip } from '@/components/public/ParentActionStrip';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
 import { getDummyNearbySchools } from '@/lib/public/nearbyDummyData';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
@@ -207,6 +208,8 @@ export default async function FindYourSchoolPage(props: {
           })}
         </p>
       )}
+
+      <ParentActionStrip />
     </div>
   );
 }

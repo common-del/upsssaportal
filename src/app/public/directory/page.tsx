@@ -6,6 +6,7 @@ import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { TierStars } from '@/components/public/TierStars';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
+import { getDummyNearbySchools } from '@/lib/public/nearbyDummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 import type { Prisma } from '@prisma/client';
 
@@ -20,6 +21,7 @@ type DirectoryRow = {
   blockName: string;
   type: SchoolType;
   performanceLevel: PerformanceLevel;
+  overallScore: number;
   feeDisclosed: boolean;
   accreditation: 'SQAAF Verified' | 'Pending';
 };
@@ -34,22 +36,35 @@ export default async function DirectoryPage(props: {
   const hi = locale === 'hi';
 
   const district = (searchParams.district as string) || '';
+  const block = (searchParams.block as string) || '';
   const category = (searchParams.category as string) || '';
   const type = (searchParams.type as string) || '';
   const performance = (searchParams.performance as string) || '';
   const q = (searchParams.q as string) || '';
+  const nearMe = searchParams.nearMe === '1';
   const page = Math.max(1, parseInt((searchParams.page as string) || '1', 10));
 
   let districts: { code: string; nameEn: string; nameHi: string }[] = [];
+  let blocks: { code: string; districtCode: string; nameEn: string; nameHi: string }[] = [];
   let rows: DirectoryRow[] = [];
   let usingFallback = false;
 
   try {
-    const districtRecords = await prisma.district.findMany({ orderBy: { nameEn: 'asc' } });
+    const [districtRecords, blockRecords] = await Promise.all([
+      prisma.district.findMany({ orderBy: { nameEn: 'asc' } }),
+      prisma.block.findMany({ orderBy: { nameEn: 'asc' } }),
+    ]);
     districts = districtRecords.map((d) => ({ code: d.code, nameEn: d.nameEn, nameHi: d.nameHi }));
+    blocks = blockRecords.map((b) => ({
+      code: b.code,
+      districtCode: b.districtCode,
+      nameEn: b.nameEn,
+      nameHi: b.nameHi,
+    }));
 
     const where: Prisma.SchoolWhereInput = {};
     if (district) where.districtCode = district;
+    if (block) where.blockCode = block;
     if (category) where.category = category;
     if (q) {
       where.OR = [
@@ -80,7 +95,9 @@ export default async function DirectoryPage(props: {
   } catch {
     usingFallback = true;
     districts = ALL_DISTRICTS.map((name) => ({ code: name, nameEn: name, nameHi: name }));
+    blocks = [];
     rows = SCHOOLS.filter((s) => !district || s.district === district)
+      .filter((s) => !block || s.block === block)
       .filter((s) => !category || s.level === category)
       .filter(
         (s) =>
@@ -97,6 +114,7 @@ export default async function DirectoryPage(props: {
         blockName: s.block,
         type: s.type,
         performanceLevel: s.performanceLevel,
+        overallScore: s.overallScore,
         feeDisclosed: s.feeDisclosed,
         accreditation: s.accreditation,
       }));
@@ -111,10 +129,12 @@ export default async function DirectoryPage(props: {
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const nearbySchools = getDummyNearbySchools(rows);
 
   function pageHref(p: number) {
     const params = new URLSearchParams();
     if (district) params.set('district', district);
+    if (block) params.set('block', block);
     if (category) params.set('category', category);
     if (type) params.set('type', type);
     if (performance) params.set('performance', performance);
@@ -143,7 +163,10 @@ export default async function DirectoryPage(props: {
       <div className="mt-6 rounded-xl border-l-4 border-[#1B2A6B] bg-white p-4 shadow-sm">
         <DirectoryFilters
           districts={districts}
-          selected={{ district, category, type, performance, q }}
+          blocks={blocks}
+          selected={{ district, block, category, type, performance, q }}
+          nearMe={nearMe}
+          nearbySchools={nearbySchools}
           locale={locale}
         />
       </div>

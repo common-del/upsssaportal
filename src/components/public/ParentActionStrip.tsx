@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const NAVY = '#1B2A6B';
+const GOLD = '#F5B731';
 
 /** Informational only - none of these are links. */
 const ACTIONS: {
@@ -27,32 +28,40 @@ export async function ParentActionStrip() {
   const t = await getTranslations('rating');
 
   return (
-    <section className="mt-10">
-      <ul className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+    // One panel rather than five loose pieces: the four notes are split by
+    // hairlines and the banner is fused on as the panel's footer. Hairlines run
+    // horizontally when the cells stack, vertically once they sit in a row.
+    <section className="mt-10 overflow-hidden rounded-2xl bg-white shadow-sm">
+      <ul className="flex flex-col sm:flex-row">
         {ACTIONS.map(({ key, icon: Icon }) => (
-          <li key={key} className="flex flex-col items-center px-2 text-center">
+          <li
+            key={key}
+            className="flex flex-1 flex-col items-center gap-2.5 border-t border-gray-100 px-5 py-6 text-center first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0"
+          >
             <Icon size={26} style={{ color: NAVY }} aria-hidden />
-            <span className="mt-2 block text-sm font-bold leading-snug text-gray-900">
-              {t(key)}
-            </span>
+            <span className="text-sm font-bold leading-snug text-gray-900">{t(key)}</span>
           </li>
         ))}
       </ul>
 
-      <div className="mt-6 flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm">
-        <span
-          className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
-          style={{ backgroundColor: NAVY }}
-        >
-          <ShieldCheck size={22} className="text-white" aria-hidden />
+      <div
+        className="flex items-center gap-4 px-6 py-4 text-white"
+        style={{ backgroundColor: NAVY }}
+      >
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/10">
+          <ShieldCheck size={19} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-base font-bold text-gray-900">{t('involvementTitle')}</span>
-          <span className="mt-0.5 block text-sm text-text-secondary">{t('involvementBody')}</span>
+          <span className="block text-[15px] font-bold">{t('involvementTitle')}</span>
+          <span className="mt-0.5 block text-[13px] text-white/70">{t('involvementBody')}</span>
         </span>
-        <span className="hidden shrink-0 items-center gap-2 sm:flex" aria-hidden>
-          <Trophy size={30} style={{ color: NAVY }} />
-          <BarChart3 size={30} style={{ color: NAVY }} />
+        <span
+          className="ml-auto hidden shrink-0 items-center gap-2.5 sm:flex"
+          style={{ color: GOLD }}
+          aria-hidden
+        >
+          <Trophy size={25} />
+          <BarChart3 size={25} />
         </span>
       </div>
     </section>

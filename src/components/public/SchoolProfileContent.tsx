@@ -931,9 +931,7 @@ function ReportCardTab({
                     </span>
                     <span className="mt-1 flex items-center gap-2">
                       <TierStars level={s.performanceLevel} size={12} />
-                      <span className="text-xs font-semibold text-[#1B2A6B]">
-                        {s.overallScore}/100
-                      </span>
+                      <LevelBadge level={s.performanceLevel} />
                     </span>
                   </span>
                   <ChevronRight size={16} className="shrink-0 text-gray-400" />

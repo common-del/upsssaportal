@@ -12,10 +12,11 @@ import {
   Search,
 } from 'lucide-react';
 import { TierStars } from '@/components/public/TierStars';
+import { LevelBadge } from '@/components/public/LevelBadge';
 import { RADIUS_TIERS_KM, type NearbySchool } from '@/lib/public/nearbyDummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 
-export type RatingSchoolRow = {
+export type FindSchoolRow = {
   udise: string;
   name: string;
   districtName: string;
@@ -23,6 +24,8 @@ export type RatingSchoolRow = {
   /** Not shown in the flow, but the nearby-distance helper needs it. */
   type: SchoolType;
   performanceLevel: PerformanceLevel;
+  /** Carried for the nearby-distance helper only - the flow shows the tier
+   * name, never a numeric score. */
   overallScore: number;
 };
 
@@ -40,7 +43,7 @@ interface Props {
   districts: GeoOption[];
   blocks: BlockOption[];
   /** Already narrowed server-side by district / block / q. */
-  schools: RatingSchoolRow[];
+  schools: FindSchoolRow[];
   selected: { district: string; block: string; q: string };
   /** True once a district is picked and the parent asked to skip the block step. */
   wholeDistrict: boolean;
@@ -49,7 +52,7 @@ interface Props {
   locale: string;
 }
 
-export function SchoolRatingFlow({
+export function FindYourSchoolFlow({
   districts,
   blocks,
   schools,
@@ -203,9 +206,7 @@ export function SchoolRatingFlow({
                       </span>
                       <span className="mt-1 flex items-center gap-2">
                         <TierStars level={s.performanceLevel} size={12} />
-                        <span className="text-xs font-semibold text-[#1B2A6B]">
-                          {t('overallScore', { score: s.overallScore })}
-                        </span>
+                        <LevelBadge level={s.performanceLevel} />
                       </span>
                     </span>
                     <ChevronRight size={16} className="shrink-0 text-gray-400" />
@@ -285,9 +286,7 @@ export function SchoolRatingFlow({
                       </span>
                       <span className="mt-1 flex items-center gap-2">
                         <TierStars level={s.performanceLevel} size={13} />
-                        <span className="text-xs font-semibold text-[#1B2A6B]">
-                          {t('overallScore', { score: s.overallScore })}
-                        </span>
+                        <LevelBadge level={s.performanceLevel} />
                       </span>
                     </span>
                     <ChevronRight size={18} className="shrink-0 text-gray-400" />

@@ -1,7 +1,7 @@
 import { getTranslations, getLocale } from 'next-intl/server';
 import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
-import { SchoolRatingFlow, type RatingSchoolRow } from '@/components/public/SchoolRatingFlow';
+import { FindYourSchoolFlow, type FindSchoolRow } from '@/components/public/FindYourSchoolFlow';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
 import { getDummyNearbySchools } from '@/lib/public/nearbyDummyData';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
@@ -16,7 +16,7 @@ const NEARBY_POOL = 15;
 type GeoRow = { code: string; nameEn: string; nameHi: string };
 type BlockRow = GeoRow & { districtCode: string };
 
-export default async function SchoolRatingPage(props: {
+export default async function FindYourSchoolPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const searchParams = await props.searchParams;
@@ -37,9 +37,9 @@ export default async function SchoolRatingPage(props: {
 
   let districts: GeoRow[] = [];
   let blocks: BlockRow[] = [];
-  let schools: RatingSchoolRow[] = [];
+  let schools: FindSchoolRow[] = [];
   let totalMatches = 0;
-  let nearbyPool: RatingSchoolRow[] = [];
+  let nearbyPool: FindSchoolRow[] = [];
   let usingFallback = false;
 
   try {
@@ -80,7 +80,7 @@ export default async function SchoolRatingPage(props: {
       nameHi: string;
       district: { nameEn: string; nameHi: string };
       block: { nameEn: string; nameHi: string };
-    }): RatingSchoolRow => {
+    }): FindSchoolRow => {
       const extra = deriveResultFields(s.udise);
       return {
         udise: s.udise,
@@ -138,7 +138,7 @@ export default async function SchoolRatingPage(props: {
       if (block && s.block !== block) return false;
       return true;
     }).map(
-      (s): RatingSchoolRow => ({
+      (s): FindSchoolRow => ({
         udise: s.udise,
         name: s.name,
         districtName: s.district,
@@ -187,7 +187,7 @@ export default async function SchoolRatingPage(props: {
       )}
 
       <div className="mt-6">
-        <SchoolRatingFlow
+        <FindYourSchoolFlow
           districts={districts}
           blocks={blocks}
           schools={schools}

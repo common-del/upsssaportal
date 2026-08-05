@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/app/sssa/frameworks': ['./data/sqaaf/**/*'],
   },
+  async redirects() {
+    return [
+      // The flow lives under /public so it inherits the public nav and footer.
+      // These keep the bare path working, and /public/rating was briefly live
+      // under that name.
+      { source: '/find-your-school', destination: '/public/find-your-school', permanent: false },
+      { source: '/public/rating', destination: '/public/find-your-school', permanent: false },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

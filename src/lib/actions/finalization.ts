@@ -358,7 +358,7 @@ export async function publishResults(cycleId: string) {
 
   revalidatePath('/app/sssa/finalization');
   revalidatePath('/public/directory');
-  revalidatePath('/public/rating');
+  revalidatePath('/public/find-your-school');
   return { success: true };
 }
 

@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/public', label: 'Homepage' },
   { href: '/public/directory', label: 'School Directory' },
   { href: '/public/compare', label: 'Compare Schools' },
+  { href: '/public/state-overview', label: 'State Overview' },
   { href: '/public/reports', label: 'State Reports' },
   { href: '/public/about', label: 'About' },
 ] as const;

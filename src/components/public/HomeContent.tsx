@@ -91,7 +91,7 @@ export function HomeContent() {
           </p>
           <div className="mt-6 flex flex-col gap-2.5">
             <Link
-              href="/public/directory"
+              href="/public/rating"
               className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-[#F5B731] px-6 text-sm font-bold text-[#1B2A6B] shadow-sm transition hover:opacity-90 sm:text-base"
             >
               <Search size={17} />

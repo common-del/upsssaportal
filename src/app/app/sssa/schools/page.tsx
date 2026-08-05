@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
-import { AdminSchoolFilters } from '@/components/admin/AdminSchoolFilters';
+import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
@@ -126,7 +126,7 @@ export default async function SssaSchoolDirectoryPage(props: {
       )}
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <AdminSchoolFilters
+        <DirectoryFilters
           districts={districts}
           selected={{ district, category, type, performance, q }}
           locale={locale}

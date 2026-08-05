@@ -119,7 +119,13 @@
     "skipBlock": "ब्लॉक छोड़ें — {district} के सभी विद्यालय देखें",
     "change": "बदलें",
     "resultsFor": "“{query}” के परिणाम",
-    "truncated": "{total} मेल खाते विद्यालयों में से पहले {shown} दिखाए जा रहे हैं। बाकी देखने के लिए ब्लॉक या नाम से खोज सीमित करें।"
+    "truncated": "{total} मेल खाते विद्यालयों में से पहले {shown} दिखाए जा रहे हैं। बाकी देखने के लिए ब्लॉक या नाम से खोज सीमित करें।",
+    "actionViewReport": "View your child's school report card",
+    "actionTalkParents": "Talk to other parents about the school report card",
+    "actionEnquire": "Enquire with your school about the report card",
+    "actionCompare": "Compare with nearby schools",
+    "involvementTitle": "Your involvement makes a difference",
+    "involvementBody": "When parents and schools work together, children learn better and grow with confidence."
   },
   "schoolProfile": {
     "title": "विद्यालय प्रोफ़ाइल",

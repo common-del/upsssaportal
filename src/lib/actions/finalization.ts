@@ -358,6 +358,7 @@ export async function publishResults(cycleId: string) {
 
   revalidatePath('/app/sssa/finalization');
   revalidatePath('/public/directory');
+  revalidatePath('/public/rating');
   return { success: true };
 }
 

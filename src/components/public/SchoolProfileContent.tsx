@@ -5,8 +5,10 @@ import {
   BookOpen,
   Building,
   Building2,
+  AlertTriangle,
   Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Download,
   Droplets,
@@ -24,14 +26,18 @@ import {
   UserCog,
   type LucideIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { BackButton } from '@/components/common/BackButton';
 import { LevelBadge } from '@/components/public/LevelBadge';
+import { TierStars } from '@/components/public/TierStars';
+import { ExplainerFilm } from '@/components/public/ExplainerFilm';
 import {
   levelDescription,
   scoreToLevel,
   type SchoolProfileData,
 } from '@/lib/public/schoolProfile';
+import type { NearbySchool } from '@/lib/public/nearbyDummyData';
 import type { PerformanceLevel } from '@/lib/public/constants';
 
 const NAVY = '#1B2A6B';
@@ -99,7 +105,13 @@ function CompareBars({
   );
 }
 
-export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }) {
+export function SchoolProfileContent({
+  profile,
+  nearbySchools = [],
+}: {
+  profile: SchoolProfileData;
+  nearbySchools?: NearbySchool[];
+}) {
   const [tab, setTab] = useState<TabId>('Overview');
   const [compareMode, setCompareMode] = useState<'state' | 'district'>('state');
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({});
@@ -163,7 +175,9 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
           />
         )}
         {tab === 'Fee Disclosure' && <FeeTab profile={profile} />}
-        {tab === 'School Report Card' && <ReportCardTab profile={profile} />}
+        {tab === 'School Report Card' && (
+          <ReportCardTab profile={profile} nearbySchools={nearbySchools} />
+        )}
       </div>
     </div>
   );
@@ -726,12 +740,28 @@ function FeeTab({ profile }: { profile: SchoolProfileData }) {
   );
 }
 
-function ReportCardTab({ profile }: { profile: SchoolProfileData }) {
+/** Row tints for the nearby list, keyed to the same tiers LevelBadge uses. Uday
+ * stays neutral grey rather than red - it means "emerging", not "failing", and
+ * this is a public list of named government schools. */
+const NEARBY_TIER_ROW: Record<PerformanceLevel, string> = {
+  Utkarsh: 'border-emerald-200 bg-emerald-50',
+  Unnat: 'border-amber-200 bg-amber-50',
+  Uday: 'border-gray-200 bg-gray-50',
+};
+
+function ReportCardTab({
+  profile,
+  nearbySchools,
+}: {
+  profile: SchoolProfileData;
+  nearbySchools: NearbySchool[];
+}) {
   const rc = profile.reportCard;
   const levelForDomain = (name: string): PerformanceLevel => {
     const match = rc.domainScores.find((s) => s.name === name);
     return match ? scoreToLevel(match.score) : profile.performanceLevel;
   };
+  const weakestDomain = rc.improvements[0];
 
   return (
     <div className="space-y-8">
@@ -812,6 +842,107 @@ function ReportCardTab({ profile }: { profile: SchoolProfileData }) {
           ))}
         </div>
       </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* No explainer film exists yet, so this renders its "coming soon" state
+            until a YouTube ID is supplied. */}
+        <ExplainerFilm
+          variant="light"
+          title="Watch: How to read your School Report Card"
+          description="A short film explaining what the score covers and what it means for your child."
+          minutes="2 min"
+        />
+
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-bold text-[#1B2A6B]">
+            How to use the School Report Card
+          </h2>
+          <ol className="mt-3 space-y-3">
+            {[
+              'Read the overall score above, then the three strengths and three areas for improvement.',
+              'Watch the short film to understand what the score covers.',
+              'Take these questions to the next parent-teacher meeting or School Management Committee (SMC) meeting.',
+              'After the next assessment cycle, open this page again and check whether the score moved.',
+            ].map((text, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#1B2A6B] text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className="text-sm text-gray-700">{text}</span>
+              </li>
+            ))}
+          </ol>
+          <ul className="mt-3 space-y-1.5 rounded-lg bg-[#F3F4F6] p-3">
+            <li className="text-xs text-gray-700">
+              “Our school scored {profile.overallScore} out of 100. What is the plan to improve it
+              this year?”
+            </li>
+            {weakestDomain && (
+              <li className="text-xs text-gray-700">
+                “Our weakest area is {weakestDomain}. What will change there?”
+              </li>
+            )}
+            <li className="text-xs text-gray-700">
+              “A nearby school scores higher with similar resources. What are they doing
+              differently?”
+            </li>
+          </ul>
+        </section>
+      </div>
+
+      {nearbySchools.length > 0 && (
+        <section className="overflow-hidden rounded-xl bg-[#1B2A6B] shadow-sm">
+          <div className="p-5">
+            <h2 className="text-base font-bold text-white">
+              Want to see how the nearby schools are performing?
+            </h2>
+            <p className="mt-1 text-xs text-white/70">
+              Tap a school to open its report card.
+            </p>
+            {/* Distances are generated from the UDISE code, not measured - see
+                nearbyDummyData.ts. Said plainly rather than in small print. */}
+            <div
+              role="note"
+              className="mt-3 flex gap-2 rounded-lg border border-amber-400/60 bg-amber-400/10 p-2.5"
+            >
+              <AlertTriangle size={16} className="mt-px shrink-0 text-amber-300" />
+              <span className="text-xs text-amber-100">
+                These distances are examples, not real measurements. Exact school locations are
+                not in the system yet.
+              </span>
+            </div>
+          </div>
+          <ul className="max-h-80 space-y-2 overflow-y-auto px-5 pb-5">
+            {nearbySchools.map((s) => (
+              <li key={s.udise}>
+                <Link
+                  href={`/public/schools/${s.udise}`}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg border p-3 transition hover:opacity-90',
+                    NEARBY_TIER_ROW[s.performanceLevel],
+                  )}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-gray-900">
+                      {s.name}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-500">
+                      {s.blockName} · {s.distanceKm} km away
+                    </span>
+                    <span className="mt-1 flex items-center gap-2">
+                      <TierStars level={s.performanceLevel} size={12} />
+                      <span className="text-xs font-semibold text-[#1B2A6B]">
+                        {s.overallScore}/100
+                      </span>
+                    </span>
+                  </span>
+                  <ChevronRight size={16} className="shrink-0 text-gray-400" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

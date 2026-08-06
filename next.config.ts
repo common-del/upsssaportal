@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
       // under that name.
       { source: '/find-your-school', destination: '/public/find-your-school', permanent: false },
       { source: '/public/rating', destination: '/public/find-your-school', permanent: false },
+      // Compare Schools was retired; the comparison now lives on State Overview.
+      { source: '/public/compare', destination: '/public/state-overview', permanent: false },
     ];
   },
 };

@@ -1,5 +1,6 @@
 import { ALL_DISTRICTS } from '@/lib/public/dummyData';
 import { scoreToLevel } from '@/lib/public/schoolProfile';
+import { SQAAF_DOMAINS } from '@/lib/public/constants';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 
 /**
@@ -28,13 +29,20 @@ export const DISTRICT_RANKING: DistrictRank[] = ALL_DISTRICTS.map((district) => 
   .sort((a, b) => b.score - a.score || a.district.localeCompare(b.district))
   .map((row, i) => ({ rank: i + 1, ...row }));
 
+/** The page lists only the top ten; the full ranking stays available for the
+ * state average below. */
+export const TOP_DISTRICTS = DISTRICT_RANKING.slice(0, 10);
+
 export const STATE_AVERAGE_SCORE = Math.round(
   DISTRICT_RANKING.reduce((sum, d) => sum + d.score, 0) / DISTRICT_RANKING.length,
 );
 export const STATE_AVERAGE_LEVEL: PerformanceLevel = scoreToLevel(STATE_AVERAGE_SCORE);
 
-/** Deliberately headed "Highest average score by type" rather than "best" - the
- * groups differ hugely in size, so a single winner should not be read into it. */
+export const TOP_DISTRICT = DISTRICT_RANKING[0];
+
+/** Per-type averages. Only the highest surfaces now, as a headline stat - the
+ * full breakdown section was removed. The groups differ hugely in size, so the
+ * headline says "Top management type" and not that one type is better. */
 export const TYPE_AVERAGES: { type: string; score: number }[] = [
   { type: 'Private', score: 68 },
   { type: 'Aided', score: 61 },
@@ -98,4 +106,66 @@ export function topSchoolsForDistrict(district: string): TopSchool[] {
     .map((row, i) => ({ rank: i + 1, ...row, level: scoreToLevel(row.score) }));
 }
 
+export const TOP_TYPE = TYPE_AVERAGES[0];
+
 export const OVERVIEW_DISTRICTS = [...ALL_DISTRICTS];
+
+// ─── Comparison flow: district -> block -> schools ───
+
+const COMPARE_BLOCKS_PER_DISTRICT = 6;
+const COMPARE_SCHOOLS_PER_BLOCK = 7;
+
+const CLASS_RANGES = ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'];
+
+/** Placeholder blocks. The real Block table has no Hindi names and the dummy
+ * school set is too thin (15 rows statewide) to fill a block list, so the
+ * comparison flow generates its own. */
+export function compareBlocksForDistrict(district: string): string[] {
+  const seed = hash(district);
+  // Step by 1. A step sharing a factor with the pool length cycles through only
+  // a couple of entries, which dedup then collapses to almost nothing.
+  return Array.from(
+    { length: COMPARE_BLOCKS_PER_DISTRICT },
+    (_, i) => BLOCK_POOL[(seed + i) % BLOCK_POOL.length],
+  );
+}
+
+export type CompareSchool = {
+  udise: string;
+  name: string;
+  district: string;
+  block: string;
+  type: SchoolType;
+  level: string;
+  overallScore: number;
+  performanceLevel: PerformanceLevel;
+  domainScores: Record<(typeof SQAAF_DOMAINS)[number], number>;
+};
+
+/** Placeholder schools for one block, enough of them that picking four is
+ * possible. Deterministic per district+block so selections survive a reload. */
+export function compareSchoolsForBlock(district: string, block: string): CompareSchool[] {
+  const seed = hash(`${district}|${block}`);
+
+  return Array.from({ length: COMPARE_SCHOOLS_PER_BLOCK }, (_, i) => {
+    const overallScore = Math.max(38, Math.min(94, 86 - (seed % 9) - i * 6 + ((seed + i) % 5)));
+    const domainScores = {} as Record<(typeof SQAAF_DOMAINS)[number], number>;
+    SQAAF_DOMAINS.forEach((domain, d) => {
+      // Spread each domain around the overall score so the bars differ.
+      const offset = ((hash(domain) + seed + i * 13 + d * 7) % 21) - 10;
+      domainScores[domain] = Math.max(30, Math.min(98, overallScore + offset));
+    });
+
+    return {
+      udise: `9CMP${String(hash(`${district}|${block}|${i}`)).padStart(7, '0')}`,
+      name: `${NAME_PATTERNS[(seed + i) % NAME_PATTERNS.length]}, ${block}`,
+      district,
+      block,
+      type: TYPE_POOL[(seed + i) % TYPE_POOL.length],
+      level: CLASS_RANGES[(seed + i * 3) % CLASS_RANGES.length],
+      overallScore,
+      performanceLevel: scoreToLevel(overallScore),
+      domainScores,
+    };
+  }).sort((a, b) => b.overallScore - a.overallScore);
+}

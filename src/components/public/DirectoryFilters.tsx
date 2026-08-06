@@ -88,13 +88,16 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         />
       </div>
 
+      {/* Each unfiltered select shows its field name rather than "All ...". The
+          filter*, not all*, keys are used: allDistricts is shared with the
+          admin user and monitoring screens, which still want "All Districts". */}
       <SearchableSelect
         value={selected.district}
         onChange={(v) => navigate({ district: v })}
         options={districts.map((d) => ({ value: d.code, label: getName(d) }))}
-        allLabel={t('allDistricts')}
+        allLabel={t('filterDistrict')}
         searchPlaceholder={t('district')}
-        ariaLabel={t('district')}
+        ariaLabel={t('filterDistrict')}
         className="w-[170px]"
         buttonClassName="py-2.5"
       />
@@ -103,9 +106,9 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         value={selected.type}
         onChange={(e) => navigate({ type: e.target.value })}
         className={selectClass}
-        aria-label={t('type')}
+        aria-label={t('filterType')}
       >
-        <option value="">{t('allTypes')}</option>
+        <option value="">{t('filterType')}</option>
         <option value="Government">{t('typeGovernment')}</option>
         <option value="Aided">{t('typeAided')}</option>
         <option value="Private">{t('typePrivate')}</option>
@@ -115,9 +118,9 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         value={selected.category}
         onChange={(e) => navigate({ category: e.target.value })}
         className={selectClass}
-        aria-label={t('class')}
+        aria-label={t('filterClass')}
       >
-        <option value="">{t('allClasses')}</option>
+        <option value="">{t('filterClass')}</option>
         <option value="Primary">{t('catPrimary')}</option>
         <option value="Upper Primary">{t('catUpperPrimary')}</option>
         <option value="Secondary">{t('catSecondary')}</option>
@@ -128,9 +131,9 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         value={selected.performance}
         onChange={(e) => navigate({ performance: e.target.value })}
         className={selectClass}
-        aria-label={t('performance')}
+        aria-label={t('filterPerformance')}
       >
-        <option value="">{t('allPerformance')}</option>
+        <option value="">{t('filterPerformance')}</option>
         <option value="Uday">Uday</option>
         <option value="Unnat">Unnat</option>
         <option value="Utkarsh">Utkarsh</option>

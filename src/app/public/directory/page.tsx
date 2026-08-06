@@ -185,7 +185,9 @@ export default async function DirectoryPage(props: {
                   <td className="whitespace-nowrap px-3 py-5">{r.blockName}</td>
                   <td className="whitespace-nowrap px-3 py-5">{r.type}</td>
                   <td className="px-3 py-5">
-                    <div className="flex items-center gap-2">
+                    {/* Stars sit under the tier name, not beside it: side by side
+                        they read as a second, competing rating. */}
+                    <div className="flex flex-col items-start gap-1.5">
                       <span
                         className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[r.performanceLevel]}`}
                       >

@@ -169,3 +169,63 @@ export function compareSchoolsForBlock(district: string, block: string): Compare
     };
   }).sort((a, b) => b.overallScore - a.overallScore);
 }
+
+/** Kept here, not in the client component: importing a value from a 'use client'
+ * module into a server component yields a client-reference stub, not the number,
+ * which silently broke slice() on the server. */
+export const MAX_COMPARE = 3;
+
+// ─── Comparison search: one flat pool, built once, server side only ───
+
+/** Every generated school across every district and block. Built lazily and
+ * cached, so the page can search by name without shipping ~3,000 records to the
+ * browser - the compare page resolves matches server side and passes only the
+ * handful it needs. */
+let comparePool: CompareSchool[] | null = null;
+
+function getComparePool(): CompareSchool[] {
+  if (comparePool) return comparePool;
+  comparePool = ALL_DISTRICTS.flatMap((district) =>
+    compareBlocksForDistrict(district).flatMap((block) =>
+      compareSchoolsForBlock(district, block),
+    ),
+  );
+  return comparePool;
+}
+
+export function searchCompareSchools(
+  query: string,
+  opts: { district?: string; block?: string; limit?: number } = {},
+): CompareSchool[] {
+  const { district, block, limit = 12 } = opts;
+  const needle = query.trim().toLowerCase();
+  if (!needle && !district) return [];
+
+  const matches = getComparePool().filter((s) => {
+    if (district && s.district !== district) return false;
+    if (block && s.block !== block) return false;
+    if (!needle) return true;
+    return (
+      s.name.toLowerCase().includes(needle) ||
+      s.udise.toLowerCase().includes(needle) ||
+      s.block.toLowerCase().includes(needle)
+    );
+  });
+
+  return matches.slice(0, limit);
+}
+
+export function compareSchoolsByUdise(udises: string[]): CompareSchool[] {
+  if (udises.length === 0) return [];
+  const wanted = new Set(udises);
+  const found = new Map(
+    getComparePool()
+      .filter((s) => wanted.has(s.udise))
+      .map((s) => [s.udise, s]),
+  );
+  // Preserve the order the user picked them in.
+  return udises.flatMap((u) => {
+    const hit = found.get(u);
+    return hit ? [hit] : [];
+  });
+}

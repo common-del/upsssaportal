@@ -57,9 +57,6 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
     };
   }, []);
 
-  const selectClass =
-    'rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-text-primary focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]';
-
   return (
     // One plain row on the page background - no cards, no accent bar. The
     // search box takes the spare width; the four selects wrap beneath it on
@@ -88,56 +85,71 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         />
       </div>
 
-      {/* Each unfiltered select shows its field name rather than "All ...". The
-          filter*, not all*, keys are used: allDistricts is shared with the
-          admin user and monitoring screens, which still want "All Districts". */}
+      {/* All four are SearchableSelect rather than a mix of that and native
+          <select>. A native select can only display its selected option, so it
+          cannot read "Management Type" while unset AND offer a separate
+          "All Management Types" row - the two requests only reconcile with a
+          controlled listbox. Search box off for the short lists. */}
       <SearchableSelect
         value={selected.district}
         onChange={(v) => navigate({ district: v })}
         options={districts.map((d) => ({ value: d.code, label: getName(d) }))}
-        allLabel={t('filterDistrict')}
+        allLabel={t('allDistricts')}
+        placeholderLabel={t('filterDistrict')}
         searchPlaceholder={t('district')}
         ariaLabel={t('filterDistrict')}
         className="w-[170px]"
         buttonClassName="py-2.5"
       />
 
-      <select
+      <SearchableSelect
         value={selected.type}
-        onChange={(e) => navigate({ type: e.target.value })}
-        className={selectClass}
-        aria-label={t('filterType')}
-      >
-        <option value="">{t('filterType')}</option>
-        <option value="Government">{t('typeGovernment')}</option>
-        <option value="Aided">{t('typeAided')}</option>
-        <option value="Private">{t('typePrivate')}</option>
-      </select>
+        onChange={(v) => navigate({ type: v })}
+        options={[
+          { value: 'Government', label: t('typeGovernment') },
+          { value: 'Aided', label: t('typeAided') },
+          { value: 'Private', label: t('typePrivate') },
+        ]}
+        allLabel={t('allTypes')}
+        placeholderLabel={t('filterType')}
+        searchable={false}
+        ariaLabel={t('filterType')}
+        className="w-[190px]"
+        buttonClassName="py-2.5"
+      />
 
-      <select
+      <SearchableSelect
         value={selected.category}
-        onChange={(e) => navigate({ category: e.target.value })}
-        className={selectClass}
-        aria-label={t('filterClass')}
-      >
-        <option value="">{t('filterClass')}</option>
-        <option value="Primary">{t('catPrimary')}</option>
-        <option value="Upper Primary">{t('catUpperPrimary')}</option>
-        <option value="Secondary">{t('catSecondary')}</option>
-        <option value="Higher Secondary">{t('catHigherSecondary')}</option>
-      </select>
+        onChange={(v) => navigate({ category: v })}
+        options={[
+          { value: 'Primary', label: t('catPrimary') },
+          { value: 'Upper Primary', label: t('catUpperPrimary') },
+          { value: 'Secondary', label: t('catSecondary') },
+          { value: 'Higher Secondary', label: t('catHigherSecondary') },
+        ]}
+        allLabel={t('allClasses')}
+        placeholderLabel={t('filterClass')}
+        searchable={false}
+        ariaLabel={t('filterClass')}
+        className="w-[170px]"
+        buttonClassName="py-2.5"
+      />
 
-      <select
+      <SearchableSelect
         value={selected.performance}
-        onChange={(e) => navigate({ performance: e.target.value })}
-        className={selectClass}
-        aria-label={t('filterPerformance')}
-      >
-        <option value="">{t('filterPerformance')}</option>
-        <option value="Uday">Uday</option>
-        <option value="Unnat">Unnat</option>
-        <option value="Utkarsh">Utkarsh</option>
-      </select>
+        onChange={(v) => navigate({ performance: v })}
+        options={[
+          { value: 'Uday', label: 'Uday' },
+          { value: 'Unnat', label: 'Unnat' },
+          { value: 'Utkarsh', label: 'Utkarsh' },
+        ]}
+        allLabel={t('allPerformance')}
+        placeholderLabel={t('filterPerformance')}
+        searchable={false}
+        ariaLabel={t('filterPerformance')}
+        className="w-[180px]"
+        buttonClassName="py-2.5"
+      />
     </div>
   );
 }

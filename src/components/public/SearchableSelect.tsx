@@ -13,9 +13,18 @@ interface SearchableSelectProps {
   value: string;
   onChange: (value: string) => void;
   options: SearchableSelectOption[];
+  /** The "clear this filter" row inside the open list, e.g. "All Districts". */
   allLabel: string;
+  /**
+   * What the closed control reads when nothing is chosen. Defaults to allLabel.
+   * Set it to the field name so the row of filters reads as labels, while the
+   * open list still offers an explicit "All ..." to come back to.
+   */
+  placeholderLabel?: string;
   allValue?: string;
   searchPlaceholder?: string;
+  /** Off for short option lists, where a search box is noise. */
+  searchable?: boolean;
   className?: string;
   buttonClassName?: string;
   id?: string;
@@ -27,8 +36,10 @@ export function SearchableSelect({
   onChange,
   options,
   allLabel,
+  placeholderLabel,
   allValue = '',
   searchPlaceholder = 'Search...',
+  searchable = true,
   className,
   buttonClassName,
   id,
@@ -51,8 +62,8 @@ export function SearchableSelect({
   }, []);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (open && searchable) inputRef.current?.focus();
+  }, [open, searchable]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return options;
@@ -61,7 +72,9 @@ export function SearchableSelect({
   }, [options, query]);
 
   const selectedLabel =
-    value === allValue ? allLabel : (options.find((o) => o.value === value)?.label ?? value);
+    value === allValue
+      ? (placeholderLabel ?? allLabel)
+      : (options.find((o) => o.value === value)?.label ?? value);
 
   function select(v: string) {
     onChange(v);
@@ -89,20 +102,22 @@ export function SearchableSelect({
 
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1 w-full min-w-[220px] rounded-lg border border-gray-200 bg-white shadow-lg">
-          <div className="relative border-b border-gray-100 p-2">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="w-full rounded-md border border-gray-200 py-1.5 pl-8 pr-2 text-sm focus:border-[#1B2A6B] focus:outline-none"
-            />
-          </div>
+          {searchable && (
+            <div className="relative border-b border-gray-100 p-2">
+              <Search
+                size={14}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full rounded-md border border-gray-200 py-1.5 pl-8 pr-2 text-sm focus:border-[#1B2A6B] focus:outline-none"
+              />
+            </div>
+          )}
           <ul role="listbox" className="max-h-60 overflow-y-auto py-1 text-sm">
             <li>
               <button

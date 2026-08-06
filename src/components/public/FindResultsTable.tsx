@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Check, Plus, Scale, X } from 'lucide-react';
 import { LevelBadge } from '@/components/public/LevelBadge';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
+import { illustrativeFeeBand } from '@/lib/public/nearbyDummyData';
 import { MAX_COMPARE } from '@/lib/public/stateOverviewData';
 import type { PerformanceLevel } from '@/lib/public/constants';
 import type { SchoolType } from '@/lib/public/constants';
@@ -12,15 +13,35 @@ import type { SchoolType } from '@/lib/public/constants';
 export type FindResultRow = {
   udise: string;
   name: string;
+  /** Still carried for the empty-state and dummy fallback, no longer a column:
+      district and block are already stated in the summary above the table. */
   districtName: string;
   blockName: string;
   /** Illustrative, derived from the UDISE code - see nearbyDummyData.ts. */
   distanceKm: number;
+  /** From School.feesRangeMin/Max. Null on the generated schools, which is most
+      of them - illustrativeFeeBand fills in below. */
+  feesMin: number | null;
+  feesMax: number | null;
 };
 
 function truncateName(name: string, max = 42): string {
   if (name.length <= max) return name;
   return `${name.slice(0, max - 1)}…`;
+}
+
+const rupees = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
+/** Real disclosure if the school has one, an illustrative band otherwise. */
+function feeLabel(row: FindResultRow, type: SchoolType): string {
+  const disclosed = row.feesMin !== null || row.feesMax !== null;
+  const { min, max } = disclosed
+    ? { min: row.feesMin ?? row.feesMax ?? 0, max: row.feesMax ?? row.feesMin ?? 0 }
+    : illustrativeFeeBand(row.udise, type);
+
+  if (min === 0 && max === 0) return 'No fee';
+  if (min === max) return rupees(min);
+  return `${rupees(min)} – ${rupees(max)}`;
 }
 
 export function FindResultsTable({
@@ -55,21 +76,22 @@ export function FindResultsTable({
     <>
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1040px] text-left text-sm">
+          {/* Narrower than before: district and block are gone, so the whole
+              table now fits a laptop without sideways scrolling - which is what
+              keeps the second-last Compare column reachable. */}
+          <table className="w-full min-w-[880px] text-left text-sm">
             <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-600">
               <tr>
-                {/* Named, because an unlabelled tick column tells a parent nothing
-                    about what it is for. */}
-                <th className="w-px px-4 py-3">Compare</th>
                 <th className="px-4 py-3">School Name</th>
                 <th className="px-4 py-3">Distance</th>
                 <th className="px-4 py-3">UDISE</th>
-                <th className="px-4 py-3">District</th>
-                <th className="px-4 py-3">Block</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Level</th>
-                <th className="px-4 py-3">Fee</th>
+                <th className="px-4 py-3">Annual Fee</th>
                 <th className="px-4 py-3">Accreditation</th>
+                {/* Named, because an unlabelled column tells a parent nothing
+                    about what it is for. */}
+                <th className="px-4 py-3">Compare</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -83,6 +105,37 @@ export function FindResultsTable({
                     key={row.udise}
                     className={isSelected ? 'bg-[#1B2A6B]/[0.04]' : 'hover:bg-gray-50'}
                   >
+                    <td className="max-w-[220px] px-4 py-3">
+                      <Link
+                        href={`/public/schools/${row.udise}`}
+                        className="font-bold text-[#1B2A6B] hover:underline"
+                        title={row.name}
+                      >
+                        {truncateName(row.name)}
+                      </Link>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold tabular-nums text-gray-700">
+                      {row.distanceKm} km
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{row.udise}</td>
+                    <td className="px-4 py-3">{extra.type as SchoolType}</td>
+                    <td className="px-4 py-3">
+                      <LevelBadge level={extra.performanceLevel as PerformanceLevel} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700">
+                      {feeLabel(row, extra.type as SchoolType)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {extra.accreditation === 'SQAAF Verified' ? (
+                        <span className="rounded-full bg-[#1B2A6B] px-2.5 py-0.5 text-xs font-medium text-white">
+                          SQAAF Verified
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                          Pending
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {/* A worded button rather than a tickbox: it states what it
                           does, so the page needs no instruction line above it. */}
@@ -108,47 +161,6 @@ export function FindResultsTable({
                         {isSelected ? <Check size={13} aria-hidden /> : <Plus size={13} aria-hidden />}
                         {isSelected ? 'Added' : 'Compare'}
                       </button>
-                    </td>
-                    <td className="max-w-[220px] px-4 py-3">
-                      <Link
-                        href={`/public/schools/${row.udise}`}
-                        className="font-bold text-[#1B2A6B] hover:underline"
-                        title={row.name}
-                      >
-                        {truncateName(row.name)}
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold tabular-nums text-gray-700">
-                      {row.distanceKm} km
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{row.udise}</td>
-                    <td className="px-4 py-3">{row.districtName}</td>
-                    <td className="px-4 py-3">{row.blockName}</td>
-                    <td className="px-4 py-3">{extra.type as SchoolType}</td>
-                    <td className="px-4 py-3">
-                      <LevelBadge level={extra.performanceLevel as PerformanceLevel} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {extra.feeDisclosed ? (
-                        <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                          Disclosed
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                          Not Disclosed
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {extra.accreditation === 'SQAAF Verified' ? (
-                        <span className="rounded-full bg-[#1B2A6B] px-2.5 py-0.5 text-xs font-medium text-white">
-                          SQAAF Verified
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                          Pending
-                        </span>
-                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <Link

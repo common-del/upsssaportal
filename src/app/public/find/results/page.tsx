@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db';
 import { computeAge, ageToGrade, gradeLabel } from '@/lib/age-to-grade';
 import { ResultsSortSelect } from '@/components/public/ResultsSortSelect';
 import { FindResultsTable, type FindResultRow } from '@/components/public/FindResultsTable';
-import { AlertTriangle } from 'lucide-react';
 import { SCHOOLS } from '@/lib/public/dummyData';
 import { illustrativeDistanceKm } from '@/lib/public/nearbyDummyData';
 import { searchSchools } from '@/lib/actions/findSchools';
@@ -269,27 +268,11 @@ export default async function FindResultsPage(props: {
 
       {total > 0 ? (
         <div className="mt-4">
-          <>
-            {/* Distances come from a hash of the UDISE code, not measurement, and
-                almost no school carries a real fee disclosure yet. Sorting or
-                quoting a number is a stronger claim than labelling one, so both
-                are said plainly rather than in small print. */}
-            <div
-              role="note"
-              className="mb-3 flex gap-2 rounded-lg border border-amber-400 bg-amber-50 p-3"
-            >
-              <AlertTriangle size={16} className="mt-px shrink-0 text-amber-700" aria-hidden />
-              <span className="text-xs text-amber-900">
-                <span className="font-bold">
-                  Distances and fees are examples, not real figures.
-                </span>{' '}
-                Exact school locations are not in the system yet, so &ldquo;nearest first&rdquo; is
-                illustrative only, and most schools have not disclosed a fee. Please check a
-                school&rsquo;s actual location and fee before deciding.
-              </span>
-            </div>
-            <FindResultsTable rows={rows} backHref={sortHref(sort)} />
-          </>
+          {/* Note: distances are derived from a hash of the UDISE code and most
+              fees are illustrative too - see nearbyDummyData.ts. The on-screen
+              caveat that said so was removed on request. Nothing warns a parent
+              now, so put one back before this goes in front of real users. */}
+          <FindResultsTable rows={rows} backHref={sortHref(sort)} />
         </div>
       ) : (
         <p className="mt-8 text-center text-gray-600">No schools found for the selected area.</p>

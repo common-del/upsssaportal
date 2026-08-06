@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { GraduationCap } from 'lucide-react';
 import { LevelBadge } from '@/components/public/LevelBadge';
-import { SchoolComparePicker } from '@/components/public/SchoolComparePicker';
 import {
   OVERVIEW_DISTRICTS,
   STATE_AVERAGE_LEVEL,
@@ -180,15 +179,6 @@ export function StateOverviewContent() {
         </Link>
       </div>
 
-      {/* Comparison, replacing the former Compare Schools page */}
-      <section>
-        <h2 className="text-lg font-bold text-[#1B2A6B]">Compare schools side by side</h2>
-        <p className="mt-0.5 max-w-2xl text-xs text-gray-500">
-          Pick a district, then a block, then choose up to four schools from that block to compare
-          their SQAAF scores domain by domain.
-        </p>
-        <SchoolComparePicker />
-      </section>
     </div>
   );
 }

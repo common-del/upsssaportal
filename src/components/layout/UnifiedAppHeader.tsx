@@ -92,7 +92,13 @@ export function UnifiedAppHeader({
     >
       {/* Row 1: brand + actions (~64px) */}
       <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-6">
-        <Link href={brandHref} className="flex min-w-0 items-center gap-2.5">
+        {/* brandHref stays each role's own dashboard - for a signed-in officer
+            that is their home, not the public landing page. */}
+        <Link
+          href={brandHref}
+          title="Go to your dashboard"
+          className="group flex min-w-0 items-center gap-2.5 rounded-md transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B731] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A6B]"
+        >
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
             style={{ backgroundColor: YELLOW, color: NAVY }}
@@ -100,7 +106,9 @@ export function UnifiedAppHeader({
             UP
           </div>
           <div className="hidden min-w-0 sm:block">
-            <p className="truncate text-sm font-bold text-white sm:text-base">SSSA Uttar Pradesh</p>
+            <p className="truncate text-sm font-bold text-white underline-offset-4 group-hover:underline sm:text-base">
+              SSSA Uttar Pradesh
+            </p>
             <p className="truncate text-xs text-white/70">School Education Department, Uttar Pradesh</p>
           </div>
         </Link>

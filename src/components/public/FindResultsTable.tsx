@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Check, Plus, Scale, X } from 'lucide-react';
 import { LevelBadge } from '@/components/public/LevelBadge';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
-import { illustrativeFeeBand } from '@/lib/public/nearbyDummyData';
+import { feeLabel } from '@/lib/public/fees';
 import { MAX_COMPARE } from '@/lib/public/stateOverviewData';
 import type { PerformanceLevel } from '@/lib/public/constants';
 import type { SchoolType } from '@/lib/public/constants';
@@ -30,19 +30,6 @@ function truncateName(name: string, max = 42): string {
   return `${name.slice(0, max - 1)}…`;
 }
 
-const rupees = (n: number) => `₹${n.toLocaleString('en-IN')}`;
-
-/** Real disclosure if the school has one, an illustrative band otherwise. */
-function feeLabel(row: FindResultRow, type: SchoolType): string {
-  const disclosed = row.feesMin !== null || row.feesMax !== null;
-  const { min, max } = disclosed
-    ? { min: row.feesMin ?? row.feesMax ?? 0, max: row.feesMax ?? row.feesMin ?? 0 }
-    : illustrativeFeeBand(row.udise, type);
-
-  if (min === 0 && max === 0) return 'No fee';
-  if (min === max) return rupees(min);
-  return `${rupees(min)} – ${rupees(max)}`;
-}
 
 export function FindResultsTable({
   rows,
@@ -123,7 +110,7 @@ export function FindResultsTable({
                       <LevelBadge level={extra.performanceLevel as PerformanceLevel} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700">
-                      {feeLabel(row, extra.type as SchoolType)}
+                      {feeLabel(row.udise, extra.type as SchoolType, row.feesMin, row.feesMax)}
                     </td>
                     <td className="px-4 py-3">
                       {extra.accreditation === 'SQAAF Verified' ? (

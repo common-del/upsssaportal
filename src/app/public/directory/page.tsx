@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { TierStars } from '@/components/public/TierStars';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
+import { feeLabel } from '@/lib/public/fees';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 import type { Prisma } from '@prisma/client';
@@ -22,6 +23,10 @@ type DirectoryRow = {
   type: SchoolType;
   performanceLevel: PerformanceLevel;
   feeDisclosed: boolean;
+  /** From School.feesRangeMin/Max; null on the generated schools, which is most
+      of them - feeLabel falls back to an illustrative band. */
+  feesMin: number | null;
+  feesMax: number | null;
   accreditation: 'SQAAF Verified' | 'Pending';
 };
 
@@ -75,6 +80,8 @@ export default async function DirectoryPage(props: {
         nameHi: s.nameHi,
         districtName: hi ? s.district.nameHi : s.district.nameEn,
         blockName: hi ? s.block.nameHi : s.block.nameEn,
+        feesMin: s.feesRangeMin,
+        feesMax: s.feesRangeMax,
         ...extra,
       };
     });
@@ -99,6 +106,8 @@ export default async function DirectoryPage(props: {
         type: s.type,
         performanceLevel: s.performanceLevel,
         feeDisclosed: s.feeDisclosed,
+        feesMin: null,
+        feesMax: null,
         accreditation: s.accreditation,
       }));
   }
@@ -164,7 +173,7 @@ export default async function DirectoryPage(props: {
                 <th className="px-3 py-3 font-semibold">{t('block')}</th>
                 <th className="px-3 py-3 font-semibold">{t('type')}</th>
                 <th className="px-3 py-3 font-semibold">Level</th>
-                <th className="px-3 py-3 font-semibold">Fee</th>
+                <th className="px-3 py-3 font-semibold">Annual Fee</th>
                 <th className="px-3 py-3 font-semibold">SQAAF Status</th>
                 <th className="px-3 py-3 font-semibold" />
               </tr>
@@ -185,9 +194,10 @@ export default async function DirectoryPage(props: {
                   <td className="whitespace-nowrap px-3 py-5">{r.blockName}</td>
                   <td className="whitespace-nowrap px-3 py-5">{r.type}</td>
                   <td className="px-3 py-5">
-                    {/* Stars sit under the tier name, not beside it: side by side
-                        they read as a second, competing rating. */}
-                    <div className="flex flex-col items-start gap-1.5">
+                    {/* inline-flex, so the column shrinks to the pill's width and
+                        items-center then centres the stars under the pill rather
+                        than under the whole cell. */}
+                    <div className="inline-flex flex-col items-center gap-1.5">
                       <span
                         className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${DIRECTORY_LEVEL_BADGE[r.performanceLevel]}`}
                       >
@@ -196,16 +206,8 @@ export default async function DirectoryPage(props: {
                       <TierStars level={r.performanceLevel} size={12} />
                     </div>
                   </td>
-                  <td className="px-3 py-5">
-                    {r.feeDisclosed ? (
-                      <span className="whitespace-nowrap rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-xs font-medium text-[#92400E]">
-                        Disclosed
-                      </span>
-                    ) : (
-                      <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                        Not Disclosed
-                      </span>
-                    )}
+                  <td className="whitespace-nowrap px-3 py-5 tabular-nums">
+                    {feeLabel(r.udise, r.type, r.feesMin, r.feesMax)}
                   </td>
                   <td className="px-3 py-5">
                     {r.accreditation === 'SQAAF Verified' ? (

@@ -38,7 +38,7 @@ export function PublicNav() {
             UP
           </div>
           <div className="text-base font-semibold leading-tight underline-offset-4 group-hover:underline sm:text-lg">
-            State School Standards Authority, Uttar Pradesh
+            State School Standard Authority (SSSA), Uttar Pradesh
           </div>
         </Link>
 

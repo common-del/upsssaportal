@@ -7,6 +7,11 @@ import {
   getDummySchoolRecord,
 } from '@/lib/public/schoolProfile';
 import { getDummyNearbySchools } from '@/lib/public/nearbyDummyData';
+import {
+  toDomainScoreRecord,
+  type ComparableSchool,
+} from '@/components/public/CompareReportCard';
+import type { NearbyComparable } from '@/components/public/NearbyCompare';
 import { SCHOOLS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 
@@ -97,5 +102,51 @@ export default async function SchoolProfilePage(props: {
   const profile = buildSchoolProfileData({ udise, name, district, block });
   const nearbySchools = getDummyNearbySchools(nearbyPool, NEARBY_POOL);
 
-  return <SchoolProfileContent profile={profile} nearbySchools={nearbySchools} />;
+  // Comparison needs domain scores, which the nearby list doesn't carry. Building
+  // each sibling's profile is a pure derivation - no extra queries - and means the
+  // figures shown here match that school's own report card exactly.
+  const nearbyByUdise = new Map(nearbyPool.map((s) => [s.udise, s]));
+  const nearbyComparable: NearbyComparable[] = nearbySchools.flatMap((n) => {
+    const source = nearbyByUdise.get(n.udise);
+    if (!source) return [];
+    const sibling = buildSchoolProfileData({
+      udise: source.udise,
+      name: source.name,
+      district,
+      block: source.blockName,
+    });
+    return [
+      {
+        udise: sibling.udise,
+        name: sibling.name,
+        district: sibling.district,
+        type: sibling.type,
+        level: sibling.classes,
+        overallScore: sibling.overallScore,
+        performanceLevel: sibling.performanceLevel,
+        domainScores: toDomainScoreRecord(sibling.reportCard.domainScores),
+        blockName: source.blockName,
+        distanceKm: n.distanceKm,
+      },
+    ];
+  });
+
+  const currentComparable: ComparableSchool = {
+    udise: profile.udise,
+    name: profile.name,
+    district: profile.district,
+    type: profile.type,
+    level: profile.classes,
+    overallScore: profile.overallScore,
+    performanceLevel: profile.performanceLevel,
+    domainScores: toDomainScoreRecord(profile.reportCard.domainScores),
+  };
+
+  return (
+    <SchoolProfileContent
+      profile={profile}
+      currentComparable={currentComparable}
+      nearbyComparable={nearbyComparable}
+    />
+  );
 }

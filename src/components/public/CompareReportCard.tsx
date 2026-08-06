@@ -20,6 +20,20 @@ export type ComparableSchool = {
   domainScores: Record<(typeof SQAAF_DOMAINS)[number], number>;
 };
 
+/** buildSchoolProfileData emits domain scores as a {name, score} list keyed by
+ * UP_SQAAF_DOMAINS, whose names match SQAAF_DOMAINS one for one. Reshapes it into
+ * the record the card indexes into, falling back to 0 for any domain missing. */
+export function toDomainScoreRecord(
+  rows: { name: string; score: number }[],
+): Record<(typeof SQAAF_DOMAINS)[number], number> {
+  const byName = new Map(rows.map((r) => [r.name, r.score]));
+  const record = {} as Record<(typeof SQAAF_DOMAINS)[number], number>;
+  SQAAF_DOMAINS.forEach((domain) => {
+    record[domain] = byName.get(domain) ?? 0;
+  });
+  return record;
+}
+
 const DOMAIN_LABELS: Record<(typeof SQAAF_DOMAINS)[number], string> = {
   'Infrastructure and Safety': 'Infrastructure & Safety',
   'Administration, HR and Leadership': 'Admin, HR & Leadership',

@@ -5,10 +5,8 @@ import {
   BookOpen,
   Building,
   Building2,
-  AlertTriangle,
   Check,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   Download,
   Droplets,
@@ -26,18 +24,17 @@ import {
   UserCog,
   type LucideIcon,
 } from 'lucide-react';
-import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { BackButton } from '@/components/common/BackButton';
 import { LevelBadge } from '@/components/public/LevelBadge';
-import { TierStars } from '@/components/public/TierStars';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
+import { NearbyCompare, type NearbyComparable } from '@/components/public/NearbyCompare';
+import type { ComparableSchool } from '@/components/public/CompareReportCard';
 import {
   levelDescription,
   scoreToLevel,
   type SchoolProfileData,
 } from '@/lib/public/schoolProfile';
-import type { NearbySchool } from '@/lib/public/nearbyDummyData';
 import type { PerformanceLevel } from '@/lib/public/constants';
 
 const NAVY = '#1B2A6B';
@@ -107,10 +104,12 @@ function CompareBars({
 
 export function SchoolProfileContent({
   profile,
-  nearbySchools = [],
+  currentComparable,
+  nearbyComparable = [],
 }: {
   profile: SchoolProfileData;
-  nearbySchools?: NearbySchool[];
+  currentComparable: ComparableSchool;
+  nearbyComparable?: NearbyComparable[];
 }) {
   const [tab, setTab] = useState<TabId>('Overview');
   const [compareMode, setCompareMode] = useState<'state' | 'district'>('state');
@@ -176,7 +175,11 @@ export function SchoolProfileContent({
         )}
         {tab === 'Fee Disclosure' && <FeeTab profile={profile} />}
         {tab === 'School Report Card' && (
-          <ReportCardTab profile={profile} nearbySchools={nearbySchools} />
+          <ReportCardTab
+            profile={profile}
+            currentComparable={currentComparable}
+            nearbyComparable={nearbyComparable}
+          />
         )}
       </div>
     </div>
@@ -740,21 +743,14 @@ function FeeTab({ profile }: { profile: SchoolProfileData }) {
   );
 }
 
-/** Row tints for the nearby list, keyed to the same tiers LevelBadge uses. Uday
- * stays neutral grey rather than red - it means "emerging", not "failing", and
- * this is a public list of named government schools. */
-const NEARBY_TIER_ROW: Record<PerformanceLevel, string> = {
-  Utkarsh: 'border-emerald-200 bg-emerald-50',
-  Unnat: 'border-amber-200 bg-amber-50',
-  Uday: 'border-gray-200 bg-gray-50',
-};
-
 function ReportCardTab({
   profile,
-  nearbySchools,
+  currentComparable,
+  nearbyComparable,
 }: {
   profile: SchoolProfileData;
-  nearbySchools: NearbySchool[];
+  currentComparable: ComparableSchool;
+  nearbyComparable: NearbyComparable[];
 }) {
   const rc = profile.reportCard;
   const levelForDomain = (name: string): PerformanceLevel => {
@@ -890,57 +886,7 @@ function ReportCardTab({
         </section>
       </div>
 
-      {nearbySchools.length > 0 && (
-        <section className="overflow-hidden rounded-xl bg-[#1B2A6B] shadow-sm">
-          <div className="p-5">
-            <h2 className="text-base font-bold text-white">
-              Want to see how the nearby schools are performing?
-            </h2>
-            <p className="mt-1 text-xs text-white/70">
-              Tap a school to open its report card.
-            </p>
-            {/* Distances are generated from the UDISE code, not measured - see
-                nearbyDummyData.ts. Said plainly rather than in small print. */}
-            <div
-              role="note"
-              className="mt-3 flex gap-2 rounded-lg border border-amber-400/60 bg-amber-400/10 p-2.5"
-            >
-              <AlertTriangle size={16} className="mt-px shrink-0 text-amber-300" />
-              <span className="text-xs text-amber-100">
-                These distances are examples, not real measurements. Exact school locations are
-                not in the system yet.
-              </span>
-            </div>
-          </div>
-          <ul className="max-h-80 space-y-2 overflow-y-auto px-5 pb-5">
-            {nearbySchools.map((s) => (
-              <li key={s.udise}>
-                <Link
-                  href={`/public/schools/${s.udise}`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg border p-3 transition hover:opacity-90',
-                    NEARBY_TIER_ROW[s.performanceLevel],
-                  )}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-gray-900">
-                      {s.name}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-gray-500">
-                      {s.blockName} · {s.distanceKm} km away
-                    </span>
-                    <span className="mt-1 flex items-center gap-2">
-                      <TierStars level={s.performanceLevel} size={12} />
-                      <LevelBadge level={s.performanceLevel} />
-                    </span>
-                  </span>
-                  <ChevronRight size={16} className="shrink-0 text-gray-400" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <NearbyCompare current={currentComparable} nearby={nearbyComparable} />
     </div>
   );
 }

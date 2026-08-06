@@ -227,19 +227,6 @@ export function HomeContent() {
             </div>
           </div>
         </div>
-        {/* Reworded, not just relinked: State Overview has district averages and
-            per-district top schools, but no domain-wise analytics or mandal
-            tables, so the old sentence would have promised what is not there. */}
-        <p className="mt-4 text-xs text-gray-400">
-          District averages and the top schools in each district are on the{' '}
-          <Link
-            href="/public/state-overview"
-            className="font-medium text-[#1B2A6B] underline hover:no-underline"
-          >
-            State Overview
-          </Link>{' '}
-          page.
-        </p>
       </section>
 
       {/* Grievance redressal — promoted, visible without deep scrolling */}

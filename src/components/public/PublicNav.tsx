@@ -5,11 +5,13 @@ import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { cn } from '@/lib/cn';
 
+/** /public/reports has no tab of its own - it stays reachable from the link in
+ *  the homepage stats section, the same way comparison is reached from the flows
+ *  that need it rather than from the top bar. */
 const NAV_LINKS = [
   { href: '/public', label: 'Homepage' },
   { href: '/public/directory', label: 'School Directory' },
   { href: '/public/state-overview', label: 'State Overview' },
-  { href: '/public/reports', label: 'State Reports' },
   { href: '/public/about', label: 'About' },
 ] as const;
 

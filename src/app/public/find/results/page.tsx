@@ -3,13 +3,15 @@ import { prisma } from '@/lib/db';
 import { computeAge, ageToGrade, gradeLabel } from '@/lib/age-to-grade';
 import { ResultsSortSelect } from '@/components/public/ResultsSortSelect';
 import { FindResultsTable, type FindResultRow } from '@/components/public/FindResultsTable';
+import { AlertTriangle } from 'lucide-react';
 import { SCHOOLS } from '@/lib/public/dummyData';
+import { illustrativeDistanceKm } from '@/lib/public/nearbyDummyData';
 import { searchSchools } from '@/lib/actions/findSchools';
 import type { Prisma } from '@prisma/client';
 
 const PAGE_SIZE = 50;
 
-type SortKey = 'name_asc' | 'name_desc' | 'fees_asc' | 'fees_desc';
+type SortKey = 'name_asc' | 'name_desc' | 'fees_asc' | 'fees_desc' | 'distance_asc';
 
 function buildOrderBy(sort: SortKey): Prisma.SchoolOrderByWithRelationInput[] {
   switch (sort) {
@@ -73,6 +75,7 @@ async function loadResults(
         name: s.nameEn,
         districtName: s.district.nameEn,
         blockName: s.block.nameEn,
+        distanceKm: illustrativeDistanceKm(s.udise),
       }));
     }
   } catch {
@@ -93,6 +96,7 @@ async function loadResults(
     name: s.name,
     districtName: s.districtName,
     blockName: s.blockName,
+    distanceKm: illustrativeDistanceKm(s.udise),
   }));
 }
 
@@ -108,6 +112,7 @@ function dummyRowsForDistrict(districtName: string, blockName?: string): FindRes
       name: s.name,
       districtName: s.district,
       blockName: s.block,
+      distanceKm: illustrativeDistanceKm(s.udise),
     }));
 }
 
@@ -158,6 +163,11 @@ export default async function FindResultsPage(props: {
 
   if (sort === 'name_desc') {
     rows = [...rows].sort((a, b) => b.name.localeCompare(a.name));
+  }
+
+  // Distance is derived, not a column, so it can only be ordered after fetching.
+  if (sort === 'distance_asc') {
+    rows = [...rows].sort((a, b) => a.distanceKm - b.distanceKm || a.name.localeCompare(b.name));
   }
 
   const total = rows.length;
@@ -243,6 +253,7 @@ export default async function FindResultsPage(props: {
               name_desc: sortHref('name_desc'),
               fees_asc: sortHref('fees_asc'),
               fees_desc: sortHref('fees_desc'),
+              distance_asc: sortHref('distance_asc'),
             }}
           />
         )}
@@ -250,7 +261,23 @@ export default async function FindResultsPage(props: {
 
       {total > 0 ? (
         <div className="mt-4">
-          <FindResultsTable rows={rows} />
+          <>
+            {/* Distances come from a hash of the UDISE code, not measurement.
+                Sorting by one is a stronger claim than labelling with one, so it
+                is said plainly rather than in small print. */}
+            <div
+              role="note"
+              className="mb-3 flex gap-2 rounded-lg border border-amber-400 bg-amber-50 p-3"
+            >
+              <AlertTriangle size={16} className="mt-px shrink-0 text-amber-700" aria-hidden />
+              <span className="text-xs text-amber-900">
+                <span className="font-bold">Distances are examples, not real measurements.</span>{' '}
+                Exact school locations are not in the system yet, so &ldquo;nearest first&rdquo;
+                is illustrative only. Please check a school&rsquo;s actual location before deciding.
+              </span>
+            </div>
+            <FindResultsTable rows={rows} backHref={sortHref(sort)} />
+          </>
         </div>
       ) : (
         <p className="mt-8 text-center text-gray-600">No schools found for the selected area.</p>

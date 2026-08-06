@@ -25,6 +25,7 @@ export function ResultsSortSelect({ current, sortHrefs }: Props) {
         }}
         className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm text-text-primary focus:border-navy-600 focus:outline-none focus:ring-1 focus:ring-navy-600"
       >
+        <option value="distance_asc">{t('sortDistanceAsc')}</option>
         <option value="name_asc">{t('sortNameAsc')}</option>
         <option value="name_desc">Name Z→A</option>
         <option value="fees_asc">{t('sortFeesAsc')}</option>

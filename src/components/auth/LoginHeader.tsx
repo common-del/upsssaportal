@@ -25,7 +25,11 @@ export function LoginHeader() {
       <div className="mx-auto flex h-[72px] max-w-7xl items-center px-6">
         {/* Left zone: brand */}
         <div className="flex shrink-0 items-center gap-2.5">
-          <Link href="/public" className="flex items-center gap-2.5">
+          <Link
+            href="/public"
+            title="Go to homepage"
+            className="group flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B731] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A6B]"
+          >
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
               style={{ backgroundColor: YELLOW, color: NAVY }}
@@ -33,7 +37,9 @@ export function LoginHeader() {
               UP
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-white sm:text-base">SSSA Uttar Pradesh</p>
+              <p className="truncate text-sm font-bold text-white underline-offset-4 group-hover:underline sm:text-base">
+                SSSA Uttar Pradesh
+              </p>
               <p className="hidden truncate text-xs text-white/70 sm:block">
                 School Education Department, Uttar Pradesh
               </p>

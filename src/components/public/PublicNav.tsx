@@ -26,12 +26,19 @@ export function PublicNav() {
   return (
     <header className="bg-[#1B2A6B] text-white shadow-md print:hidden">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:py-4">
-        <Link href="/public" className="flex items-center gap-3">
+        {/* The masthead was already a link to the homepage but looked inert -
+            no hover, no cursor cue - so nobody tried it. The underline on hover
+            and the focus ring are the whole point of this block. */}
+        <Link
+          href="/public"
+          title="Go to homepage"
+          className="group flex items-center gap-3 rounded-md transition-opacity hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5B731] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A6B]"
+        >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F5B731] text-sm font-bold text-[#1B2A6B]">
             UP
           </div>
-          <div className="text-base font-semibold leading-tight sm:text-lg">
-            State School Standards Authority Uttar Pradesh
+          <div className="text-base font-semibold leading-tight underline-offset-4 group-hover:underline sm:text-lg">
+            State School Standards Authority, Uttar Pradesh
           </div>
         </Link>
 

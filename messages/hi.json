@@ -92,7 +92,11 @@
     "showing": "{from}–{to} दिखा रहे हैं, कुल {total}",
     "prev": "पिछला",
     "next": "अगला",
-    "page": "पृष्ठ {page} / {totalPages}"
+    "page": "पृष्ठ {page} / {totalPages}",
+    "filterDistrict": "जिला",
+    "filterType": "प्रबंधन प्रकार",
+    "filterClass": "कक्षाएँ",
+    "filterPerformance": "SQAAF रेटिंग"
   },
   "rating": {
     "title": "अपना विद्यालय खोजें",

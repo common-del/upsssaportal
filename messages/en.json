@@ -92,7 +92,11 @@
     "showing": "Showing {from}–{to} of {total}",
     "prev": "Previous",
     "next": "Next",
-    "page": "Page {page} of {totalPages}"
+    "page": "Page {page} of {totalPages}",
+    "filterDistrict": "District",
+    "filterType": "Management Type",
+    "filterClass": "Classes",
+    "filterPerformance": "SQAAF Rating"
   },
   "rating": {
     "title": "Find Your School",

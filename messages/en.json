@@ -220,6 +220,7 @@
     "showing": "Showing {from}–{to} of {total}",
     "noResults": "No schools found matching your criteria.",
     "sortBy": "Sort by",
+    "sortDistanceAsc": "Nearest first",
     "sortNameAsc": "Name A → Z",
     "sortFeesAsc": "Fees: Low → High",
     "sortFeesDesc": "Fees: High → Low",

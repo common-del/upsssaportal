@@ -66,3 +66,17 @@ export function getDummyNearbySchools<
     })
     .sort((a, b) => a.distanceKm - b.distanceKm);
 }
+
+/**
+ * A stable illustrative distance for one school, 0.4-18.4 km.
+ *
+ * There are still no school coordinates anywhere in the schema, so this is
+ * derived from the UDISE code rather than measured. Anything that sorts or
+ * filters on it must say so on screen: an ordering reads as a stronger claim
+ * than a label, and a parent will weigh "closer" against a bus route. Replace
+ * with a real haversine distance once school geo-coordinates exist.
+ */
+export function illustrativeDistanceKm(udise: string): number {
+  const seed = hashString(udise);
+  return Math.round((0.4 + (seed % 1800) / 100) * 10) / 10;
+}

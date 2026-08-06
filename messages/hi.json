@@ -220,6 +220,7 @@
     "showing": "{from}–{to} दिखा रहे हैं, कुल {total}",
     "noResults": "आपके मानदंडों से मेल खाने वाला कोई विद्यालय नहीं मिला।",
     "sortBy": "क्रमबद्ध करें",
+    "sortDistanceAsc": "निकटतम पहले",
     "sortNameAsc": "नाम अ → ज्ञ",
     "sortFeesAsc": "शुल्क: कम → अधिक",
     "sortFeesDesc": "शुल्क: अधिक → कम",

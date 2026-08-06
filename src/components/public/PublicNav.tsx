@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { cn } from '@/lib/cn';
 
-/** /public/reports has no tab of its own - it stays reachable from the link in
- *  the homepage stats section, the same way comparison is reached from the flows
- *  that need it rather than from the top bar. */
+/** /public/reports still builds and responds, but nothing in the UI links to it
+ *  any more - the tab went, and the homepage sentence that pointed at it now
+ *  points at State Overview. Reachable by typing the URL only. Delete the route
+ *  or give it an entry point; leaving it half-wired is the worst of both. */
 const NAV_LINKS = [
   { href: '/public', label: 'Homepage' },
   { href: '/public/directory', label: 'School Directory' },

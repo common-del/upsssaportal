@@ -62,6 +62,8 @@ async function loadResults(
       select: {
         udise: true,
         nameEn: true,
+        feesRangeMin: true,
+        feesRangeMax: true,
         district: { select: { nameEn: true } },
         block: { select: { nameEn: true } },
       },
@@ -76,6 +78,8 @@ async function loadResults(
         districtName: s.district.nameEn,
         blockName: s.block.nameEn,
         distanceKm: illustrativeDistanceKm(s.udise),
+        feesMin: s.feesRangeMin,
+        feesMax: s.feesRangeMax,
       }));
     }
   } catch {
@@ -97,6 +101,8 @@ async function loadResults(
     districtName: s.districtName,
     blockName: s.blockName,
     distanceKm: illustrativeDistanceKm(s.udise),
+    feesMin: s.feesMin,
+    feesMax: s.feesMax,
   }));
 }
 
@@ -113,6 +119,8 @@ function dummyRowsForDistrict(districtName: string, blockName?: string): FindRes
       districtName: s.district,
       blockName: s.block,
       distanceKm: illustrativeDistanceKm(s.udise),
+      feesMin: null,
+      feesMax: null,
     }));
 }
 
@@ -262,18 +270,22 @@ export default async function FindResultsPage(props: {
       {total > 0 ? (
         <div className="mt-4">
           <>
-            {/* Distances come from a hash of the UDISE code, not measurement.
-                Sorting by one is a stronger claim than labelling with one, so it
-                is said plainly rather than in small print. */}
+            {/* Distances come from a hash of the UDISE code, not measurement, and
+                almost no school carries a real fee disclosure yet. Sorting or
+                quoting a number is a stronger claim than labelling one, so both
+                are said plainly rather than in small print. */}
             <div
               role="note"
               className="mb-3 flex gap-2 rounded-lg border border-amber-400 bg-amber-50 p-3"
             >
               <AlertTriangle size={16} className="mt-px shrink-0 text-amber-700" aria-hidden />
               <span className="text-xs text-amber-900">
-                <span className="font-bold">Distances are examples, not real measurements.</span>{' '}
-                Exact school locations are not in the system yet, so &ldquo;nearest first&rdquo;
-                is illustrative only. Please check a school&rsquo;s actual location before deciding.
+                <span className="font-bold">
+                  Distances and fees are examples, not real figures.
+                </span>{' '}
+                Exact school locations are not in the system yet, so &ldquo;nearest first&rdquo; is
+                illustrative only, and most schools have not disclosed a fee. Please check a
+                school&rsquo;s actual location and fee before deciding.
               </span>
             </div>
             <FindResultsTable rows={rows} backHref={sortHref(sort)} />

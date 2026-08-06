@@ -80,3 +80,28 @@ export function illustrativeDistanceKm(udise: string): number {
   const seed = hashString(udise);
   return Math.round((0.4 + (seed % 1800) / 100) * 10) / 10;
 }
+
+/**
+ * A stable illustrative annual fee band for one school, in rupees.
+ *
+ * `School.feesRangeMin/Max` exist in the schema but are only populated for the
+ * few hand-seeded demo schools - the ~3,000 generated ones carry no fee data at
+ * all, so a real-values-only fee column reads as a dash on nearly every row.
+ * This fills that gap deterministically, keyed to the school type so the number
+ * does not contradict the Type column beside it. Fees are money a parent may
+ * act on, so anything showing one of these must say on screen that it is an
+ * example. Drop this the moment real fee disclosures land in the DB.
+ */
+export function illustrativeFeeBand(
+  udise: string,
+  type: SchoolType,
+): { min: number; max: number } {
+  if (type === 'Government') return { min: 0, max: 0 };
+  const seed = hashString(udise);
+  if (type === 'Aided') {
+    const min = 300 + (seed % 5) * 100;
+    return { min, max: min + 900 + (seed % 7) * 100 };
+  }
+  const min = 6000 + (seed % 12) * 500;
+  return { min, max: min + 9000 + (seed % 15) * 1000 };
+}

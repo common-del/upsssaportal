@@ -90,7 +90,6 @@ export function SssaAdminLayout({
               </div>
               <div className="hidden min-w-0 sm:block">
                 <p className="truncate text-sm font-bold text-white sm:text-base">State School Standard Authority (SSSA), Uttar Pradesh</p>
-                <p className="truncate text-xs text-white/70">School Education Department, Uttar Pradesh</p>
               </div>
             </Link>
           </div>

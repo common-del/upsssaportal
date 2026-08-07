@@ -1,26 +1,18 @@
-import { MandalAnalytics } from '@/components/sssa/MandalAnalytics';
-import { buildMandalDashboardData, buildStateDashboardData } from '@/lib/sssa/adminMetrics';
+import { redirect } from 'next/navigation';
 
-export default async function MandalAnalyticsPage({
+/** Folded into /app/sssa. Kept as a redirect because these URLs are linked from
+ *  elsewhere in the app and are likely bookmarked - the query carries over so a
+ *  saved mandal view still lands on the same scope. */
+export default async function LegacyMandalAnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mandal?: string }>;
+  searchParams: Promise<{ mandal?: string; district?: string; block?: string }>;
 }) {
-  const params = await searchParams;
-  const state = await buildStateDashboardData();
-  const mandalCode =
-    params.mandal && state.mandals.some((m) => m.code === params.mandal)
-      ? params.mandal
-      : (state.mandals[0]?.code ?? '');
-
-  const data = await buildMandalDashboardData(mandalCode);
-
-  return (
-    <MandalAnalytics
-      key={mandalCode}
-      initialMandalCode={mandalCode}
-      mandals={state.mandals}
-      initialData={data}
-    />
-  );
+  const { mandal, district, block } = await searchParams;
+  const params = new URLSearchParams();
+  if (mandal) params.set('mandal', mandal);
+  if (district) params.set('district', district);
+  if (block) params.set('block', block);
+  const qs = params.toString();
+  redirect(`/app/sssa${qs ? `?${qs}` : ''}`);
 }

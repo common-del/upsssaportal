@@ -8,15 +8,12 @@ export type NavItem = {
 export type NavSection = { label?: string; items: NavItem[] };
 
 export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
-  { items: [{ href: '/app/sssa', label: 'State Dashboard', exact: true }] },
-  {
-    label: 'Analytics',
-    items: [
-      { href: '/app/sssa/mandal', label: 'Mandal Level Analytics' },
-      { href: '/app/sssa/district', label: 'District Analytics' },
-      { href: '/app/sssa/block', label: 'Block Analytics' },
-    ],
-  },
+  // One Analytics entry, not four. State / Mandal / District / Block rendered the
+  // same panels and each already carried the full cascade of dropdowns; the level
+  // is now just how far the query has narrowed. `exact` is required: without it
+  // the prefix match would light this up on every /app/sssa/* page. Scope lives in
+  // the query string, which usePathname drops, so it stays active at every level.
+  { items: [{ href: '/app/sssa', label: 'Analytics', exact: true }] },
   {
     label: 'Directory & Disputes',
     items: [

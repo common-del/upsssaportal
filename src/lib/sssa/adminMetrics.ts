@@ -362,9 +362,35 @@ export type ScopedDashboardData = StateDashboardData & {
   managementBars: { type: string; score: number; color: string }[];
 };
 
+export type AnalyticsLevel = 'state' | 'mandal' | 'district' | 'block';
+
+/** A row in the drill-down table: the ranking is also the way one level down. */
+export type RankedChild = { code: string; name: string; schools: number; avg: number };
+
+export type AnalyticsData = ScopedDashboardData & {
+  level: AnalyticsLevel;
+  /** Name of the thing currently in scope, e.g. "Mohanlalganj" or "Uttar Pradesh". */
+  scopeName: string;
+  /** The resolved chain. Ancestors are derived when only a deeper code is supplied. */
+  mandalCode: string;
+  mandalName: string;
+  districtCode: string;
+  districtName: string;
+  blockCode: string;
+  blockName: string;
+  /** One rung below the current scope, best score first. Empty at block scope. */
+  rankedChildren: RankedChild[];
+  childUnit: '' | 'Mandal' | 'District' | 'Block';
+};
+
 /** Benchmarks are always relative to the selected mandal (and, once a district is
  * picked, the selected district) — the same three benchmark cards appear unchanged
- * across Mandal/District/Block Analytics, only narrowing as you drill down. */
+ * across every scope, only narrowing as you drill down.
+ *
+ * The sorted lists are returned as well as the top row of each. They cost nothing
+ * extra to hand back and the drill-down table is built from them, so a ranking is
+ * never computed twice. An empty mandalCode means state scope: districts and
+ * blocks are then ranked across the whole state rather than within a mandal. */
 async function computeBenchmarks(
   cycleId: string | null,
   mandalCode: string,
@@ -379,12 +405,17 @@ async function computeBenchmarks(
     })),
   );
   mandalAvgs.sort((a, b) => b.avg - a.avg);
-  const mandalRank = Math.max(1, mandalAvgs.findIndex((x) => x.code === mandalCode) + 1);
+  const mandalRank = mandalCode
+    ? Math.max(1, mandalAvgs.findIndex((x) => x.code === mandalCode) + 1)
+    : 0;
   const topMandal = mandalAvgs[0];
 
-  const districtsInMandal = state.districts.filter((d) => d.mandalCode === mandalCode);
+  const districtScope = mandalCode
+    ? state.districts.filter((d) => d.mandalCode === mandalCode)
+    : state.districts;
   const districtAvgs = await Promise.all(
-    districtsInMandal.map(async (d) => ({
+    districtScope.map(async (d) => ({
+      code: d.code,
       name: d.nameEn,
       avg: cycleId ? await avgScoreFor(cycleId, { districtCode: d.code }) : 0,
     })),
@@ -393,9 +424,12 @@ async function computeBenchmarks(
 
   const blockScope = districtCode
     ? state.blocks.filter((b) => b.districtCode === districtCode)
-    : state.blocks.filter((b) => districtsInMandal.some((d) => d.code === b.districtCode));
+    : mandalCode
+      ? state.blocks.filter((b) => districtScope.some((d) => d.code === b.districtCode))
+      : state.blocks;
   const blockAvgs = await Promise.all(
     blockScope.map(async (b) => ({
+      code: b.code,
       name: b.nameEn,
       avg: cycleId ? await avgScoreFor(cycleId, { blockCode: b.code }) : 0,
     })),
@@ -416,6 +450,22 @@ async function computeBenchmarks(
       name: blockAvgs[0]?.name ?? '—',
       avg: Math.round(blockAvgs[0]?.avg ?? 0),
     },
+    mandalAvgs,
+    districtAvgs,
+    blockAvgs,
+  };
+}
+
+/** School counts for every district and block in two queries rather than one per
+ *  row, so the drill-down table doesn't scale its cost with the number of blocks. */
+async function schoolCountMaps() {
+  const [byDistrict, byBlock] = await Promise.all([
+    prisma.school.groupBy({ by: ['districtCode'], _count: { _all: true } }),
+    prisma.school.groupBy({ by: ['blockCode'], _count: { _all: true } }),
+  ]);
+  return {
+    districts: new Map(byDistrict.map((r) => [r.districtCode, r._count._all])),
+    blocks: new Map(byBlock.map((r) => [r.blockCode, r._count._all])),
   };
 }
 
@@ -467,9 +517,6 @@ async function buildScopedDashboardData(
   };
 }
 
-export async function buildMandalDashboardData(mandalCode: string): Promise<ScopedDashboardData> {
-  return buildScopedDashboardData(mandalCode, undefined, undefined);
-}
 
 export async function buildDistrictDashboardData(districtCode: string): Promise<ScopedDashboardData> {
   const district = await prisma.district.findUnique({
@@ -488,6 +535,175 @@ export async function buildBlockDashboardData(
     select: { mandalCode: true },
   });
   return buildScopedDashboardData(district?.mandalCode ?? '', districtCode, blockCode);
+}
+
+type HierarchyLists = Pick<StateDashboardData, 'mandals' | 'districts' | 'blocks'>;
+
+/**
+ * Turn whatever codes arrived in the query into a consistent scope chain.
+ *
+ * Pure, and exported so it can be tested without a database — this is where a
+ * bookmarked `?block=B050` with no ancestors, or a chain whose district does not
+ * belong to its mandal, would otherwise render a contradictory header. Ancestors
+ * are always derived from the deepest valid code rather than trusted, and unknown
+ * codes fall back to the next level up instead of erroring.
+ */
+export function resolveAnalyticsScope(
+  lists: HierarchyLists,
+  scope: { mandal?: string; district?: string; block?: string },
+) {
+  const block = scope.block ? lists.blocks.find((b) => b.code === scope.block) : undefined;
+  const district = block
+    ? lists.districts.find((d) => d.code === block.districtCode)
+    : scope.district
+      ? lists.districts.find((d) => d.code === scope.district)
+      : undefined;
+  const mandal = district
+    ? lists.mandals.find((m) => m.code === district.mandalCode)
+    : scope.mandal
+      ? lists.mandals.find((m) => m.code === scope.mandal)
+      : undefined;
+
+  // A block whose district is missing from the lists cannot be scoped to
+  // coherently, so it degrades to the level that is still consistent.
+  const level: AnalyticsLevel = block && district ? 'block' : district ? 'district' : mandal ? 'mandal' : 'state';
+
+  return {
+    mandal,
+    district: level === 'state' ? undefined : district,
+    block: level === 'block' ? block : undefined,
+    level,
+  };
+}
+
+/**
+ * One builder for all four analytics scopes — state, mandal, district, block.
+ *
+ * The level is not passed in; it is whatever the deepest supplied code implies.
+ * Ancestors are derived rather than trusted, so a bookmarked `?block=B050` alone
+ * still resolves its district and mandal, and a mismatched chain (a district that
+ * isn't in the given mandal) is corrected instead of rendering a contradiction.
+ */
+export async function buildAnalyticsData(scope: {
+  mandal?: string;
+  district?: string;
+  block?: string;
+}): Promise<AnalyticsData> {
+  const state = await buildStateDashboardData();
+  const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
+  const cycleId = cycle?.id ?? null;
+
+  const { mandal, district, block, level } = resolveAnalyticsScope(state, scope);
+  const mandalCode = mandal?.code ?? '';
+  const districtCode = district?.code ?? '';
+  const blockCode = block?.code ?? '';
+
+  const districtsInMandal = mandalCode
+    ? state.districts.filter((d) => d.mandalCode === mandalCode).map((d) => d.code)
+    : [];
+
+  const schoolWhere: Prisma.SchoolWhereInput = blockCode
+    ? { blockCode }
+    : districtCode
+      ? { districtCode }
+      : mandalCode
+        ? { districtCode: { in: districtsInMandal } }
+        : {};
+
+  const scopeKey = `${mandalCode || 'state'}-${districtCode || 'all'}-${blockCode || 'all'}`;
+
+  const [totalSchools, rawAvg, benchmarks, scopedWorkflow, perf, counts] = await Promise.all([
+    prisma.school.count({ where: schoolWhere }),
+    avgScoreFor(cycleId, schoolWhere),
+    computeBenchmarks(cycleId, mandalCode, districtCode || undefined, state),
+    level === 'state' ? Promise.resolve(null) : workflowCounts(cycleId, schoolWhere),
+    performanceCounts(cycleId, schoolWhere),
+    schoolCountMaps(),
+  ]);
+
+  // State scope keeps the mock statewide breakdown, because buildStateDashboardData
+  // deliberately sets totalSchools to that breakdown's sum so the two agree. Real
+  // counts here would show ~222 schools' stages against a total of 2.5 lakh.
+  const workflow = scopedWorkflow ?? state.workflow;
+
+  // The table one rung down. At block scope there is nothing below to rank.
+  let rankedChildren: RankedChild[] = [];
+  let childUnit: AnalyticsData['childUnit'] = '';
+  if (level === 'state') {
+    childUnit = 'Mandal';
+    rankedChildren = benchmarks.mandalAvgs.map((m) => ({
+      code: m.code,
+      name: m.name,
+      avg: Math.round(m.avg),
+      schools: state.districts
+        .filter((d) => d.mandalCode === m.code)
+        .reduce((sum, d) => sum + (counts.districts.get(d.code) ?? 0), 0),
+    }));
+  } else if (level === 'mandal') {
+    childUnit = 'District';
+    rankedChildren = benchmarks.districtAvgs.map((d) => ({
+      code: d.code,
+      name: d.name,
+      avg: Math.round(d.avg),
+      schools: counts.districts.get(d.code) ?? 0,
+    }));
+  } else if (level === 'district') {
+    childUnit = 'Block';
+    rankedChildren = benchmarks.blockAvgs.map((b) => ({
+      code: b.code,
+      name: b.name,
+      avg: Math.round(b.avg),
+      schools: counts.blocks.get(b.code) ?? 0,
+    }));
+  }
+
+  const managementBars = [
+    { type: 'Government', score: 52 + (scopeKey.length % 20), color: '#10B981' },
+    { type: 'Govt Aided Schools', score: 48 + (scopeKey.length % 15), color: '#F5B731' },
+    { type: 'Private Aided', score: 55 + (scopeKey.length % 12), color: '#F97316' },
+    { type: 'Private', score: 60 + (scopeKey.length % 10), color: '#EF4444' },
+  ];
+
+  const disputeScope = blockCode
+    ? { blockCode }
+    : districtCode
+      ? { districtCode }
+      : mandalCode
+        ? { mandalCode }
+        : {};
+
+  const scopeName =
+    block?.nameEn ?? district?.nameEn ?? mandal?.nameEn ?? 'Uttar Pradesh';
+
+  return {
+    ...state,
+    level,
+    scopeName,
+    mandalCode,
+    mandalName: mandal?.nameEn ?? '',
+    districtCode,
+    districtName: district?.nameEn ?? '',
+    blockCode,
+    blockName: block?.nameEn ?? '',
+    rankedChildren,
+    childUnit,
+    totalSchools: level === 'state' ? state.totalSchools : totalSchools,
+    averageScore: level === 'state' ? state.averageScore : Math.round(rawAvg),
+    workflow,
+    lowPerforming: level === 'state' ? state.lowPerforming : perf.low,
+    highPerforming: level === 'state' ? state.highPerforming : perf.high,
+    infraGaps: await infraGapsFor(
+      level === 'state' ? state.totalSchools : totalSchools,
+      scopeKey,
+    ),
+    domainGaps: await domainGaps(cycleId, scopeKey),
+    disputes: await disputeAnalytics(disputeScope),
+    managementBars,
+    mandalRank: benchmarks.mandalRank,
+    topMandalBenchmark: benchmarks.topMandalBenchmark,
+    topDistrictInMandal: benchmarks.topDistrictInMandal,
+    topBlockInScope: benchmarks.topBlockInScope,
+  };
 }
 
 const CATEGORY_CODE_TO_DOMAIN: Record<string, string> = {

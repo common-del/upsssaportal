@@ -107,7 +107,7 @@ export function UnifiedAppHeader({
           </div>
           <div className="hidden min-w-0 sm:block">
             <p className="truncate text-sm font-bold text-white underline-offset-4 group-hover:underline sm:text-base">
-              SSSA Uttar Pradesh
+              State School Standard Authority (SSSA), Uttar Pradesh
             </p>
             <p className="truncate text-xs text-white/70">School Education Department, Uttar Pradesh</p>
           </div>

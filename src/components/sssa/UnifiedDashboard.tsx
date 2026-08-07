@@ -140,7 +140,6 @@ export function UnifiedDashboard({
       <HeroCards
         totalSchools={data.totalSchools}
         averageScore={data.averageScore}
-        lastCycleDelta={data.lastCycleDelta}
       />
       <SubmissionProgress workflow={data.workflow} totalSchools={data.totalSchools} />
       <PerformanceHighlights low={data.lowPerforming} high={data.highPerforming} />

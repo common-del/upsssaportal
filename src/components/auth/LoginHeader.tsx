@@ -38,7 +38,7 @@ export function LoginHeader() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-white underline-offset-4 group-hover:underline sm:text-base">
-                SSSA Uttar Pradesh
+                State School Standard Authority (SSSA), Uttar Pradesh
               </p>
               <p className="hidden truncate text-xs text-white/70 sm:block">
                 School Education Department, Uttar Pradesh

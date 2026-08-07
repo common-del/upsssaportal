@@ -129,7 +129,6 @@ function StatCards() {
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
               Average Score
             </p>
-            <p className="mt-0.5 text-xs font-medium text-green-600">▲ 2.3% from last cycle</p>
             <p className="mt-1 text-2xl font-bold text-[#1B2A6B]">54.2%</p>
           </div>
           <TrendingUp className="text-green-600" size={28} />

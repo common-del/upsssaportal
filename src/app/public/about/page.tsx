@@ -159,12 +159,8 @@ export default function AboutPage() {
           </div>
         </ContentCard>
       </div>
-
-      <footer className="bg-[#1B2A6B] py-6 text-center text-sm text-white/90">
-        <p>
-          © 2025 State School Standards Authority, Uttar Pradesh. All rights reserved.
-        </p>
-      </footer>
+      {/* No footer here: PublicLayout already renders PublicFooter on every
+          /public route, and this page had a second copy of the same line. */}
     </div>
   );
 }

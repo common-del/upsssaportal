@@ -116,11 +116,16 @@ export const DISPUTE_CATEGORIES_TABLE = [
   'Infrastructure claim mismatch',
 ] as const;
 
+/**
+ * Listed in the order a school actually moves through them, so the progress bar
+ * reads left to right as a journey. Anything consuming this must key off `key`,
+ * never off array position - the order is presentational and will change again.
+ */
 export const WORKFLOW_STAGES = [
   { key: 'not_started', label: 'Not Started', color: '#9CA3AF' },
+  { key: 'draft', label: 'Draft', color: '#A855F7' },
   { key: 'submitted', label: 'Submitted Self Evaluation', color: '#3B82F6' },
   { key: 'under_review', label: 'Under External Review', color: '#14B8A6' },
   { key: 'inconsistencies', label: 'Inconsistencies Found in External Evaluation', color: '#EF4444' },
-  { key: 'draft', label: 'Draft', color: '#A855F7' },
   { key: 'verified', label: 'Verified', color: '#10B981' },
 ] as const;

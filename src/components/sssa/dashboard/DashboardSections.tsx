@@ -8,6 +8,7 @@ import {
   Circle,
   ClipboardList,
   FileEdit,
+  FileSearch,
   FileWarning,
   Send,
   Trophy,
@@ -28,16 +29,22 @@ import { DOMAIN_CHART_LABELS } from '@/lib/up-sqaaf-framework';
 const NAVY = '#1B2A6B';
 const YELLOW = '#F5B731';
 
-const STAGE_ICONS = [Circle, Send, FileEdit, FileWarning, FileEdit, CheckCircle2] as const;
+/** Keyed, not positional - the stage order is presentational and changes. */
+const STAGE_ICONS: Record<string, typeof Circle> = {
+  not_started: Circle,
+  draft: FileEdit,
+  submitted: Send,
+  under_review: FileSearch,
+  inconsistencies: FileWarning,
+  verified: CheckCircle2,
+};
 
 export function HeroCards({
   totalSchools,
   averageScore,
-  lastCycleDelta,
 }: {
   totalSchools: number;
   averageScore: number;
-  lastCycleDelta: number | null;
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -49,9 +56,6 @@ export function HeroCards({
       <div className="relative overflow-hidden rounded-2xl p-6 shadow-sm" style={{ backgroundColor: YELLOW, color: NAVY }}>
         <TrendingUp className="absolute right-4 top-4 h-10 w-10 opacity-50" />
         <p className="text-sm font-medium uppercase tracking-wide">Average Score</p>
-        {lastCycleDelta != null && (
-          <p className="mt-1 text-xs font-medium opacity-80">{lastCycleDelta}% from last cycle</p>
-        )}
         <p className="mt-2 text-4xl font-bold">{averageScore > 0 ? `${averageScore}%` : '—'}</p>
       </div>
     </div>
@@ -86,8 +90,8 @@ export function SubmissionProgress({
         ))}
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {workflow.map((w, i) => {
-          const Icon = STAGE_ICONS[i] ?? ClipboardList;
+        {workflow.map((w) => {
+          const Icon = STAGE_ICONS[w.key] ?? ClipboardList;
           return (
             <div key={w.key} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
               <Icon className="h-5 w-5" style={{ color: w.color }} />

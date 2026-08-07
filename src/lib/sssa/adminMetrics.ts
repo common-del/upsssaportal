@@ -28,7 +28,6 @@ export type StateDashboardData = {
   cycleName: string;
   totalSchools: number;
   averageScore: number;
-  lastCycleDelta: number | null;
   workflow: WorkflowStageCount[];
   lowPerforming: number;
   highPerforming: number;
@@ -66,10 +65,13 @@ async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.Scho
     ...(schoolUdises ? { schoolUdise: { in: schoolUdises } } : {}),
   };
 
-  const [submittedSubs, assignedRows, highDelta] = await Promise.all([
+  const [submittedSubs, draftSubs, assignedRows, highDelta, verifiedCount] = await Promise.all([
     prisma.selfAssessmentSubmission.findMany({
       where: { ...saWhere, status: 'SUBMITTED' },
       select: { schoolUdise: true },
+    }),
+    prisma.selfAssessmentSubmission.count({
+      where: { ...saWhere, status: 'DRAFT' },
     }),
     prisma.verifierAssignment.findMany({
       where: {
@@ -83,6 +85,13 @@ async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.Scho
         cycleId,
         ...(schoolUdises ? { schoolUdise: { in: schoolUdises } } : {}),
         selfScorePercent: { not: null },
+        verifierScorePercent: { not: null },
+      },
+    }),
+    prisma.result.count({
+      where: {
+        cycleId,
+        ...(schoolUdises ? { schoolUdise: { in: schoolUdises } } : {}),
         verifierScorePercent: { not: null },
       },
     }),
@@ -102,15 +111,27 @@ async function workflowCounts(cycleId: string | null, schoolFilter?: Prisma.Scho
   );
   const underReview = Math.max(0, assignedSubmitted - inconsistencies);
   const awaitingVerifier = Math.max(0, submitted - assignedSubmitted);
-  // Everything that hasn't submitted yet (whether truly not started or a saved draft).
-  const draft = Math.max(0, total - submitted);
+  const draft = Math.min(draftSubs, Math.max(0, total - submitted));
+  // No submission row at all - neither started nor saved.
+  const notStarted = Math.max(0, total - submitted - draft);
 
-  const counts = [awaitingVerifier, underReview, inconsistencies, draft];
+  // Keyed, not positional. This used to be a bare array indexed against
+  // WORKFLOW_STAGES, which put every count under the wrong label (draft's
+  // number sat under "Inconsistencies Found", and Verified was always 0).
+  // Reordering the stages would have shuffled that silently.
+  const byKey: Record<string, number> = {
+    not_started: notStarted,
+    draft,
+    submitted: awaitingVerifier,
+    under_review: underReview,
+    inconsistencies,
+    verified: Math.min(verifiedCount, submitted),
+  };
 
-  return WORKFLOW_STAGES.map((s, i) => ({
+  return WORKFLOW_STAGES.map((s) => ({
     ...s,
-    count: counts[i] ?? 0,
-    pct: pct(counts[i] ?? 0, total),
+    count: byKey[s.key] ?? 0,
+    pct: pct(byKey[s.key] ?? 0, total),
   }));
 }
 
@@ -266,7 +287,6 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
 
   let totalSchools = await prisma.school.count();
   let averageScore = 0;
-  let lastCycleDelta: number | null = null;
 
   if (cycle) {
     const results = await prisma.result.findMany({
@@ -277,7 +297,6 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
       averageScore = Math.round(
         results.reduce((s, r) => s + (r.finalScorePercent ?? 0), 0) / results.length,
       );
-      lastCycleDelta = 3;
     }
   }
 
@@ -323,7 +342,6 @@ export async function buildStateDashboardData(): Promise<StateDashboardData> {
     cycleName: cycle?.name ?? 'SSSA Cycle 2025-26 (Annual)',
     totalSchools,
     averageScore,
-    lastCycleDelta,
     workflow,
     lowPerforming,
     highPerforming,

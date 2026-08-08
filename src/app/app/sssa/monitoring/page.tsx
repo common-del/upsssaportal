@@ -1,301 +1,52 @@
-import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
-import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
-import { getBatchRatingAggregates } from '@/lib/actions/rating';
-import MonitoringClient from '@/components/monitoring/MonitoringClient';
-import { School, PlayCircle, CheckCircle2, UserCheck } from 'lucide-react';
+import { buildExceptions } from '@/lib/sssa/exceptions';
+import { ExceptionMonitor } from '@/components/sssa/ExceptionMonitor';
 
-const PAGE_SIZE = 20;
-
+/**
+ * Self Assessment Monitoring, rebuilt exception-first.
+ *
+ * It used to open on funnel tiles and a paginated list of all 32,579 schools,
+ * which made finding the handful that need chasing the officer's job. It now
+ * opens on what is wrong. The funnel moved to the School Directory, where the
+ * full list already lives, so neither is duplicated.
+ */
 export default async function MonitoringPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const t = await getTranslations('monitoring');
   const sp = await searchParams;
 
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
-        {t('noCycle')}
+        No active cycle. Start one to see what needs attention.
       </div>
     );
   }
 
-  const framework = await prisma.framework.findUnique({ where: { cycleId: cycle.id } });
+  const groups = await buildExceptions(cycle.id);
 
-  // Funnel stats
-  const [totalSchools, started, submitted, verifierSubmitted] = await Promise.all([
-    prisma.school.count(),
-    prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, startedAt: { not: null } } }),
-    prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
-    prisma.verificationSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
-  ]);
-
-  // Determine view mode
-  const view = sp.view === 'district' ? 'district' : 'schools';
-  const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
-  const filterMandal = sp.mandal ?? '';
-  const filterDistrict = sp.district ?? '';
-  const filterBlock = sp.block ?? '';
-  const filterStatus = sp.status ?? '';
-  const filterSa = sp.sa ?? '';
-  const filterPerformance = sp.performance === 'low' || sp.performance === 'high' ? sp.performance : '';
-  const searchQ = sp.q ?? '';
-
-  // Fetch districts and blocks for filters - scoped to the mandal when a Mandal-level
-  // dashboard tile links in with ?mandal=... (previously ignored entirely, so a Mandal
-  // dashboard's Low/High Performing link silently showed the unscoped statewide list).
-  const [districts, blocks] = await Promise.all([
-    prisma.district.findMany({
-      where: filterMandal ? { mandalCode: filterMandal } : undefined,
-      orderBy: { nameEn: 'asc' },
-      select: { code: true, nameEn: true, nameHi: true },
-    }),
-    filterDistrict
-      ? prisma.block.findMany({ where: { districtCode: filterDistrict }, orderBy: { nameEn: 'asc' }, select: { code: true, nameEn: true, nameHi: true } })
-      : Promise.resolve([]),
-  ]);
-
-  let schoolsData: {
-    rows: { udise: string; nameEn: string; nameHi: string; districtCode: string; blockCode: string; category: string; saStatus: string; saScore: number | null; verifierScore: number | null; finalScore: number | null; ratingAvg: number | null; ratingCount: number }[];
-    total: number;
-  } = { rows: [], total: 0 };
-
-  let districtData: {
-    code: string; nameEn: string; nameHi: string; total: number; started: number; submitted: number; avgScore: number | null; avgVerifierScore: number | null; avgRating: number | null;
-  }[] = [];
-
-  if (view === 'schools') {
-    const where: Prisma.SchoolWhereInput = {};
-    if (filterDistrict) where.districtCode = filterDistrict;
-    else if (filterMandal) where.districtCode = { in: districts.map((d) => d.code) };
-    if (filterBlock) where.blockCode = filterBlock;
-    if (searchQ) {
-      where.OR = [
-        { nameEn: { contains: searchQ, mode: 'insensitive' } },
-        { nameHi: { contains: searchQ, mode: 'insensitive' } },
-        { udise: { contains: searchQ } },
-      ];
-    }
-
-    // Resolve the performance filter to a concrete udise list first so
-    // pagination below stays accurate - otherwise a school matching "low"/
-    // "high" could fall outside the current page before the filter is even
-    // applied. A final score only counts here if it's backed by a verifier
-    // score - a result can't be "final" off of self-assessment alone.
-    if (filterPerformance) {
-      const matches = await prisma.result.findMany({
-        where: {
-          cycleId: cycle.id,
-          verifierScorePercent: { not: null },
-          finalScorePercent: filterPerformance === 'low' ? { lt: 40 } : { gte: 76 },
-        },
-        select: { schoolUdise: true },
-      });
-      where.udise = { in: matches.map((m) => m.schoolUdise) };
-    }
-
-    const [schoolRows, total] = await Promise.all([
-      prisma.school.findMany({
-        where,
-        orderBy: { nameEn: 'asc' },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
-        select: { udise: true, nameEn: true, nameHi: true, districtCode: true, blockCode: true, category: true },
-      }),
-      prisma.school.count({ where }),
-    ]);
-
-    const udises = schoolRows.map((s) => s.udise);
-
-    // Batch get submissions for these schools
-    const submissions = await prisma.selfAssessmentSubmission.findMany({
-      where: { cycleId: cycle.id, schoolUdise: { in: udises } },
-      select: { schoolUdise: true, status: true, startedAt: true },
-    });
-    const subMap = new Map(submissions.map((s) => [s.schoolUdise, s]));
-
-    // Batch scores
-    const scores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, udises) : {};
-    const vScores = framework ? await getBatchVerificationScores(cycle.id, framework.id, udises) : {};
-
-    // Final (Result) scores - only counted when backed by a verifier score
-    // (Result.verifierScorePercent), same rule as the performance filter above.
-    const results = await prisma.result.findMany({
-      where: { cycleId: cycle.id, schoolUdise: { in: udises }, verifierScorePercent: { not: null } },
-      select: { schoolUdise: true, finalScorePercent: true },
-    });
-    const finalScores = new Map(results.map((r) => [r.schoolUdise, r.finalScorePercent]));
-
-    // Batch ratings
-    const ratings = await getBatchRatingAggregates(udises);
-
-    // Apply status filter post-fetch if needed
-    let rows = schoolRows.map((s) => {
-      const sub = subMap.get(s.udise);
-      let saStatus = 'not_started';
-      if (sub?.status === 'SUBMITTED') saStatus = 'submitted';
-      else if (sub?.startedAt) saStatus = 'draft';
-
-      const sc = scores[s.udise];
-      const vs = vScores[s.udise];
-      const rt = ratings[s.udise];
-
-      return {
-        ...s,
-        saStatus,
-        saScore: saStatus === 'submitted' ? (sc?.scorePercent ?? null) : null,
-        verifierScore: vs?.scorePercent ?? null,
-        finalScore: finalScores.get(s.udise) ?? null,
-        ratingAvg: rt?.avg ?? null,
-        ratingCount: rt?.count ?? 0,
-      };
-    });
-
-    if (filterStatus) {
-      rows = rows.filter((r) => r.saStatus === filterStatus);
-    }
-    if (filterSa === 'with') {
-      rows = rows.filter((r) => r.saStatus !== 'not_started');
-    } else if (filterSa === 'without') {
-      rows = rows.filter((r) => r.saStatus === 'not_started');
-    }
-
-    schoolsData = { rows, total: (filterStatus || filterSa) ? rows.length : total };
-  } else {
-    // District view: aggregate
-    const allDistricts = await prisma.district.findMany({
-      orderBy: { nameEn: 'asc' },
-      select: { code: true, nameEn: true, nameHi: true },
-    });
-
-    const districtSchoolCounts = await prisma.school.groupBy({
-      by: ['districtCode'],
-      _count: { _all: true },
-    });
-    const countMap = new Map(districtSchoolCounts.map((d) => [d.districtCode, d._count._all]));
-
-    const allSubs = await prisma.selfAssessmentSubmission.findMany({
-      where: { cycleId: cycle.id },
-      select: { schoolUdise: true, status: true, startedAt: true, school: { select: { districtCode: true } } },
-    });
-
-    // Batch all school udises for scores
-    const allSchoolUdises = allSubs.map((s) => s.schoolUdise);
-    const allScores = framework ? await getBatchSelfAssessmentScores(cycle.id, framework.id, allSchoolUdises) : {};
-    const allVScores = framework ? await getBatchVerificationScores(cycle.id, framework.id, allSchoolUdises) : {};
-    const allRatings = await getBatchRatingAggregates(allSchoolUdises);
-
-    const schoolsByDistrict = await prisma.school.findMany({
-      select: { udise: true, districtCode: true },
-    });
-    const schoolDistrictMap = new Map(schoolsByDistrict.map((s) => [s.udise, s.districtCode]));
-
-    const districtAgg: Record<string, { started: number; submitted: number; scores: number[]; vScores: number[]; ratings: number[] }> = {};
-    for (const d of allDistricts) {
-      districtAgg[d.code] = { started: 0, submitted: 0, scores: [], vScores: [], ratings: [] };
-    }
-
-    for (const sub of allSubs) {
-      const dc = sub.school.districtCode;
-      if (!districtAgg[dc]) continue;
-      if (sub.startedAt) districtAgg[dc].started++;
-      if (sub.status === 'SUBMITTED') districtAgg[dc].submitted++;
-    }
-
-    for (const [udise, sc] of Object.entries(allScores)) {
-      if (sc.scorePercent !== null) {
-        const dc = schoolDistrictMap.get(udise);
-        if (dc && districtAgg[dc]) districtAgg[dc].scores.push(sc.scorePercent);
-      }
-    }
-
-    for (const [udise, vs] of Object.entries(allVScores)) {
-      if (vs.scorePercent !== null) {
-        const dc = schoolDistrictMap.get(udise);
-        if (dc && districtAgg[dc]) districtAgg[dc].vScores.push(vs.scorePercent);
-      }
-    }
-
-    for (const [udise, rt] of Object.entries(allRatings)) {
-      if (rt.avg > 0) {
-        const dc = schoolDistrictMap.get(udise);
-        if (dc && districtAgg[dc]) districtAgg[dc].ratings.push(rt.avg);
-      }
-    }
-
-    districtData = allDistricts.map((d) => {
-      const agg = districtAgg[d.code] ?? { started: 0, submitted: 0, scores: [], vScores: [], ratings: [] };
-      return {
-        ...d,
-        total: countMap.get(d.code) ?? 0,
-        started: agg.started,
-        submitted: agg.submitted,
-        avgScore: agg.scores.length > 0 ? Math.round(agg.scores.reduce((a, b) => a + b, 0) / agg.scores.length) : null,
-        avgVerifierScore: agg.vScores.length > 0 ? Math.round(agg.vScores.reduce((a, b) => a + b, 0) / agg.vScores.length) : null,
-        avgRating: agg.ratings.length > 0 ? parseFloat((agg.ratings.reduce((a, b) => a + b, 0) / agg.ratings.length).toFixed(1)) : null,
-      };
-    });
-  }
-
-  const startedPct = totalSchools > 0 ? Math.round((started / totalSchools) * 100) : 0;
-  const submittedPct = totalSchools > 0 ? Math.round((submitted / totalSchools) * 100) : 0;
-  const verifiedPct = totalSchools > 0 ? Math.round((verifierSubmitted / totalSchools) * 100) : 0;
+  // Analytics' Low/High Performing tiles still link in with ?performance=…, so
+  // that lands on the closest exception rather than 404-ing on a dead filter.
+  const requested = sp.flag ?? (sp.performance ? 'low-districts' : '');
+  const selectedId = groups.some((g) => g.id === requested) ? requested : (groups[0]?.id ?? '');
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-gray-600">
-        {t('cycle')}: <span className="font-semibold text-[#1B2A6B]">{cycle.name}</span>
-      </p>
+    <div className="flex flex-col gap-6">
+      <header>
+        <h1 className="text-2xl font-bold text-gray-900">Self Assessment Monitoring</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Active Cycle: <span className="font-semibold text-gray-900">{cycle.name}</span> · what
+          needs attention first
+        </p>
+      </header>
 
-      {/* Cycle summary banner */}
-      <div className="mt-4 rounded-lg border border-navy-200 bg-navy-50 px-4 py-2.5 text-sm text-navy-800">
-        {t('cycleBanner', { total: totalSchools, started, submitted })}
-      </div>
-
-      {/* Funnel cards */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-4">
-        <StatCard icon={<School size={22} />} bg="bg-navy-50" color="text-navy-700" label={t('totalSchools')} value={totalSchools} />
-        <StatCard icon={<PlayCircle size={22} />} bg="bg-amber-50" color="text-amber-600" label={t('started')} value={started} pct={startedPct} />
-        <StatCard icon={<CheckCircle2 size={22} />} bg="bg-green-50" color="text-green-600" label={t('submitted')} value={submitted} pct={submittedPct} />
-        <StatCard icon={<UserCheck size={22} />} bg="bg-indigo-50" color="text-indigo-600" label={t('verifierSubmitted')} value={verifierSubmitted} pct={verifiedPct} />
-      </div>
-
-      {/* Interactive table section */}
-      <MonitoringClient
-        view={view}
-        schoolsData={schoolsData}
-        districtData={districtData}
-        districts={districts}
-        blocks={blocks}
-        filterDistrict={filterDistrict}
-        filterBlock={filterBlock}
-        filterStatus={filterStatus}
-        filterSa={filterSa}
-        filterPerformance={filterPerformance}
-        searchQ={searchQ}
-        page={page}
-        pageSize={PAGE_SIZE}
-        totalSchools={schoolsData.total}
-      />
-    </div>
-  );
-}
-
-function StatCard({ icon, bg, color, label, value, pct }: {
-  icon: React.ReactNode; bg: string; color: string; label: string; value: number; pct?: number;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-white p-5">
-      <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full ${bg} ${color}`}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-navy-900">{value}</p>
-      <p className="mt-0.5 text-sm text-text-secondary">{label}{pct !== undefined ? ` (${pct}%)` : ''}</p>
+      <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+        <ExceptionMonitor groups={groups} selectedId={selectedId} />
+      </Suspense>
     </div>
   );
 }

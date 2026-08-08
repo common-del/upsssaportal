@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
+import { CycleFunnel, type CycleFunnelCounts } from '@/components/sssa/CycleFunnel';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
@@ -37,8 +38,22 @@ export default async function SssaSchoolDirectoryPage(props: {
   let districts: { code: string; nameEn: string; nameHi: string }[] = [];
   let rows: DirectoryRow[] = [];
   let usingFallback = false;
+  let funnel: CycleFunnelCounts | null = null;
 
   try {
+    const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
+    if (cycle) {
+      const [totalSchools, started, submitted, verified] = await Promise.all([
+        prisma.school.count(),
+        prisma.selfAssessmentSubmission.count({
+          where: { cycleId: cycle.id, startedAt: { not: null } },
+        }),
+        prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
+        prisma.verificationSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
+      ]);
+      funnel = { cycleName: cycle.name, totalSchools, started, submitted, verified };
+    }
+
     const districtRecords = await prisma.district.findMany({ orderBy: { nameEn: 'asc' } });
     districts = districtRecords.map((d) => ({ code: d.code, nameEn: d.nameEn, nameHi: d.nameHi }));
 
@@ -118,6 +133,11 @@ export default async function SssaSchoolDirectoryPage(props: {
       <header>
         <h1 className="text-2xl font-bold text-gray-900">School Directory</h1>
       </header>
+
+      {/* Cycle progress sits with the register rather than on Monitoring, which
+          is now exception-first. This is the page that already lists every
+          school, so "how many of them have got how far" belongs above it. */}
+      {funnel && <CycleFunnel counts={funnel} />}
 
       {usingFallback && (
         <p className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">

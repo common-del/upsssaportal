@@ -1,17 +1,17 @@
-import { SssaAnalytics } from '@/components/sssa/SssaAnalytics';
-import { buildAnalyticsData } from '@/lib/sssa/adminMetrics';
+import { buildStateDashboard } from '@/lib/sssa/stateDashboard';
+import { StateDashboard } from '@/components/sssa/StateDashboard';
 
 /**
- * The single analytics surface. State, mandal, district and block used to be four
- * nav entries rendering the same set of panels; the level is now just how far the
- * query has narrowed, and the ranked table on each view is what narrows it.
+ * The SSSA landing page: one state score, and who sits at each end of it.
+ *
+ * This used to render the analytics surface — a scope cascade with submission
+ * progress, domain gaps and dispute breakdowns. Those questions now belong to the
+ * pages that own them: how far the cycle has got is on the School Directory beside
+ * the register, verification backlog is on Verification, and grievances are split
+ * across Complaints and Appeals, each carrying its own count in the sidebar. What
+ * is left here is the summary that had no home — the score itself.
  */
-export default async function SssaAnalyticsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ mandal?: string; district?: string; block?: string }>;
-}) {
-  const { mandal, district, block } = await searchParams;
-  const data = await buildAnalyticsData({ mandal, district, block });
-  return <SssaAnalytics data={data} />;
+export default async function SssaDashboardPage() {
+  const data = await buildStateDashboard();
+  return <StateDashboard data={data} />;
 }

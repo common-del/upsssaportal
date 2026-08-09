@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
-import { CycleFunnel, type CycleFunnelCounts } from '@/components/sssa/CycleFunnel';
+import { CycleFunnel, BehindBlocks } from '@/components/sssa/CycleFunnel';
+import { buildCycleCounts, buildBehindBlocks, type CycleCounts, type BehindBlock } from '@/lib/sssa/cycleCounts';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
@@ -38,21 +39,11 @@ export default async function SssaSchoolDirectoryPage(props: {
   let districts: { code: string; nameEn: string; nameHi: string }[] = [];
   let rows: DirectoryRow[] = [];
   let usingFallback = false;
-  let funnel: CycleFunnelCounts | null = null;
+  let funnel: CycleCounts | null = null;
+  let behind: BehindBlock[] = [];
 
   try {
-    const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
-    if (cycle) {
-      const [totalSchools, started, submitted, verified] = await Promise.all([
-        prisma.school.count(),
-        prisma.selfAssessmentSubmission.count({
-          where: { cycleId: cycle.id, startedAt: { not: null } },
-        }),
-        prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
-        prisma.verificationSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
-      ]);
-      funnel = { cycleName: cycle.name, totalSchools, started, submitted, verified };
-    }
+    [funnel, behind] = await Promise.all([buildCycleCounts(), buildBehindBlocks()]);
 
     const districtRecords = await prisma.district.findMany({ orderBy: { nameEn: 'asc' } });
     districts = districtRecords.map((d) => ({ code: d.code, nameEn: d.nameEn, nameHi: d.nameHi }));
@@ -75,7 +66,9 @@ export default async function SssaSchoolDirectoryPage(props: {
     });
 
     rows = matches.map((s) => {
-      const extra = deriveResultFields(s.udise);
+      // Real management value where we have it, so the Type column stops being a
+      // hash of the UDISE.
+      const extra = deriveResultFields(s.udise, s.management);
       return {
         id: s.id,
         udise: s.udise,
@@ -131,13 +124,18 @@ export default async function SssaSchoolDirectoryPage(props: {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">School Directory</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Schools</h1>
+        <p className="mt-1 text-sm text-gray-500">The register, and how far the cycle has got</p>
       </header>
 
-      {/* Cycle progress sits with the register rather than on Monitoring, which
-          is now exception-first. This is the page that already lists every
-          school, so "how many of them have got how far" belongs above it. */}
+      {/* Cycle progress sits with the register rather than on its own page. This
+          is where every school is already listed, so "how many of them have got
+          how far" belongs above it. */}
       {funnel && <CycleFunnel counts={funnel} />}
+
+      {/* The counts say how many have not started. This says where they are — the
+          only part of the old monitoring page that no other page now covers. */}
+      <BehindBlocks blocks={behind} />
 
       {usingFallback && (
         <p className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">

@@ -75,10 +75,13 @@ export function DisputesManagement(props: DashboardProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <header>
-          <h1 className="text-2xl font-bold text-gray-900">Dispute Resolution Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
+          {/* Named for who files them, not for the table they live in. A school
+              disputing its own verification is an Appeal and has its own page —
+              different filer, different object, different resolution path. */}
           <p className="mt-1 max-w-3xl text-sm text-gray-600">
-            Monitor inconsistencies found in external evaluation, dispute reviews, clarification
-            tracking, and resolution status statewide
+            Raised by parents and the public against a school. Each carries a deadline and
+            escalates on its own — school, then district, then here.
           </p>
         </header>
         <button

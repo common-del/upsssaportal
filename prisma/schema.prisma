@@ -65,6 +65,13 @@ model School {
   nameEn              String
   nameHi              String
   category            String
+  /// Who runs the school: GOVERNMENT, AIDED or PRIVATE. UDISE already classifies
+  /// every school this way, so this is imported from the same extract the register
+  /// came from rather than collected from schools. Nullable because the backfill
+  /// cannot invent a value for a school the extract does not cover — a null here
+  /// means "not yet imported", never "unknown type", and the dashboard excludes
+  /// nulls from the management breakdown rather than bucketing them.
+  management          String?
   districtCode        String
   blockCode           String
   addressEn           String?

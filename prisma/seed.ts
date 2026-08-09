@@ -26,6 +26,7 @@ function buildSchools() {
     nameEn: string;
     nameHi: string;
     category: string;
+    management: string;
     districtCode: string;
     blockCode: string;
     addressEn: string | null;
@@ -52,6 +53,9 @@ function buildSchools() {
         nameEn: `${block.nameEn} ${cat} School ${i}`,
         nameHi: `${block.nameHi} ${cat === 'Primary' ? 'प्राथमिक' : cat === 'Upper Primary' ? 'उच्च प्राथमिक' : 'माध्यमिक'} विद्यालय ${i}`,
         category: cat,
+        // Stands in for the UDISE extract's management column. Deterministic so a
+        // reseed does not reshuffle which school is government and which private.
+        management: (['GOVERNMENT', 'GOVERNMENT', 'PRIVATE', 'AIDED', 'GOVERNMENT'] as const)[(globalIdx - 1) % 5],
         districtCode: block.districtCode,
         blockCode: block.code,
         addressEn: i % 2 === 1 ? `${block.nameEn}, ${district.nameEn}, Uttar Pradesh` : null,
@@ -69,6 +73,7 @@ function buildSchools() {
     nameEn: 'Demo Model School',
     nameHi: 'डेमो मॉडल विद्यालय',
     category: 'Secondary',
+    management: 'GOVERNMENT',
     districtCode: 'D001',
     blockCode: 'B001',
     addressEn: 'Mohanlalganj, Lucknow, Uttar Pradesh',

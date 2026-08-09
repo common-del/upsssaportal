@@ -83,17 +83,35 @@ export function getDummySchoolRecord(udise: string): SchoolRecord | null {
   return SCHOOLS.find((s) => s.udise === udise) ?? null;
 }
 
-export function deriveResultFields(udise: string): {
+/** School.management, mapped onto the display vocabulary the directory uses. */
+const MANAGEMENT_TO_TYPE: Record<string, SchoolType> = {
+  GOVERNMENT: 'Government',
+  AIDED: 'Aided',
+  PRIVATE: 'Private',
+};
+
+/**
+ * @param management  `School.management` when the caller has the record to hand.
+ *   Pass it. Without it the type falls back to a hash of the UDISE, which is
+ *   stable and completely made up — it was the only option before the column
+ *   existed, and it is kept only so callers that genuinely have no record (the
+ *   public fallback path) still render something.
+ */
+export function deriveResultFields(
+  udise: string,
+  management?: string | null,
+): {
   type: SchoolType;
   performanceLevel: PerformanceLevel;
   feeDisclosed: boolean;
   accreditation: AccreditationStatus;
   overallScore: number;
 } {
+  const real = management ? MANAGEMENT_TO_TYPE[management] : undefined;
   const match = getDummySchoolRecord(udise);
   if (match) {
     return {
-      type: match.type,
+      type: real ?? match.type,
       performanceLevel: match.performanceLevel,
       feeDisclosed: match.feeDisclosed,
       accreditation: match.accreditation,
@@ -104,7 +122,7 @@ export function deriveResultFields(udise: string): {
   const types: SchoolType[] = ['Government', 'Aided', 'Private'];
   const score = 35 + (h % 46);
   return {
-    type: types[h % 3],
+    type: real ?? types[h % 3],
     performanceLevel: scoreToLevel(score),
     feeDisclosed: h % 2 === 0,
     accreditation: h % 3 === 0 ? 'SQAAF Verified' : 'Pending',

@@ -7,42 +7,44 @@ export type NavItem = {
 
 export type NavSection = { label?: string; items: NavItem[] };
 
+/**
+ * Eight working destinations, then a rule, then the three you touch rarely.
+ *
+ * The group headings are gone: at this length they labelled the obvious and each
+ * cost a line of vertical space. Two entries were removed rather than renamed —
+ * Analytics and Self Assessment Monitoring both answered "how is the cycle going
+ * and what is wrong", which is now split between the Dashboard and the pages that
+ * own each question.
+ *
+ * Complaints and Appeals are separate entries because they are separate mechanisms,
+ * not two views of one queue. A parent complaining about a school is a Ticket: filed
+ * on the public form, tracked by mobile, escalating on `nextDueAt` through
+ * SCHOOL → DISTRICT → SSSA. A school disputing its verification is an Appeal with
+ * AppealItem rows: one per school per cycle, argued indicator by indicator, decided
+ * only by SSSA, with no ladder and no clock. Different filer, different object,
+ * different resolution path. The only thing they share is that someone is unhappy.
+ *
+ * `exact` is required on the Dashboard: without it the prefix match would light it
+ * up on every /app/sssa/* page.
+ */
 export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
-  // One Analytics entry, not four. State / Mandal / District / Block rendered the
-  // same panels and each already carried the full cascade of dropdowns; the level
-  // is now just how far the query has narrowed. `exact` is required: without it
-  // the prefix match would light this up on every /app/sssa/* page. Scope lives in
-  // the query string, which usePathname drops, so it stays active at every level.
-  { items: [{ href: '/app/sssa', label: 'Analytics', exact: true }] },
   {
-    label: 'Directory & Disputes',
     items: [
-      { href: '/app/sssa/schools', label: 'School Directory' },
-      { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
-      { href: '/app/sssa/framework', label: 'Assessments Framework' },
-      { href: '/app/sssa/disputes', label: 'Dispute Resolution Management' },
+      { href: '/app/sssa', label: 'Dashboard', exact: true },
+      { href: '/app/sssa/schools', label: 'Schools' },
+      { href: '/app/sssa/compliance', label: 'Compliance' },
+      { href: '/app/sssa/verifiers', label: 'Verification' },
+      { href: '/app/sssa/disputes', label: 'Complaints' },
+      { href: '/app/sssa/appeals', label: 'Appeals' },
+      { href: '/app/sssa/framework', label: 'Framework' },
+      { href: '/app/sssa/users', label: 'Users' },
     ],
   },
   {
-    label: 'Administration',
-    items: [
-      { href: '/app/sssa/verifiers', label: 'Verifier Assignment' },
-      { href: '/app/sssa/users', label: 'User Management' },
-    ],
-  },
-  {
-    label: 'Account',
     items: [
       { href: '/app/sssa/notifications', label: 'Notifications' },
-      { href: '/app/sssa/activity', label: 'Activity Log' },
+      { href: '/app/sssa/help/sqaaf', label: 'Help' },
       { href: '/app/sssa/settings', label: 'Settings' },
-    ],
-  },
-  {
-    label: 'Help',
-    items: [
-      { href: '/app/sssa/help/sqaaf', label: 'How to fill SQAAF' },
-      { href: '/app/sssa/faq', label: 'FAQ' },
     ],
   },
 ];

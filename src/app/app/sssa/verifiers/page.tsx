@@ -55,6 +55,7 @@ export default async function VerifiersPage() {
           select: {
             nameEn: true,
             udise: true,
+            districtCode: true,
             district: { select: { nameEn: true } },
           },
         },
@@ -93,6 +94,7 @@ export default async function VerifiersPage() {
     udise: a.schoolUdise,
     schoolName: a.school.nameEn,
     district: a.school.district.nameEn,
+    districtCode: a.school.districtCode,
     verifierId: a.verifierUserId,
     verifierName: a.verifier.name ?? a.verifier.username,
   }));

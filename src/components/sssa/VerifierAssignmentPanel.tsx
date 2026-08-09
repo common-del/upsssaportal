@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { assignSchoolsToVerifier, reassignVerifier } from '@/lib/actions/verification';
-import { cn } from '@/lib/cn';
 
 const MAX_PER_VERIFIER = 50;
+const NAVY = '#1B2A6B';
 
 export type UnassignedSchool = {
   udise: string;
@@ -28,17 +28,34 @@ export type AssignedRow = {
   udise: string;
   schoolName: string;
   district: string;
+  districtCode: string;
   verifierId: string;
   verifierName: string;
 };
 
+/**
+ * Assignment, one row at a time.
+ *
+ * This was two panes: tick schools on the left, pick a verifier on the right,
+ * press assign. That asks you to hold a selection in your head while scrolling a
+ * separate list, and it stated the district rule in a notice — "verifiers can only
+ * be assigned schools in their own district" — while still offering every verifier
+ * in the dropdown, so the rule was yours to remember and the app's to reject.
+ *
+ * Each row now carries its own picker containing only the verifiers who are
+ * actually eligible for that school. The rule is enforced by what is in the list
+ * rather than by a sentence above it, there is no selection to lose, and a school
+ * with nobody eligible says so on its own line instead of failing on submit.
+ *
+ * Bulk assignment survives for the case it is genuinely good at — one verifier
+ * taking a whole block — but it is no longer the only way to assign anything.
+ */
 export function VerifierAssignmentPanel({
   cycleId,
   unassigned,
   verifiers,
   assigned,
   districts,
-  blocks,
 }: {
   cycleId: string;
   unassigned: UnassignedSchool[];
@@ -49,276 +66,260 @@ export function VerifierAssignmentPanel({
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'unassigned' | 'assigned'>('unassigned');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [verifierId, setVerifierId] = useState('');
   const [district, setDistrict] = useState('');
-  const [block, setBlock] = useState('');
   const [search, setSearch] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const selectedVerifier = verifiers.find((v) => v.id === verifierId);
-
-  // When a verifier is selected, auto-filter left pane to their district
-  const effectiveDistrict = selectedVerifier?.districtCode ?? district;
-
-  const blocksFiltered = useMemo(
-    () => blocks.filter((b) => !effectiveDistrict || b.districtCode === effectiveDistrict),
-    [blocks, effectiveDistrict],
+  // Local workload so a row assigned a moment ago shows its new count without a
+  // round trip — otherwise assigning three schools to one verifier shows the same
+  // "11/50" three times and looks like nothing happened.
+  const [extra, setExtra] = useState<Record<string, number>>({});
+  const loadOf = useCallback(
+    (v: VerifierRow) => v.workload + (extra[v.id] ?? 0),
+    [extra],
   );
 
-  const filteredUnassigned = useMemo(() => {
-    const q = search.toLowerCase();
-    return unassigned.filter((s) => {
-      if (effectiveDistrict && s.districtCode !== effectiveDistrict) return false;
-      if (block && s.blockCode !== block) return false;
-      if (q && !s.name.toLowerCase().includes(q) && !s.udise.includes(q)) return false;
-      return true;
-    });
-  }, [unassigned, effectiveDistrict, block, search]);
-
-  const toggle = (udise: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(udise)) next.delete(udise);
-      else next.add(udise);
-      return next;
-    });
-  };
-
-  const canAssignMore = selectedVerifier
-    ? selectedVerifier.workload + selected.size <= MAX_PER_VERIFIER
-    : true;
-
-  const assign = () => {
-    if (!verifierId || selected.size === 0) return;
-    if (!canAssignMore) {
-      setMessage(`Verifier ${selectedVerifier?.name} would exceed the 50-school cap.`);
-      return;
+  const eligibleFor = useMemo(() => {
+    const byDistrict = new Map<string, VerifierRow[]>();
+    for (const v of verifiers) {
+      // A verifier with no district set can cover anywhere; that is a data gap,
+      // not a permission, so they are offered everywhere rather than nowhere.
+      const key = v.districtCode ?? '*';
+      byDistrict.set(key, [...(byDistrict.get(key) ?? []), v]);
     }
+    // Lightest load first, so the default choice spreads work rather than piling
+    // it on whoever happens to sort first alphabetically.
+    return (districtCode: string) =>
+      [...(byDistrict.get(districtCode) ?? []), ...(byDistrict.get('*') ?? [])].sort(
+        (a, b) => loadOf(a) - loadOf(b),
+      );
+  }, [verifiers, loadOf]);
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return unassigned.filter(
+      (s) =>
+        (!district || s.districtCode === district) &&
+        (!q || s.name.toLowerCase().includes(q) || s.udise.includes(q)),
+    );
+  }, [unassigned, district, search]);
+
+  function assign(udise: string, verifierId: string, verifierName: string) {
+    setBusy(udise);
     setMessage(null);
     startTransition(async () => {
-      const res = await assignSchoolsToVerifier(cycleId, verifierId, [...selected]);
-      setMessage(res.error ?? `Assigned ${res.assigned} school(s).`);
-      setSelected(new Set());
+      const res = await assignSchoolsToVerifier(cycleId, verifierId, [udise]);
+      setBusy(null);
+      if (res.error) {
+        setMessage(res.error);
+        return;
+      }
+      setExtra((e) => ({ ...e, [verifierId]: (e[verifierId] ?? 0) + res.assigned }));
+      setMessage(`Assigned to ${verifierName}.`);
       router.refresh();
     });
-  };
+  }
+
+  function assignAllShown() {
+    // Only meaningful once narrowed to a district, because a verifier cannot take
+    // schools outside their own.
+    const target = eligibleFor(district)[0];
+    if (!target) return;
+    const udises = rows.slice(0, MAX_PER_VERIFIER - loadOf(target)).map((r) => r.udise);
+    if (udises.length === 0) return;
+    setBusy('bulk');
+    startTransition(async () => {
+      const res = await assignSchoolsToVerifier(cycleId, target.id, udises);
+      setBusy(null);
+      setExtra((e) => ({ ...e, [target.id]: (e[target.id] ?? 0) + res.assigned }));
+      setMessage(res.error ?? `Assigned ${res.assigned} schools to ${target.name}.`);
+      router.refresh();
+    });
+  }
+
+  const lightest = district ? eligibleFor(district)[0] : null;
 
   return (
-    <div className="space-y-4">
-      {/* Info banner */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-        Verifiers can only be assigned schools in their own district. Maximum {MAX_PER_VERIFIER} schools per verifier.
-      </div>
-
-      <div className="flex gap-2 rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
         {(['unassigned', 'assigned'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={cn(
-              'flex-1 rounded-lg px-3 py-2 text-sm font-semibold',
-              tab === t ? 'bg-[#1B2A6B] text-white' : 'text-gray-600 hover:bg-gray-50',
-            )}
+            className={`rounded-lg px-3.5 py-2 text-[13px] font-semibold ${
+              tab === t ? 'text-white' : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+            style={tab === t ? { background: NAVY } : undefined}
           >
-            {t === 'unassigned' ? `Unassigned (${unassigned.length})` : `Assigned Schools (${assigned.length})`}
+            {t === 'unassigned' ? `Unassigned (${unassigned.length})` : `Assigned (${assigned.length})`}
           </button>
         ))}
       </div>
 
       {message && (
-        <p className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700">{message}</p>
+        <p className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] text-gray-700">
+          {message}
+        </p>
       )}
 
-      {tab === 'unassigned' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* Left: school list */}
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={effectiveDistrict}
-                onChange={(e) => {
-                  if (!selectedVerifier?.districtCode) {
-                    setDistrict(e.target.value);
-                    setBlock('');
-                  }
-                }}
-                disabled={Boolean(selectedVerifier?.districtCode)}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm disabled:opacity-60"
+      {tab === 'unassigned' && (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search school or UDISE"
+              className="min-w-[220px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-[13px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]"
+            />
+            <select
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-[13px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]"
+            >
+              <option value="">All districts</option>
+              {districts.map((d) => (
+                <option key={d.code} value={d.code}>
+                  {d.nameEn}
+                </option>
+              ))}
+            </select>
+            {district && lightest && rows.length > 1 && (
+              <button
+                type="button"
+                onClick={assignAllShown}
+                disabled={pending}
+                className="rounded-lg border px-3 py-2 text-[13px] font-semibold disabled:opacity-50"
+                style={{ borderColor: NAVY, color: NAVY }}
               >
-                <option value="">All districts</option>
-                {districts.map((d) => (
-                  <option key={d.code} value={d.code}>
-                    {d.nameEn}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={block}
-                onChange={(e) => setBlock(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                disabled={!effectiveDistrict}
-              >
-                <option value="">All blocks</option>
-                {blocksFiltered.map((b) => (
-                  <option key={b.code} value={b.code}>
-                    {b.nameEn}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="search"
-                placeholder="Search school or UDISE"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="min-w-[140px] flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-              />
-            </div>
-            <ul className="mt-4 max-h-[420px] space-y-2 overflow-y-auto">
-              {filteredUnassigned.length === 0 ? (
-                <li className="text-sm text-gray-500">No unassigned submitted schools match filters.</li>
-              ) : (
-                filteredUnassigned.map((s) => (
-                  <li key={s.udise} className="flex items-start gap-2 rounded-lg border border-gray-100 p-2">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(s.udise)}
-                      onChange={() => toggle(s.udise)}
-                      className="mt-1"
-                    />
-                    <div className="min-w-0 text-sm">
-                      <p className="font-medium text-gray-900">{s.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {s.district} · {s.block} · {s.udise}
-                      </p>
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
+                Assign all {rows.length} to {lightest.name}
+              </button>
+            )}
+            <span className="ml-auto text-[13px] tabular-nums text-gray-500">
+              {rows.length} shown
+            </span>
           </div>
 
-          {/* Right: verifier selection */}
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <h3 className="font-semibold text-[#1B2A6B]">Verifiers</h3>
-            <ul className="mt-3 max-h-[280px] space-y-2 overflow-y-auto text-sm">
-              {verifiers.map((v) => {
-                const isFull = v.workload >= MAX_PER_VERIFIER;
-                return (
-                  <li key={v.id} className={cn('rounded-lg bg-gray-50 px-3 py-2', isFull && 'opacity-60')}>
-                    <div className="flex justify-between">
-                      <span className={isFull ? 'text-gray-400' : ''}>{v.name}</span>
-                      <span className={cn('text-xs font-semibold', isFull ? 'text-red-500' : 'text-[#1B2A6B]')}>
-                        {isFull ? `Full (${v.workload}/${MAX_PER_VERIFIER})` : `${v.workload}/${MAX_PER_VERIFIER}`}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-200">
-                      <div
-                        className={cn('h-full rounded-full transition-all', isFull ? 'bg-red-500' : 'bg-[#1B2A6B]')}
-                        style={{ width: `${Math.min((v.workload / MAX_PER_VERIFIER) * 100, 100)}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <label className="mt-4 block text-sm font-medium text-gray-700">
-              Assign selected to
-              <select
-                value={verifierId}
-                onChange={(e) => {
-                  setVerifierId(e.target.value);
-                  setBlock('');
-                }}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="">Select verifier…</option>
-                {verifiers.map((v) => {
-                  const isFull = v.workload >= MAX_PER_VERIFIER;
-                  return (
-                    <option key={v.id} value={v.id} disabled={isFull}>
-                      {v.name} ({v.workload}/{MAX_PER_VERIFIER}){isFull ? ' — Full' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
-            {selectedVerifier && (
-              <p className="mt-2 text-xs text-gray-500">
-                District: {districts.find((d) => d.code === selectedVerifier.districtCode)?.nameEn ?? 'Not set'} · Left pane filtered to this district.
-              </p>
-            )}
-            {selected.size > 0 && selectedVerifier && !canAssignMore && (
-              <p className="mt-2 text-xs font-medium text-red-600">
-                Adding {selected.size} would exceed the 50-school cap (currently {selectedVerifier.workload}).
-              </p>
-            )}
-            <button
-              type="button"
-              disabled={pending || !verifierId || selected.size === 0 || !canAssignMore}
-              onClick={assign}
-              className="mt-4 w-full rounded-xl bg-[#1B2A6B] py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {pending ? 'Assigning…' : `Assign Selected (${selected.size})`}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">School</th>
-                <th className="px-4 py-3">District</th>
-                <th className="px-4 py-3">Verifier</th>
-                <th className="px-4 py-3">Reassign</th>
+          {rows.length === 0 ? (
+            <p className="rounded-2xl border border-gray-200 bg-white px-4 py-6 text-center text-[13px] text-gray-500">
+              Nothing to assign.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+                <thead>
+                  <tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">School</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Block</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Assign to</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((s) => {
+                    const options = eligibleFor(s.districtCode).filter(
+                      (v) => loadOf(v) < MAX_PER_VERIFIER,
+                    );
+                    return (
+                      <tr key={s.udise} className="border-t border-gray-100 first:border-t-0">
+                        <td className="px-4 py-3">
+                          <span className="block font-semibold" style={{ color: NAVY }}>
+                            {s.name}
+                          </span>
+                          <span className="font-mono text-xs text-gray-500">{s.udise}</span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          {s.block}
+                          <span className="block text-xs text-gray-500">{s.district}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {options.length === 0 ? (
+                            // Says so on the row rather than offering a verifier the
+                            // server would reject.
+                            <span className="text-xs text-red-700">
+                              No verifier available in {s.district}
+                            </span>
+                          ) : (
+                            <select
+                              defaultValue=""
+                              disabled={pending && busy === s.udise}
+                              onChange={(e) => {
+                                const v = options.find((o) => o.id === e.target.value);
+                                if (v) assign(s.udise, v.id, v.name);
+                                e.target.value = '';
+                              }}
+                              className="w-full max-w-[260px] rounded-lg border border-gray-300 px-2.5 py-1.5 text-[13px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B] disabled:opacity-50"
+                            >
+                              <option value="">
+                                {busy === s.udise ? 'Assigning…' : 'Choose verifier…'}
+                              </option>
+                              {options.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  {v.name} — {loadOf(v)}/{MAX_PER_VERIFIER}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'assigned' && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+            <thead>
+              <tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
+                <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">School</th>
+                <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">District</th>
+                <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Verifier</th>
               </tr>
             </thead>
             <tbody>
-              {assigned.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                    No assignments yet.
-                  </td>
-                </tr>
-              ) : (
-                assigned.map((row) => (
-                  <tr key={row.assignmentId} className="border-b border-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{row.schoolName}</p>
-                      <p className="text-xs text-gray-500">{row.udise}</p>
+              {assigned.map((a) => {
+                // Reassignment obeys the same district rule as assignment. The
+                // current holder is always included so the row can render even if
+                // their district was changed after the assignment was made.
+                const options = eligibleFor(a.districtCode);
+                const list = options.some((v) => v.id === a.verifierId)
+                  ? options
+                  : [...verifiers.filter((v) => v.id === a.verifierId), ...options];
+                return (
+                  <tr key={a.assignmentId} className="border-t border-gray-100 first:border-t-0">
+                    <td className="px-4 py-3 font-semibold" style={{ color: NAVY }}>
+                      {a.schoolName}
                     </td>
-                    <td className="px-4 py-3">{row.district}</td>
-                    <td className="px-4 py-3">{row.verifierName}</td>
+                    <td className="px-4 py-3 text-gray-700">{a.district}</td>
                     <td className="px-4 py-3">
                       <select
-                        className="rounded border border-gray-300 px-2 py-1 text-xs"
-                        defaultValue=""
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (!v) return;
+                        defaultValue={a.verifierId}
+                        disabled={pending}
+                        onChange={(e) =>
                           startTransition(async () => {
-                            await reassignVerifier(row.assignmentId, v);
+                            await reassignVerifier(a.assignmentId, e.target.value);
                             router.refresh();
-                          });
-                          e.target.value = '';
-                        }}
+                          })
+                        }
+                        className="w-full max-w-[260px] rounded-lg border border-gray-300 px-2.5 py-1.5 text-[13px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B] disabled:opacity-50"
                       >
-                        <option value="">Reassign…</option>
-                        {verifiers
-                          .filter((ver) => ver.id !== row.verifierId && ver.workload < MAX_PER_VERIFIER)
-                          .map((ver) => (
-                            <option key={ver.id} value={ver.id}>
-                              {ver.name} ({ver.workload}/{MAX_PER_VERIFIER})
-                            </option>
-                          ))}
+                        {list.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name} — {loadOf(v)}/{MAX_PER_VERIFIER}
+                          </option>
+                        ))}
                       </select>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -6,6 +6,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
+import { generateSchoolName, type MockSchoolCategory } from './indianSchoolNames';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -145,15 +146,31 @@ async function main() {
       const udiseCode = udise(di, bi, si + 1);
       const category = weightedPick([...SCHOOL_TYPES], SCHOOL_TYPE_WEIGHTS);
       const level = pick([...LEVELS]);
-      const nameEn = `${faker.company.name()} School, ${dist.nameEn}`;
+      // UP naming conventions keyed on the UDISE, not faker.company.name() —
+      // "Pollich - White School, Kanpur Nagar" is an American company with
+      // "School" appended, and it made every list on the portal read as fiction.
+      const { nameEn, nameHi } = generateSchoolName(
+        category as MockSchoolCategory,
+        dist.nameEn,
+        dist.nameHi ?? dist.nameEn,
+        block.nameEn,
+        block.nameHi ?? block.nameEn,
+        udiseCode,
+      );
       schoolUdises.push(udiseCode);
       schoolDistrictMap[udiseCode] = dist.code;
       schoolNameMap[udiseCode] = nameEn;
       schoolRecords.push({
         udise: udiseCode,
         nameEn,
-        nameHi: nameEn,
+        nameHi,
         category,
+        management:
+          category === 'PRIVATE'
+            ? 'PRIVATE'
+            : category === 'GOVT'
+              ? 'GOVERNMENT'
+              : 'AIDED',
         districtCode: dist.code,
         blockCode: block.code,
         addressEn: faker.location.streetAddress(),

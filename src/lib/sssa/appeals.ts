@@ -17,6 +17,7 @@ export type AppealRow = {
   school: string;
   district: string;
   verifier: string | null;
+  verifierId: string | null;
   items: number;
   pending: number;
   selfScore: number | null;
@@ -25,6 +26,7 @@ export type AppealRow = {
 };
 
 export type VerifierAppealRate = {
+  verifierId: string;
   verifier: string;
   verified: number;
   appealed: number;
@@ -70,13 +72,21 @@ export async function buildAppeals(): Promise<AppealsData> {
     // it would deflate every verifier's appeal rate by whatever they have open.
     prisma.verificationSubmission.findMany({
       where: { cycleId: cycle.id, status: 'SUBMITTED' },
-      select: { schoolUdise: true, verifier: { select: { name: true, username: true } } },
+      select: {
+        schoolUdise: true,
+        verifier: { select: { id: true, name: true, username: true } },
+      },
     }),
   ]);
 
   const resultBy = new Map(results.map((r) => [r.schoolUdise, r]));
+  // Keyed on the verifier's id, not their display name — grouping by name would
+  // merge two people who happen to share one, and the profile needs an id to link.
   const verifierBy = new Map(
-    verifications.map((v) => [v.schoolUdise, v.verifier?.name ?? v.verifier?.username ?? null]),
+    verifications.map((v) => [
+      v.schoolUdise,
+      v.verifier ? { id: v.verifier.id, name: v.verifier.name ?? v.verifier.username } : null,
+    ]),
   );
 
   const rows: AppealRow[] = appeals.map((a) => {
@@ -86,7 +96,8 @@ export async function buildAppeals(): Promise<AppealsData> {
       udise: a.schoolUdise,
       school: a.school?.nameEn ?? a.schoolUdise,
       district: a.school?.district?.nameEn ?? '—',
-      verifier: verifierBy.get(a.schoolUdise) ?? null,
+      verifier: verifierBy.get(a.schoolUdise)?.name ?? null,
+      verifierId: verifierBy.get(a.schoolUdise)?.id ?? null,
       items: a.items.length,
       pending: a.items.filter((i) => i.decision === 'PENDING').length,
       selfScore: r?.selfScorePercent ?? null,
@@ -98,31 +109,33 @@ export async function buildAppeals(): Promise<AppealsData> {
   // Grouped by who did the scoring. One verifier appealed at several times the rate
   // of their peers, and upheld most of the time, is a training or conduct question —
   // not a run of unlucky schools. That only shows up at this grouping.
-  const totalByVerifier = new Map<string, number>();
+  const totalByVerifier = new Map<string, { name: string; n: number }>();
   for (const v of verifications) {
-    const name = v.verifier?.name ?? v.verifier?.username;
-    if (!name) continue;
-    totalByVerifier.set(name, (totalByVerifier.get(name) ?? 0) + 1);
+    if (!v.verifier) continue;
+    const name = v.verifier.name ?? v.verifier.username;
+    const cur = totalByVerifier.get(v.verifier.id) ?? { name, n: 0 };
+    cur.n += 1;
+    totalByVerifier.set(v.verifier.id, cur);
   }
 
   const appealedByVerifier = new Map<string, { appealed: number; upheld: number }>();
   for (const a of appeals) {
-    const name = verifierBy.get(a.schoolUdise);
-    if (!name) continue;
-    const cur = appealedByVerifier.get(name) ?? { appealed: 0, upheld: 0 };
+    const v = verifierBy.get(a.schoolUdise);
+    if (!v) continue;
+    const cur = appealedByVerifier.get(v.id) ?? { appealed: 0, upheld: 0 };
     cur.appealed += 1;
     // An appeal counts as upheld when any indicator went the school's way — the
     // school was right about something the verifier got wrong. ACCEPT_SCHOOL and
     // KEEP_VERIFIER are the two decisions an item can carry.
     if (a.items.some((i) => i.decision === 'ACCEPT_SCHOOL')) cur.upheld += 1;
-    appealedByVerifier.set(name, cur);
+    appealedByVerifier.set(v.id, cur);
   }
 
   const byVerifier: VerifierAppealRate[] = [...totalByVerifier.entries()]
-    .filter(([, verified]) => verified >= MIN_VERIFICATIONS_FOR_RATE)
-    .map(([verifier, verified]) => {
-      const a = appealedByVerifier.get(verifier) ?? { appealed: 0, upheld: 0 };
-      return { verifier, verified, appealed: a.appealed, upheld: a.upheld };
+    .filter(([, v]) => v.n >= MIN_VERIFICATIONS_FOR_RATE)
+    .map(([verifierId, v]) => {
+      const a = appealedByVerifier.get(verifierId) ?? { appealed: 0, upheld: 0 };
+      return { verifierId, verifier: v.name, verified: v.n, appealed: a.appealed, upheld: a.upheld };
     })
     .filter((v) => v.appealed > 0)
     .sort((a, b) => b.appealed / b.verified - a.appealed / a.verified);

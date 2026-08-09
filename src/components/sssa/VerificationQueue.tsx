@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { VerificationQueue as Data } from '@/lib/sssa/verificationQueue';
 
 const NAVY = '#1B2A6B';
@@ -62,8 +63,14 @@ export function VerificationQueue({ data }: { data: Data }) {
               <tbody>
                 {data.idle.map((v) => (
                   <tr key={v.id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-4 py-3 font-semibold" style={{ color: NAVY }}>
-                      {v.name}
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/app/sssa/users/${v.id}`}
+                        className="font-semibold hover:underline"
+                        style={{ color: NAVY }}
+                      >
+                        {v.name}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{v.district ?? '—'}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-gray-500">

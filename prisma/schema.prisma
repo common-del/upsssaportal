@@ -14,6 +14,16 @@ model User {
   passwordHash        String
   name                String?
   role                String
+  /// Contact details for officials and verifiers. Nullable because every existing
+  /// account predates them — a null means "never captured", not "has no phone",
+  /// and the profile says so rather than rendering an empty field as fact.
+  mobile              String?
+  email               String?
+  /// Path to an uploaded portrait. Nullable and set by an administrator, not by
+  /// the verifier: this exists so a head teacher can confirm the person arriving
+  /// at their school is the one assigned to it, which only works if the subject
+  /// cannot change it. Falls back to initials wherever it is absent.
+  photoUrl            String?
   districtCode        String?
   verifierCapacity    Int?
   active              Boolean                  @default(true)

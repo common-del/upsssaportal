@@ -104,9 +104,15 @@ export default async function AppealsPage() {
                   const rate = v.appealed / v.verified;
                   const upheld = v.appealed ? v.upheld / v.appealed : 0;
                   return (
-                    <tr key={v.verifier} className="border-t border-gray-100 first:border-t-0">
-                      <td className="px-4 py-3 font-semibold" style={{ color: NAVY }}>
-                        {v.verifier}
+                    <tr key={v.verifierId} className="border-t border-gray-100 first:border-t-0">
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/app/sssa/users/${v.verifierId}`}
+                          className="font-semibold hover:underline"
+                          style={{ color: NAVY }}
+                        >
+                          {v.verifier}
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums text-gray-500">{v.verified}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-gray-500">{v.appealed}</td>

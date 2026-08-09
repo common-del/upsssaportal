@@ -116,7 +116,13 @@ export default function UserListClient({
             ) : users.map((u) => (
               <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface/50">
                 <td className="px-3 py-2.5 font-mono text-xs font-medium">{u.username}</td>
-                <td className="px-3 py-2.5 text-xs">{u.name ?? '—'}</td>
+                <td className="px-3 py-2.5 text-xs">
+                  {/* The name is the way in to the profile — the row you click when
+                      you are looking for a person rather than for an account. */}
+                  <Link href={`${basePath}/${u.id}`} className="font-medium text-navy-700 hover:underline">
+                    {u.name ?? u.username}
+                  </Link>
+                </td>
                 {isSssa && <td className="px-3 py-2.5"><span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium">{t(`role_${u.role}`)}</span></td>}
                 <td className="px-3 py-2.5 text-xs">
                   {u.districtCode ?? (u.verifierDistricts.length > 0 ? u.verifierDistricts.map((v) => v.districtCode).join(', ') : '—')}

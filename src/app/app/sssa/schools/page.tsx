@@ -144,10 +144,13 @@ export default async function SssaSchoolDirectoryPage(props: {
       )}
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
+        {/* School and district only. An officer arrives knowing one or the other;
+            class, management and rating were three more things to read past. */}
         <DirectoryFilters
           districts={districts}
           selected={{ district, category, type, performance, q }}
           locale={locale}
+          show={{ district: true, type: false, category: false, performance: false }}
         />
       </div>
 

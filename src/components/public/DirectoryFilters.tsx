@@ -24,9 +24,20 @@ interface Props {
   districts: FilterOption[];
   selected: Selected;
   locale: string;
+  /**
+   * Which selects to render. Defaults to all four, which is what the public
+   * directory wants — a parent browsing needs every axis. The SSSA register is a
+   * different job: an officer arrives knowing the school or the district, and the
+   * other three filters were furniture they had to read past. Opt-in rather than
+   * opt-out so adding a filter here never silently changes the public site.
+   */
+  show?: { district?: boolean; type?: boolean; category?: boolean; performance?: boolean };
 }
 
-export function DirectoryFilters({ districts, selected, locale }: Props) {
+const SHOW_ALL = { district: true, type: true, category: true, performance: true };
+
+export function DirectoryFilters({ districts, selected, locale, show }: Props) {
+  const visible = { ...SHOW_ALL, ...(show ?? {}) };
   const t = useTranslations('directory');
   const router = useRouter();
   const pathname = usePathname();
@@ -90,6 +101,7 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
           cannot read "Management Type" while unset AND offer a separate
           "All Management Types" row - the two requests only reconcile with a
           controlled listbox. Search box off for the short lists. */}
+      {visible.district && (
       <SearchableSelect
         value={selected.district}
         onChange={(v) => navigate({ district: v })}
@@ -101,7 +113,9 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         className="w-[170px]"
         buttonClassName="py-2.5"
       />
+      )}
 
+      {visible.type && (
       <SearchableSelect
         value={selected.type}
         onChange={(v) => navigate({ type: v })}
@@ -117,7 +131,9 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         className="w-[190px]"
         buttonClassName="py-2.5"
       />
+      )}
 
+      {visible.category && (
       <SearchableSelect
         value={selected.category}
         onChange={(v) => navigate({ category: v })}
@@ -134,7 +150,9 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         className="w-[170px]"
         buttonClassName="py-2.5"
       />
+      )}
 
+      {visible.performance && (
       <SearchableSelect
         value={selected.performance}
         onChange={(v) => navigate({ performance: v })}
@@ -150,6 +168,7 @@ export function DirectoryFilters({ districts, selected, locale }: Props) {
         className="w-[180px]"
         buttonClassName="py-2.5"
       />
+      )}
     </div>
   );
 }

@@ -1,5 +1,16 @@
 import { prisma } from '@/lib/db';
 import { VerifierAssignmentPanel } from '@/components/sssa/VerifierAssignmentPanel';
+import { VerificationQueue } from '@/components/sssa/VerificationQueue';
+import { buildVerificationQueue } from '@/lib/sssa/verificationQueue';
+
+/**
+ * Verification: the whole job, not just assignment.
+ *
+ * Assigning a verifier is one task within verification, and it used to be the only
+ * one with a page. What was waiting, how long it had waited, and who was free to
+ * take it lived nowhere — so the queue and the idle capacity that could clear it
+ * now sit above the assignment panel that acts on both.
+ */
 
 export default async function VerifiersPage() {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
@@ -86,7 +97,23 @@ export default async function VerifiersPage() {
     verifierName: a.verifier.name ?? a.verifier.username,
   }));
 
+  const queue = await buildVerificationQueue();
+
   return (
+    <div className="flex flex-col gap-8">
+      <header>
+        <h1 className="text-2xl font-bold text-gray-900">Verification</h1>
+        <p className="mt-1 text-sm text-gray-500">Getting submissions checked</p>
+      </header>
+
+      {queue && <VerificationQueue data={queue} />}
+
+      <section>
+        <h2 className="text-base font-bold tracking-tight text-gray-900">Assign</h2>
+        <p className="mt-0.5 max-w-[74ch] text-xs text-gray-500">
+          Match schools to verifiers by district and current load.
+        </p>
+        <div className="mt-3">
     <VerifierAssignmentPanel
       cycleId={cycle.id}
       unassigned={unassigned}
@@ -95,5 +122,8 @@ export default async function VerifiersPage() {
       districts={districts}
       blocks={blocks}
     />
+        </div>
+      </section>
+    </div>
   );
 }

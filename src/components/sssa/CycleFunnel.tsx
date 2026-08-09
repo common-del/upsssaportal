@@ -62,14 +62,12 @@ export function CycleFunnel({ counts }: { counts: CycleCounts }) {
  */
 export function BehindBlocks({ blocks }: { blocks: BehindBlock[] }) {
   if (blocks.length === 0) return null;
-  const covered = blocks.reduce((a, b) => a + (b.schools - b.started), 0);
 
   return (
     <section>
       <h2 className="text-base font-bold tracking-tight text-gray-900">Furthest behind</h2>
-      <p className="mt-0.5 max-w-[74ch] text-xs text-gray-500">
-        Blocks holding the most schools that have not opened the form. Chasing blocks rather than
-        schools is the difference between {blocks.length} calls and {inr(covered)}.
+      <p className="mt-0.5 text-xs text-gray-500">
+        Blocks with the most schools yet to open the form.
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">

@@ -1,82 +1,92 @@
 import type { Leader, ManagementRow, StateDashboard as Data } from '@/lib/sssa/stateDashboard';
+import { PageHeader, Section } from '@/components/sssa/ui';
 
 const NAVY = '#1B2A6B';
+const inr = (n: number) => n.toLocaleString('en-IN');
 
-function pct(n: number, total: number) {
-  return total > 0 ? Math.round((n / total) * 100) : 0;
+function Rank({ tone, label }: { tone: 'top' | 'bottom' | 'mid'; label: string }) {
+  const cls =
+    tone === 'top'
+      ? 'bg-green-50 text-green-700'
+      : tone === 'bottom'
+        ? 'bg-red-50 text-red-700'
+        : 'bg-gray-100 text-gray-500';
+  return (
+    <span className={`mt-0.5 w-14 shrink-0 rounded px-1.5 py-0.5 text-center text-[10px] font-extrabold tracking-wide ${cls}`}>
+      {label}
+    </span>
+  );
 }
 
-/**
- * Leading and trailing, side by side.
- *
- * Every ranking here is one query read from both ends. Showing only the leader
- * makes a regulator's landing page unreadable in a bad month — the top district
- * needs nothing from the state, and the bottom one is the phone call. They cost
- * the same to compute, so there is no reason to show one without the other.
- */
+function Card({ heading, children }: { heading: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div className="px-4 pt-3 text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
+        {heading}
+      </div>
+      <div className="flex flex-1 flex-col justify-start">{children}</div>
+    </div>
+  );
+}
+
+function Row({
+  rank,
+  name,
+  detail,
+  divider,
+}: {
+  rank: 'top' | 'bottom' | 'mid';
+  name: string;
+  detail: string;
+  divider?: boolean;
+}) {
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3 ${divider ? 'border-t border-gray-100' : ''}`}>
+      <Rank tone={rank} label={rank === 'top' ? 'Highest' : rank === 'bottom' ? 'Lowest' : ''} />
+      <span className="min-w-0">
+        <span className="block truncate text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
+          {name}
+        </span>
+        <span className="mt-0.5 block text-xs tabular-nums text-gray-500">{detail}</span>
+      </span>
+    </div>
+  );
+}
+
 function Pair({
   heading,
   top,
   bottom,
-  suffix,
-  note,
+  detail,
 }: {
   heading: string;
   top: Leader | null;
   bottom: Leader | null;
-  suffix: (l: Leader) => string;
-  note?: string;
+  detail: (l: Leader) => string;
 }) {
   if (!top) return null;
-  const Half = ({ l, rank }: { l: Leader; rank: 'TOP' | 'BOTTOM' }) => (
-    <div className="flex items-start gap-3 px-4 py-3">
-      <span
-        className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide ${
-          rank === 'TOP' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-        }`}
-      >
-        {rank}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
-          {l.name}
-        </span>
-        <span className="mt-0.5 block text-xs tabular-nums text-gray-500">{suffix(l)}</span>
-      </span>
-    </div>
-  );
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="px-4 pt-3 text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
-        {heading}
-      </div>
-      <Half l={top} rank="TOP" />
-      {bottom && (
-        <div className="border-t border-gray-100">
-          <Half l={bottom} rank="BOTTOM" />
-        </div>
-      )}
-      {note && <div className="px-4 pb-3 text-[11.5px] font-semibold text-amber-700">{note}</div>}
-    </div>
+    <Card heading={heading}>
+      <Row rank="top" name={top.name} detail={detail(top)} />
+      {bottom && <Row rank="bottom" name={bottom.name} detail={detail(bottom)} divider />}
+    </Card>
   );
 }
 
-/** Three values, so a top/bottom pair would hide the middle one. Ranked in full. */
 function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated: boolean }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="px-4 pt-3 text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
-        School management type
-      </div>
+    <Card heading="School management type">
       {unpopulated ? (
-        <p className="px-4 py-4 text-[13px] leading-relaxed text-gray-500">
-          No school has a management type yet. The field is imported from the UDISE extract — until
-          that backfill runs this stays empty rather than showing a guess.
+        <p className="px-4 py-3 text-[13px] leading-relaxed text-gray-500">
+          Not yet imported.
         </p>
       ) : (
         rows.map((m, i) => (
-          <div key={m.code} className={`flex items-start gap-3 px-4 py-3 ${i ? 'border-t border-gray-100' : ''}`}>
-            <span className="mt-0.5 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-extrabold text-gray-500">
+          <div
+            key={m.code}
+            className={`flex items-start gap-3 px-4 py-3 ${i ? 'border-t border-gray-100' : ''}`}
+          >
+            <span className="mt-0.5 w-14 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-center text-[10px] font-extrabold text-gray-500">
               {i + 1}
             </span>
             <span className="min-w-0">
@@ -84,30 +94,31 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
                 {m.label}
               </span>
               <span className="mt-0.5 block text-xs tabular-nums text-gray-500">
-                <b className="font-bold text-gray-900">{m.score}%</b> · {m.schools.toLocaleString('en-IN')} scored
+                {m.score}% · {inr(m.schools)} scored
               </span>
             </span>
           </div>
         ))
       )}
-    </div>
+    </Card>
   );
 }
 
 export function StateDashboard({ data }: { data: Data }) {
-  const coverage = pct(data.verified, data.totalSchools);
+  const coverage = data.totalSchools
+    ? Math.round((data.verified / data.totalSchools) * 100)
+    : 0;
+
+  // cycleName already reads "SSSA Cycle 2025-26" in the data, so prefixing it here
+  // produced "SSSA Cycle SSSA Cycle 2025-26".
+  const subtitle = data.cycleName === '—' ? undefined : data.cycleName;
 
   if (data.averageScore == null) {
     return (
       <div className="flex flex-col gap-6">
-        <header>
-          <h1 className="text-2xl font-bold text-gray-900">Uttar Pradesh</h1>
-          <p className="mt-1 text-sm text-gray-500">SSSA Cycle {data.cycleName}</p>
-        </header>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
-          No school has been verified yet, so there is no state score to report. The figures here
-          rest on verified results only — a self-assessment nobody has checked is a claim, not a
-          score.
+        <PageHeader title="Uttar Pradesh" subtitle={subtitle} />
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          No school has been verified yet, so there is no state score.
         </div>
       </div>
     );
@@ -115,67 +126,49 @@ export function StateDashboard({ data }: { data: Data }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-900">Uttar Pradesh</h1>
-        <p className="mt-1 text-sm text-gray-500">SSSA Cycle {data.cycleName}</p>
-      </header>
+      <PageHeader title="Uttar Pradesh" subtitle={subtitle} />
 
-      <p className="max-w-[60ch] text-[16.5px] leading-relaxed text-gray-600">
-        Across <b className="font-bold tabular-nums text-gray-900">{data.verified.toLocaleString('en-IN')}</b>{' '}
-        verified schools the state scores{' '}
-        <b className="font-bold tabular-nums text-gray-900">{data.averageScore}%</b>
-        {data.band ? <> — the {data.band} band.</> : '.'}
-      </p>
-
-      <div className="flex flex-wrap items-baseline gap-5 rounded-2xl px-6 py-5 text-white" style={{ background: NAVY }}>
-        <span className="w-full text-[11px] font-bold uppercase tracking-widest text-white/65">
-          State average score
-        </span>
-        <span className="text-5xl font-bold leading-none tracking-tight tabular-nums">
-          {data.averageScore}%
-        </span>
-        {data.band && (
-          <span className="rounded-full bg-[#F5B731] px-4 py-1.5 text-[15px] font-bold" style={{ color: NAVY }}>
-            {data.band}
-          </span>
-        )}
-        {/* Coverage travels with the number rather than sitting in a footnote. At
-            this level it is part of reading the score, not a caveat about it. */}
-        <span className="ml-auto text-right text-xs leading-relaxed text-white/70">
-          Based on {data.verified.toLocaleString('en-IN')} verified schools — <b>{coverage}%</b> of the state
-          <br />
-          {(data.totalSchools - data.verified).toLocaleString('en-IN')} not yet scored
-        </span>
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-4 rounded-2xl px-6 py-5 text-white" style={{ background: NAVY }}>
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">
+            State average score
+          </div>
+          <div className="mt-2 flex items-center gap-3">
+            <span className="text-5xl font-bold leading-none tracking-tight tabular-nums">
+              {data.averageScore}%
+            </span>
+            {data.band && (
+              <span
+                className="rounded-full bg-[#F5B731] px-4 py-1.5 text-[15px] font-bold"
+                style={{ color: NAVY }}
+              >
+                {data.band}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="ml-auto text-right text-xs leading-relaxed tabular-nums text-white/70">
+          {inr(data.verified)} of {inr(data.totalSchools)} schools verified ({coverage}%)
+        </div>
       </div>
 
-      <section>
-        <h2 className="text-base font-bold tracking-tight text-gray-900">Leading and trailing</h2>
-        <p className="mt-0.5 max-w-[72ch] text-xs text-gray-500">
-          One ranking each, read from both ends. The trailing side is the one that needs a call.
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <Section title="Highest and lowest">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Pair
             heading="District"
             top={data.topDistrict}
             bottom={data.bottomDistrict}
-            suffix={(l) =>
-              `${l.score}% · ${l.schools.toLocaleString('en-IN')} scored${l.band ? ` · ${l.band}` : ''}`
-            }
+            detail={(l) => `${l.score}% · ${inr(l.schools)} scored${l.band ? ` · ${l.band}` : ''}`}
           />
           <Pair
             heading="School"
             top={data.topSchool}
             bottom={data.bottomSchool}
-            suffix={(l) => `${l.score} / 100${l.band ? ` · ${l.band}` : ''}`}
-            note={
-              coverage < 90
-                ? `Best and worst of the ${coverage}% verified so far, not of the state`
-                : undefined
-            }
+            detail={(l) => `${l.score} out of 100${l.band ? ` · ${l.band}` : ''}`}
           />
           <Management rows={data.management} unpopulated={data.managementUnpopulated} />
         </div>
-      </section>
+      </Section>
     </div>
   );
 }

@@ -46,10 +46,8 @@ export function VerificationQueue({ data }: { data: Data }) {
           <h2 className="text-base font-bold tracking-tight text-gray-900">
             Verifiers with nothing assigned
           </h2>
-          <p className="mt-0.5 max-w-[74ch] text-xs text-gray-500">
-            Capacity sitting unused while {inr(data.waiting)} schools wait. This contradiction is
-            only visible because both numbers are on one page — it is the clearest fix available
-            today.
+          <p className="mt-0.5 text-xs text-gray-500">
+            Available capacity while {inr(data.waiting)} schools wait.
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[460px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
@@ -83,10 +81,9 @@ export function VerificationQueue({ data }: { data: Data }) {
       {data.rows.length > 0 && (
         <section>
           <h2 className="text-base font-bold tracking-tight text-gray-900">The queue</h2>
-          <p className="mt-0.5 max-w-[76ch] text-xs text-gray-500">
-            Longest wait first, showing {data.rows.length} of {inr(data.waiting)}. Evidence counts
-            attachments against indicators answered — a thin column means the school is making
-            claims it has not backed up, which the verifier should know before they start.
+          <p className="mt-0.5 text-xs text-gray-500">
+            Showing {data.rows.length} of {inr(data.waiting)}, longest wait first. Evidence is
+            attachments against indicators answered.
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[680px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">

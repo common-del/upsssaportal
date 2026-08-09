@@ -27,12 +27,29 @@ export type ComplianceRow = {
 
 export type ComplianceSummary = {
   totalSchools: number;
+  /** Schools with at least one MandatoryDocument row. Everything below is measured
+   *  against this, not against the register — see `tracked` on the return. */
+  schoolsWithDocRecords: number;
+  schoolsWithFeeRecords: number;
   expiredDocs: number;
-  missingDocs: number;
+  /** Schools that hold document records but not all of them. Excludes schools with
+   *  no records at all, which is missing data rather than a breach. */
+  incompleteDocs: number;
   noFeeDisclosure: number;
   fullyCompliant: number;
+  /**
+   * False when so few schools have records that the figures describe the state of
+   * the import rather than the state of compliance. Reporting "32,573 schools are
+   * missing a document" when only six have ever uploaded one presents an empty
+   * table as mass non-compliance, which is the kind of number a regulator acts on.
+   */
+  tracked: boolean;
   rows: ComplianceRow[];
 };
+
+/** Below this share of the register carrying records, the page reports coverage
+ *  instead of compliance. */
+const TRACKED_THRESHOLD = 0.5;
 
 const MAX_ROWS = 50;
 
@@ -131,17 +148,28 @@ export async function buildCompliance(): Promise<ComplianceSummary> {
     .sort((a, b) => (b.daysInBreach ?? -1) - (a.daysInBreach ?? -1) || b.expired - a.expired)
     .slice(0, MAX_ROWS);
 
-  const schoolsMissingDocs = [...bySchool.values()].filter((a) => a.held < expected).length;
-  // Schools with no MandatoryDocument rows at all never appear in docRows, so they
-  // are counted here rather than being silently treated as compliant.
-  const schoolsWithNoDocRows = totalSchools - bySchool.size;
+  // Only schools that actually hold records can be short of them. A school with no
+  // MandatoryDocument rows has not been assessed for documents at all, and counting
+  // it as "missing one" turns an unpopulated table into a compliance crisis.
+  const incompleteDocs = [...bySchool.values()].filter((a) => a.held < expected).length;
+  const schoolsWithDocRecords = bySchool.size;
+
+  const tracked =
+    totalSchools > 0 &&
+    schoolsWithDocRecords / totalSchools >= TRACKED_THRESHOLD &&
+    schoolsWithFee / totalSchools >= TRACKED_THRESHOLD;
 
   return {
     totalSchools,
+    schoolsWithDocRecords,
+    schoolsWithFeeRecords: schoolsWithFee,
     expiredDocs,
-    missingDocs: schoolsMissingDocs + schoolsWithNoDocRows,
-    noFeeDisclosure: Math.max(0, totalSchools - schoolsWithFee),
-    fullyCompliant: Math.max(0, schoolsWithFee - schoolsMissingDocs - schoolsWithNoDocRows),
+    incompleteDocs,
+    noFeeDisclosure: Math.max(0, schoolsWithDocRecords - schoolsWithFee),
+    fullyCompliant: [...bySchool.entries()].filter(
+      ([udise, a]) => a.held >= expected && a.expired === 0 && feeUdises.has(udise),
+    ).length,
+    tracked,
     rows,
   };
 }

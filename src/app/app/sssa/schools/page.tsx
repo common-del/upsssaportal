@@ -125,7 +125,7 @@ export default async function SssaSchoolDirectoryPage(props: {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">Schools</h1>
-        <p className="mt-1 text-sm text-gray-500">The register, and how far the cycle has got</p>
+        <p className="mt-1 text-sm text-gray-500">The register and cycle progress</p>
       </header>
 
       {/* Cycle progress sits with the register rather than on its own page. This

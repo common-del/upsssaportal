@@ -26,9 +26,7 @@ export default async function ComplaintsPage() {
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Raised by parents and the public, about a school
-        </p>
+        <p className="mt-1 text-sm text-gray-500">Raised by parents and the public</p>
       </header>
 
       {data.open === 0 ? (
@@ -57,10 +55,8 @@ export default async function ComplaintsPage() {
 
           <section>
             <h2 className="text-base font-bold tracking-tight text-gray-900">Open cases</h2>
-            <p className="mt-0.5 max-w-[76ch] text-xs text-gray-500">
-              Past their deadline first, then oldest. Each carries an SLA, and missing it moves the
-              case up a level on its own — school, then district, then here. A case showing SSSA is
-              one that two levels already let lapse.
+            <p className="mt-0.5 text-xs text-gray-500">
+              Past deadline first, then oldest. With shows the level currently handling the case.
             </p>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[760px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
@@ -118,10 +114,8 @@ export default async function ComplaintsPage() {
               <h2 className="text-base font-bold tracking-tight text-gray-900">
                 What people complain about
               </h2>
-              <p className="mt-0.5 max-w-[76ch] text-xs text-gray-500">
-                All {inr(data.open)} open complaints by category. Anything about fees or facilities
-                is checkable against the school&rsquo;s own disclosure already on file, which makes
-                those the most actionable rather than the hardest.
+              <p className="mt-0.5 text-xs text-gray-500">
+                All {inr(data.open)} open complaints by category.
               </p>
               <div className="mt-3 flex flex-col gap-2.5">
                 {data.categories.map((c) => (

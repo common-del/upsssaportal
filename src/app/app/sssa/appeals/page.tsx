@@ -18,22 +18,14 @@ export default async function AppealsPage() {
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">Appeals</h1>
-        <p className="mt-1 text-sm text-gray-500">Raised by schools, against their verification</p>
+        <p className="mt-1 text-sm text-gray-500">Raised by schools against their verification</p>
       </header>
 
-      <p className="max-w-[62ch] text-[16.5px] leading-relaxed text-gray-600">
-        <b className="font-bold tabular-nums text-gray-900">{data.open}</b> schools have an open
-        appeal, arguing <b className="font-bold tabular-nums text-gray-900">{data.pendingItems}</b>{' '}
-        individual indicators between them. Nothing can be finalised for a school while its appeal
-        is open, so these gate publication.
-      </p>
 
       <section>
         <h2 className="text-base font-bold tracking-tight text-gray-900">Open appeals</h2>
-        <p className="mt-0.5 max-w-[74ch] text-xs text-gray-500">
-          One appeal per school per cycle, argued indicator by indicator. Only SSSA can decide them
-          — there is no escalation ladder and no clock, which is the opposite of how a public
-          complaint behaves.
+        <p className="mt-0.5 text-xs text-gray-500">
+          One appeal per school per cycle. Indicators shows those still undecided.
         </p>
 
         {data.rows.length === 0 ? (
@@ -93,11 +85,8 @@ export default async function AppealsPage() {
       {data.byVerifier.length > 0 && (
         <section>
           <h2 className="text-base font-bold tracking-tight text-gray-900">Appeals by verifier</h2>
-          <p className="mt-0.5 max-w-[74ch] text-xs text-gray-500">
-            Grouped by who did the scoring rather than who complained. A verifier appealed at
-            several times the rate of their peers, and upheld most of the time, is a training or
-            conduct question — not a run of unlucky schools. Verifiers with fewer than 20 completed
-            verifications are left out, because a rate over a handful of cases is noise.
+          <p className="mt-0.5 text-xs text-gray-500">
+            Verifiers with at least 20 completed verifications.
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">

@@ -3,6 +3,7 @@ import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { CycleFunnel, BehindBlocks } from '@/components/sssa/CycleFunnel';
+import { SchoolsTabs, type SchoolsTab } from '@/components/sssa/SchoolsTabs';
 import { buildCycleCounts, buildBehindBlocks, type CycleCounts, type BehindBlock } from '@/lib/sssa/cycleCounts';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
@@ -29,7 +30,9 @@ export default async function SssaSchoolDirectoryPage(props: {
   const searchParams = await props.searchParams;
   const locale = await getLocale();
 
+  const tab: SchoolsTab = (searchParams.tab as string) === 'behind' ? 'behind' : 'register';
   const district = (searchParams.district as string) || '';
+  const block = (searchParams.block as string) || '';
   const category = (searchParams.category as string) || '';
   const type = (searchParams.type as string) || '';
   const performance = (searchParams.performance as string) || '';
@@ -37,19 +40,32 @@ export default async function SssaSchoolDirectoryPage(props: {
   const page = Math.max(1, parseInt((searchParams.page as string) || '1', 10));
 
   let districts: { code: string; nameEn: string; nameHi: string }[] = [];
+  let blocks: { code: string; nameEn: string; nameHi: string }[] = [];
   let rows: DirectoryRow[] = [];
   let usingFallback = false;
   let funnel: CycleCounts | null = null;
   let behind: BehindBlock[] = [];
 
   try {
-    [funnel, behind] = await Promise.all([buildCycleCounts(), buildBehindBlocks()]);
+    [funnel, behind] = await Promise.all([buildCycleCounts(), buildBehindBlocks(district)]);
 
     const districtRecords = await prisma.district.findMany({ orderBy: { nameEn: 'asc' } });
     districts = districtRecords.map((d) => ({ code: d.code, nameEn: d.nameEn, nameHi: d.nameHi }));
 
+    // Only the chosen district's blocks, so the two filters cannot contradict each
+    // other. With no district picked the list would be 826 entries, which is not a
+    // filter anybody can use — so it stays empty until a district narrows it.
+    if (district) {
+      const blockRecords = await prisma.block.findMany({
+        where: { districtCode: district },
+        orderBy: { nameEn: 'asc' },
+      });
+      blocks = blockRecords.map((b) => ({ code: b.code, nameEn: b.nameEn, nameHi: b.nameHi }));
+    }
+
     const where: Prisma.SchoolWhereInput = {};
     if (district) where.districtCode = district;
+    if (block) where.blockCode = block;
     if (category) where.category = category;
     if (q) {
       where.OR = [
@@ -82,6 +98,7 @@ export default async function SssaSchoolDirectoryPage(props: {
     usingFallback = true;
     districts = ALL_DISTRICTS.map((name) => ({ code: name, nameEn: name, nameHi: name }));
     rows = SCHOOLS.filter((s) => !district || s.district === district)
+      .filter((s) => !block || s.block === block)
       .filter((s) => !category || s.level === category)
       .filter(
         (s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.udise.includes(q),
@@ -112,6 +129,7 @@ export default async function SssaSchoolDirectoryPage(props: {
   function pageHref(p: number) {
     const params = new URLSearchParams();
     if (district) params.set('district', district);
+    if (block) params.set('block', block);
     if (category) params.set('category', category);
     if (type) params.set('type', type);
     if (performance) params.set('performance', performance);
@@ -128,15 +146,21 @@ export default async function SssaSchoolDirectoryPage(props: {
         <p className="mt-1 text-sm text-gray-500">The register and cycle progress</p>
       </header>
 
-      {/* Cycle progress sits with the register rather than on its own page. This
-          is where every school is already listed, so "how many of them have got
-          how far" belongs above it. */}
+      {/* The counts sit above the tabs because both tabs are views of the register
+          — inside one of them they would read as describing only that view. */}
       {funnel && <CycleFunnel counts={funnel} />}
 
-      {/* The counts say how many have not started. This says where they are — the
-          only part of the old monitoring page that no other page now covers. */}
-      <BehindBlocks blocks={behind} />
+      <SchoolsTabs
+        active={tab}
+        registerCount={funnel?.totalSchools ?? 0}
+        behindCount={behind.length}
+        query={{ district, block, q }}
+      />
 
+      {tab === 'behind' && <BehindBlocks blocks={behind} district={district} districts={districts} />}
+
+      {tab === 'register' && (
+        <>
       {usingFallback && (
         <p className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">
           Live school records are temporarily unavailable. Showing a sample of schools instead.
@@ -144,13 +168,14 @@ export default async function SssaSchoolDirectoryPage(props: {
       )}
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
-        {/* School and district only. An officer arrives knowing one or the other;
-            class, management and rating were three more things to read past. */}
+        {/* School, district and block. An officer arrives knowing one of the three;
+            class, management and rating were furniture they had to read past. */}
         <DirectoryFilters
           districts={districts}
-          selected={{ district, category, type, performance, q }}
+          blocks={blocks}
+          selected={{ district, block, category, type, performance, q }}
           locale={locale}
-          show={{ district: true, type: false, category: false, performance: false }}
+          show={{ district: true, block: true, type: false, category: false, performance: false }}
         />
       </div>
 
@@ -252,6 +277,8 @@ export default async function SssaSchoolDirectoryPage(props: {
             <span />
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

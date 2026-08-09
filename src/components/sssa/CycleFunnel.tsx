@@ -60,15 +60,55 @@ export function CycleFunnel({ counts }: { counts: CycleCounts }) {
  * the useful next action is the call that unlocks hundreds of schools — not the
  * one to whichever small block happens to have the lowest ratio.
  */
-export function BehindBlocks({ blocks }: { blocks: BehindBlock[] }) {
-  if (blocks.length === 0) return null;
-
+export function BehindBlocks({
+  blocks,
+  district = '',
+  districts = [],
+}: {
+  blocks: BehindBlock[];
+  district?: string;
+  districts?: { code: string; nameEn: string }[];
+}) {
   return (
     <section>
-      <h2 className="text-base font-bold tracking-tight text-gray-900">Furthest behind</h2>
-      <p className="mt-0.5 text-xs text-gray-500">
-        Blocks with the most schools yet to open the form.
-      </p>
+      <p className="text-xs text-gray-500">Blocks with the most schools yet to open the form.</p>
+
+      {districts.length > 0 && (
+        // A plain form so this stays server-rendered like the rest of the tab.
+        // Changing district reloads with ?district=…, which the register tab then
+        // shares — narrow here, switch tabs, and you are still in that district.
+        <form method="get" className="mt-3 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="tab" value="behind" />
+          <select
+            name="district"
+            defaultValue={district}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-[12.5px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]"
+          >
+            <option value="">All districts</option>
+            {districts.map((d) => (
+              <option key={d.code} value={d.code}>
+                {d.nameEn}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className="rounded-lg border px-3 py-2 text-[12.5px] font-semibold"
+            style={{ borderColor: NAVY, color: NAVY }}
+          >
+            Apply
+          </button>
+          <span className="ml-auto text-[12.5px] tabular-nums text-gray-500">
+            {blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}
+          </span>
+        </form>
+      )}
+
+      {blocks.length === 0 ? (
+        <p className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 py-6 text-center text-[13px] text-gray-500">
+          Every block here has schools underway.
+        </p>
+      ) : (
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
           <thead>
@@ -104,6 +144,7 @@ export function BehindBlocks({ blocks }: { blocks: BehindBlock[] }) {
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }

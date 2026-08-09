@@ -35,7 +35,7 @@ export type BehindBlock = {
 /** Blocks smaller than this rank badly on percentage alone — a two-school block at
  *  0% is not where the state should send anyone first. */
 const MIN_SCHOOLS_FOR_BLOCK_RANK = 20;
-const BEHIND_LIMIT = 8;
+const BEHIND_LIMIT = 25;
 
 export async function buildCycleCounts(): Promise<CycleCounts | null> {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
@@ -64,12 +64,13 @@ export async function buildCycleCounts(): Promise<CycleCounts | null> {
  * next action is a call to a block that unlocks hundreds of schools, not to whoever
  * happens to have the lowest ratio.
  */
-export async function buildBehindBlocks(): Promise<BehindBlock[]> {
+export async function buildBehindBlocks(districtCode?: string): Promise<BehindBlock[]> {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return [];
 
   const [blocks, schoolsPerBlock, startedRows] = await Promise.all([
     prisma.block.findMany({
+      where: districtCode ? { districtCode } : undefined,
       select: { code: true, nameEn: true, district: { select: { nameEn: true } } },
     }),
     prisma.school.groupBy({ by: ['blockCode'], _count: { _all: true } }),

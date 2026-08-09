@@ -153,7 +153,7 @@ export default async function DirectoryPage(props: {
       <div className="mt-6">
         <DirectoryFilters
           districts={districts}
-          selected={{ district, category, type, performance, q }}
+          selected={{ district, block: '', category, type, performance, q }}
           locale={locale}
         />
       </div>

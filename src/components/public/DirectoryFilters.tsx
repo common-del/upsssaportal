@@ -14,6 +14,7 @@ interface FilterOption {
 
 interface Selected {
   district: string;
+  block: string;
   category: string;
   type: string;
   performance: string;
@@ -22,6 +23,9 @@ interface Selected {
 
 interface Props {
   districts: FilterOption[];
+  /** Already narrowed to the chosen district by the caller, so the two filters
+   *  cannot contradict each other. */
+  blocks?: FilterOption[];
   selected: Selected;
   locale: string;
   /**
@@ -31,12 +35,18 @@ interface Props {
    * other three filters were furniture they had to read past. Opt-in rather than
    * opt-out so adding a filter here never silently changes the public site.
    */
-  show?: { district?: boolean; type?: boolean; category?: boolean; performance?: boolean };
+  show?: {
+    district?: boolean;
+    block?: boolean;
+    type?: boolean;
+    category?: boolean;
+    performance?: boolean;
+  };
 }
 
-const SHOW_ALL = { district: true, type: true, category: true, performance: true };
+const SHOW_ALL = { district: true, block: false, type: true, category: true, performance: true };
 
-export function DirectoryFilters({ districts, selected, locale, show }: Props) {
+export function DirectoryFilters({ districts, blocks = [], selected, locale, show }: Props) {
   const visible = { ...SHOW_ALL, ...(show ?? {}) };
   const t = useTranslations('directory');
   const router = useRouter();
@@ -104,12 +114,26 @@ export function DirectoryFilters({ districts, selected, locale, show }: Props) {
       {visible.district && (
       <SearchableSelect
         value={selected.district}
-        onChange={(v) => navigate({ district: v })}
+        onChange={(v) => navigate({ district: v, block: '' })}
         options={districts.map((d) => ({ value: d.code, label: getName(d) }))}
         allLabel={t('allDistricts')}
         placeholderLabel={t('filterDistrict')}
         searchPlaceholder={t('district')}
         ariaLabel={t('filterDistrict')}
+        className="w-[170px]"
+        buttonClassName="py-2.5"
+      />
+      )}
+
+      {visible.block && (
+      <SearchableSelect
+        value={selected.block}
+        onChange={(v) => navigate({ block: v })}
+        options={blocks.map((b) => ({ value: b.code, label: getName(b) }))}
+        allLabel="All blocks"
+        placeholderLabel="Block"
+        searchPlaceholder="Block"
+        ariaLabel="Block"
         className="w-[170px]"
         buttonClassName="py-2.5"
       />

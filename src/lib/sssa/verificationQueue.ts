@@ -1,51 +1,57 @@
 import { prisma } from '@/lib/db';
 
 /**
- * What is waiting to be verified, and who is free to do it.
+ * Everything the Verification page needs, in one query pass.
  *
- * Two facts that belong on the same page: schools have been waiting, and verifiers
- * are sitting idle. Neither is surprising alone; together they are a contradiction
- * with an obvious fix, and the assignment panel below can act on it immediately.
+ * The page is three tabs over two lists: schools waiting to be checked, the same
+ * list filtered to those with nobody assigned, and the verifiers themselves. All
+ * three come from here so the counts on the tabs cannot disagree with the tables
+ * under them.
  *
- * Evidence completeness travels with each row because a submission answering forty
- * indicators with four attachments is a different job from one that documented
- * everything, and the verifier should know which they are picking up before they
- * start rather than after.
+ * Evidence completeness used to travel with each row. It counted attachments
+ * against indicators answered — useful to the verifier deciding how to approach a
+ * school, useless to the person deciding who does the work, which is the only job
+ * on this page. It belongs on the verifier's own screen.
  */
 
 export type QueueRow = {
   udise: string;
   school: string;
+  block: string;
+  blockCode: string;
   district: string;
+  districtCode: string;
   daysWaiting: number;
-  verifier: string | null;
-  answered: number;
-  evidenced: number;
+  /** Null when nobody is assigned — that is what the Unassigned tab selects on. */
+  verifierId: string | null;
+  verifierName: string | null;
+  /** Needed to reassign; null when there is no assignment to move. */
+  assignmentId: string | null;
 };
 
-export type IdleVerifier = {
+export type VerifierSummary = {
   id: string;
   name: string;
+  districtCode: string | null;
   district: string | null;
   capacity: number | null;
   assigned: number;
+  verified: number;
 };
 
-export type VerifierSummary = IdleVerifier & { verified: number };
-
 export type VerificationQueue = {
+  cycleId: string;
   waiting: number;
   unassigned: number;
   oldestDays: number;
   rows: QueueRow[];
-  idle: IdleVerifier[];
-  /** Everyone, not just the idle. The profile page is reached by clicking a name,
-   *  which only works if there is a list of names somewhere — without this the
-   *  feature exists but nobody finds it. */
-  all: VerifierSummary[];
+  verifiers: VerifierSummary[];
 };
 
-const QUEUE_LIMIT = 25;
+/** The tabs filter client-side, so the whole queue ships rather than a page of it.
+ *  Well within reason at a few hundred rows; revisit if a cycle ever leaves
+ *  thousands unverified at once. */
+const QUEUE_LIMIT = 500;
 
 export async function buildVerificationQueue(): Promise<VerificationQueue | null> {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
@@ -53,99 +59,99 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
 
   const now = Date.now();
 
-  const [submissions, assignments, completed, verifiers] = await Promise.all([
+  const [submissions, assignments, completed, verifiers, districts] = await Promise.all([
     prisma.selfAssessmentSubmission.findMany({
       where: { cycleId: cycle.id, status: 'SUBMITTED' },
       select: {
-        id: true,
         schoolUdise: true,
         submittedAt: true,
-        school: { select: { nameEn: true, district: { select: { nameEn: true } } } },
-        _count: { select: { responses: true, evidenceLinks: true } },
+        school: {
+          select: {
+            nameEn: true,
+            districtCode: true,
+            blockCode: true,
+            district: { select: { nameEn: true } },
+            block: { select: { nameEn: true } },
+          },
+        },
       },
     }),
     prisma.verifierAssignment.findMany({
       where: { cycleId: cycle.id },
       select: {
+        id: true,
         schoolUdise: true,
         verifier: { select: { id: true, name: true, username: true } },
       },
     }),
-    // A school with a completed verification has left the queue.
     prisma.verificationSubmission.findMany({
       where: { cycleId: cycle.id, status: 'SUBMITTED' },
       select: { schoolUdise: true },
     }),
     prisma.user.findMany({
       where: { role: 'VERIFIER', active: true },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        districtCode: true,
-        verifierCapacity: true,
-      },
+      select: { id: true, name: true, username: true, districtCode: true, verifierCapacity: true },
     }),
+    prisma.district.findMany({ select: { code: true, nameEn: true } }),
   ]);
 
+  const districtName = new Map(districts.map((d) => [d.code, d.nameEn]));
   const done = new Set(completed.map((c) => c.schoolUdise));
-  const assignedTo = new Map(
-    assignments.map((a) => [a.schoolUdise, a.verifier?.name ?? a.verifier?.username ?? null]),
-  );
-  const assignedIdBy = new Map(
-    assignments.flatMap((a) => (a.verifier?.id ? [[a.schoolUdise, a.verifier.id] as const] : [])),
-  );
+  const assignmentBy = new Map(assignments.map((a) => [a.schoolUdise, a]));
 
-  const pending = submissions.filter((s) => !done.has(s.schoolUdise));
-
-  const rows: QueueRow[] = pending
-    .map((s) => ({
-      udise: s.schoolUdise,
-      school: s.school?.nameEn ?? s.schoolUdise,
-      district: s.school?.district?.nameEn ?? '—',
-      // Falls back to zero rather than guessing when submittedAt is missing, so a
-      // missing timestamp reads as "just arrived" instead of inventing a wait.
-      daysWaiting: s.submittedAt
-        ? Math.max(0, Math.floor((now - s.submittedAt.getTime()) / 86_400_000))
-        : 0,
-      verifier: assignedTo.get(s.schoolUdise) ?? null,
-      answered: s._count.responses,
-      evidenced: s._count.evidenceLinks,
-    }))
+  const rows: QueueRow[] = submissions
+    .filter((s) => !done.has(s.schoolUdise))
+    .map((s) => {
+      const a = assignmentBy.get(s.schoolUdise);
+      return {
+        udise: s.schoolUdise,
+        school: s.school?.nameEn ?? s.schoolUdise,
+        block: s.school?.block?.nameEn ?? '—',
+        blockCode: s.school?.blockCode ?? '',
+        district: s.school?.district?.nameEn ?? '—',
+        districtCode: s.school?.districtCode ?? '',
+        // Falls back to zero rather than guessing when submittedAt is missing, so a
+        // missing timestamp reads as "just arrived" instead of inventing a wait.
+        daysWaiting: s.submittedAt
+          ? Math.max(0, Math.floor((now - s.submittedAt.getTime()) / 86_400_000))
+          : 0,
+        verifierId: a?.verifier?.id ?? null,
+        verifierName: a?.verifier ? (a.verifier.name ?? a.verifier.username) : null,
+        assignmentId: a?.id ?? null,
+      };
+    })
     .sort((a, b) => b.daysWaiting - a.daysWaiting);
 
-  // Assignment load counts every school on a verifier's plate, finished or not —
-  // that is what "do they have room" means. Idle is nobody assigned at all.
+  // Load counts every school on a verifier's plate, finished or not — that is what
+  // "do they have room" means.
   const loadBy = new Map<string, number>();
   for (const a of assignments) {
     const id = a.verifier?.id;
     if (id) loadBy.set(id, (loadBy.get(id) ?? 0) + 1);
   }
-
   const verifiedBy = new Map<string, number>();
   for (const c of completed) {
-    const id = assignedIdBy.get(c.schoolUdise);
+    const id = assignmentBy.get(c.schoolUdise)?.verifier?.id;
     if (id) verifiedBy.set(id, (verifiedBy.get(id) ?? 0) + 1);
   }
 
-  const all: VerifierSummary[] = verifiers
-    .map((v) => ({
-      id: v.id,
-      name: v.name ?? v.username,
-      district: v.districtCode,
-      capacity: v.verifierCapacity,
-      assigned: loadBy.get(v.id) ?? 0,
-      verified: verifiedBy.get(v.id) ?? 0,
-    }))
-    // Emptiest first: the list doubles as the answer to "who has room".
-    .sort((a, b) => a.assigned - b.assigned || a.name.localeCompare(b.name));
-
   return {
+    cycleId: cycle.id,
     waiting: rows.length,
-    unassigned: rows.filter((r) => !r.verifier).length,
+    unassigned: rows.filter((r) => !r.verifierId).length,
     oldestDays: rows.length ? rows[0].daysWaiting : 0,
     rows: rows.slice(0, QUEUE_LIMIT),
-    idle: all.filter((v) => v.assigned === 0),
-    all,
+    verifiers: verifiers
+      .map((v) => ({
+        id: v.id,
+        name: v.name ?? v.username,
+        districtCode: v.districtCode,
+        district: v.districtCode ? (districtName.get(v.districtCode) ?? v.districtCode) : null,
+        capacity: v.verifierCapacity,
+        assigned: loadBy.get(v.id) ?? 0,
+        verified: verifiedBy.get(v.id) ?? 0,
+      }))
+      // Emptiest first, so the list doubles as the answer to "who has room".
+      .sort((a, b) => a.assigned - b.assigned || a.name.localeCompare(b.name)),
   };
 }

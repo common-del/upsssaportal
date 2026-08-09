@@ -23,7 +23,7 @@ export default async function SssaUsersPage({ searchParams }: { searchParams: Pr
   // opens Users to find them, so the page says it here and links to where the
   // assignment actually happens rather than making that connection the reader's job.
   const queue = await buildVerificationQueue();
-  const idle = queue?.idle.length ?? 0;
+  const idle = queue?.verifiers.filter((v) => v.assigned === 0).length ?? 0;
   const waiting = queue?.waiting ?? 0;
 
   return (

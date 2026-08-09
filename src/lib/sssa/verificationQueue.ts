@@ -31,12 +31,18 @@ export type IdleVerifier = {
   assigned: number;
 };
 
+export type VerifierSummary = IdleVerifier & { verified: number };
+
 export type VerificationQueue = {
   waiting: number;
   unassigned: number;
   oldestDays: number;
   rows: QueueRow[];
   idle: IdleVerifier[];
+  /** Everyone, not just the idle. The profile page is reached by clicking a name,
+   *  which only works if there is a list of names somewhere — without this the
+   *  feature exists but nobody finds it. */
+  all: VerifierSummary[];
 };
 
 const QUEUE_LIMIT = 25;
@@ -86,6 +92,9 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
   const assignedTo = new Map(
     assignments.map((a) => [a.schoolUdise, a.verifier?.name ?? a.verifier?.username ?? null]),
   );
+  const assignedIdBy = new Map(
+    assignments.flatMap((a) => (a.verifier?.id ? [[a.schoolUdise, a.verifier.id] as const] : [])),
+  );
 
   const pending = submissions.filter((s) => !done.has(s.schoolUdise));
 
@@ -113,22 +122,30 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
     if (id) loadBy.set(id, (loadBy.get(id) ?? 0) + 1);
   }
 
-  const idle: IdleVerifier[] = verifiers
+  const verifiedBy = new Map<string, number>();
+  for (const c of completed) {
+    const id = assignedIdBy.get(c.schoolUdise);
+    if (id) verifiedBy.set(id, (verifiedBy.get(id) ?? 0) + 1);
+  }
+
+  const all: VerifierSummary[] = verifiers
     .map((v) => ({
       id: v.id,
       name: v.name ?? v.username,
       district: v.districtCode,
       capacity: v.verifierCapacity,
       assigned: loadBy.get(v.id) ?? 0,
+      verified: verifiedBy.get(v.id) ?? 0,
     }))
-    .filter((v) => v.assigned === 0)
-    .sort((a, b) => (b.capacity ?? 0) - (a.capacity ?? 0));
+    // Emptiest first: the list doubles as the answer to "who has room".
+    .sort((a, b) => a.assigned - b.assigned || a.name.localeCompare(b.name));
 
   return {
     waiting: rows.length,
     unassigned: rows.filter((r) => !r.verifier).length,
     oldestDays: rows.length ? rows[0].daysWaiting : 0,
     rows: rows.slice(0, QUEUE_LIMIT),
-    idle,
+    idle: all.filter((v) => v.assigned === 0),
+    all,
   };
 }

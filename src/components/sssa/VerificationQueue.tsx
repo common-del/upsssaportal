@@ -40,45 +40,72 @@ export function VerificationQueue({ data }: { data: Data }) {
         )}
       </p>
 
-      {/* Idle capacity first when it exists: it is the fix for the queue below, and
-          burying it under a 25-row table means nobody connects the two. */}
-      {data.idle.length > 0 && data.waiting > 0 && (
+      {/* Everyone, emptiest first, so idle capacity still leads while the list also
+          answers "who are my verifiers" — and gives every name somewhere to be
+          clicked. A profile reachable only by guessing a name is not reachable. */}
+      {data.all.length > 0 && (
         <section>
-          <h2 className="text-base font-bold tracking-tight text-gray-900">
-            Verifiers with nothing assigned
-          </h2>
+          <h2 className="text-base font-bold tracking-tight text-gray-900">Verifiers</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            Available capacity while {inr(data.waiting)} schools wait.
+            {data.idle.length > 0 && data.waiting > 0 ? (
+              <>
+                <b className="font-bold text-[#C8372D]">{data.idle.length}</b> with nothing assigned
+                while {inr(data.waiting)} schools wait. Emptiest first — open a name for their
+                record.
+              </>
+            ) : (
+              <>Emptiest first. Open a name for their record.</>
+            )}
           </p>
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[460px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+            <table className="w-full min-w-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
               <thead>
                 <tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
                   <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Verifier</th>
                   <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">District</th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Capacity</th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Assigned</th>
+                  <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Verified</th>
+                  <th className="border-b border-gray-100 px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {data.idle.map((v) => (
-                  <tr key={v.id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/app/sssa/users/${v.id}`}
-                        className="font-semibold hover:underline"
-                        style={{ color: NAVY }}
+                {data.all.map((v) => {
+                  const cap = v.capacity ?? 0;
+                  const pct = cap > 0 ? Math.min(100, Math.round((v.assigned / cap) * 100)) : 0;
+                  return (
+                    <tr key={v.id} className="border-t border-gray-100 first:border-t-0">
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/app/sssa/users/${v.id}`}
+                          className="font-semibold hover:underline"
+                          style={{ color: NAVY }}
+                        >
+                          {v.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{v.district ?? '—'}</td>
+                      <td
+                        className="px-4 py-3 text-right font-bold tabular-nums"
+                        style={{ color: v.assigned === 0 ? '#C8372D' : '#111827' }}
                       >
-                        {v.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{v.district ?? '—'}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-500">
-                      {v.capacity ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-[#C8372D]">0</td>
-                  </tr>
-                ))}
+                        {v.assigned}
+                        {cap > 0 && <span className="font-normal text-gray-500"> of {cap}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-gray-500">{v.verified}</td>
+                      <td className="px-4 py-3" style={{ width: 120 }}>
+                        <span className="block h-1.5 overflow-hidden rounded bg-gray-100">
+                          <span
+                            className="block h-full rounded"
+                            style={{
+                              width: `${pct}%`,
+                              background: pct >= 100 ? '#C8372D' : NAVY,
+                            }}
+                          />
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

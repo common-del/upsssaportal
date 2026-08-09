@@ -66,16 +66,26 @@ async function main() {
     return;
   }
 
-  // Chunked: a single transaction over tens of thousands of updates will time out
-  // on a hosted database, and this is restartable because it only touches nulls.
-  const CHUNK = 500;
-  for (let i = 0; i < updates.length; i += CHUNK) {
-    await prisma.$transaction(
-      updates.slice(i, i + CHUNK).map((u) =>
-        prisma.school.update({ where: { udise: u.udise }, data: { management: u.code } }),
-      ),
-    );
-    console.log(`  written ${Math.min(i + CHUNK, updates.length)} / ${updates.length}`);
+  // Grouped by target value, so this is three updateMany calls per chunk rather
+  // than one UPDATE per school. Row-at-a-time took about six minutes for 32,579
+  // schools, which is six minutes added to every deploy and a build-timeout risk;
+  // this is a few seconds. Chunked because a single IN list of 32,579 ids exceeds
+  // what the driver will bind.
+  const CHUNK = 5_000;
+  const byCode = new Map<ManagementCode, string[]>();
+  for (const u of updates) byCode.set(u.code, [...(byCode.get(u.code) ?? []), u.udise]);
+
+  let written = 0;
+  for (const [code, udises] of byCode) {
+    for (let i = 0; i < udises.length; i += CHUNK) {
+      const slice = udises.slice(i, i + CHUNK);
+      await prisma.school.updateMany({
+        where: { udise: { in: slice } },
+        data: { management: code },
+      });
+      written += slice.length;
+      console.log(`  written ${written} / ${updates.length}`);
+    }
   }
   console.log('Done.');
 }

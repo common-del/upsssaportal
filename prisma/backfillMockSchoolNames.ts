@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   generateSchoolName,
   categoryFromManagement,
@@ -6,7 +6,13 @@ import {
 } from './indianSchoolNames';
 
 const prisma = new PrismaClient();
-const BATCH_SIZE = 200;
+
+// Each row needs its own name, so updateMany cannot help — but a single UPDATE
+// ... FROM (VALUES ...) sets a whole batch in one statement. Row-at-a-time took
+// roughly six minutes for 32,579 schools, which is six minutes on every deploy
+// and a build-timeout risk. 1,000 rows is 3,000 bind parameters, well inside
+// Postgres's 65,535 limit.
+const BATCH_SIZE = 1_000;
 
 /**
  * Replaces faker.company.name() school names with UP-appropriate ones.
@@ -91,14 +97,15 @@ async function main() {
 
   let done = 0;
   for (const batch of chunk(renames, BATCH_SIZE)) {
-    await prisma.$transaction(
-      batch.map((r) =>
-        prisma.school.update({
-          where: { udise: r.udise },
-          data: { nameEn: r.nameEn, nameHi: r.nameHi },
-        }),
-      ),
-    );
+    // Values are bound as parameters via Prisma.sql, not interpolated, so a
+    // school name containing a quote cannot break out of the statement.
+    const values = batch.map((r) => Prisma.sql`(${r.udise}, ${r.nameEn}, ${r.nameHi})`);
+    await prisma.$executeRaw`
+      UPDATE "School" AS s
+      SET "nameEn" = v.name_en, "nameHi" = v.name_hi
+      FROM (VALUES ${Prisma.join(values)}) AS v(udise, name_en, name_hi)
+      WHERE s.udise = v.udise
+    `;
     done += batch.length;
     console.log(`  ${done}/${renames.length} renamed...`);
   }

@@ -337,8 +337,18 @@ async function main() {
       skipDuplicates: true,
     });
   }
-  for (let i = 0; i < results.length; i += CHUNK) {
-    await prisma.result.createMany({ data: results.slice(i, i + CHUNK), skipDuplicates: true });
+  // Upserted, not createMany with skipDuplicates. seedMockPerformanceSchools has
+  // already written a Result row for most of these schools carrying a random score
+  // and a hardcoded band, so skipping duplicates left those figures in place under
+  // the genuine responses created above — self and verified then disagreed with the
+  // answers that were supposed to produce them.
+  for (const r of results) {
+    const { cycleId, schoolUdise, ...rest } = r;
+    await prisma.result.upsert({
+      where: { cycleId_schoolUdise: { cycleId, schoolUdise } },
+      create: r,
+      update: rest,
+    });
   }
 
   console.log(

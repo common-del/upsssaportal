@@ -173,7 +173,7 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
           if (row.verifierId) change(row, v.id, v.name);
           else assign(row, v.id, v.name);
         }}
-        className={`max-w-[240px] rounded-lg border px-2.5 py-1.5 text-[12.5px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B] disabled:opacity-50 ${
+        className={`w-[240px] max-w-full truncate rounded-lg border px-2.5 py-1.5 text-[12.5px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B] disabled:opacity-50 ${
           row.verifierId ? 'border-gray-300' : 'border-[#E0A49C]'
         }`}
       >
@@ -205,7 +205,9 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
               <th className={`${th} text-left`}>School</th>
               <th className={`${th} text-left`}>District</th>
               <th className={`${th} text-right`}>Waiting</th>
-              <th className={`${th} text-left`}>{action}</th>
+              <th className={`${th} text-left`} style={{ width: 268 }}>
+                {action}
+              </th>
             </tr>
           </thead>
           <tbody>

@@ -129,10 +129,14 @@ async function main() {
       data: batch.map((r) => {
         // Final score only ever comes from a verifier score, matching the
         // "no final score without a verifier score" rule used elsewhere.
+        // Ranges and codes follow the Uday / Unnat / Utkarsh scale at 55 and 80.
+        // This used to draw LOW from 0–40 and HIGH from 76–100 and label them
+        // NEEDS_IMPROVEMENT / EXCELLENT, which put a score of 39 in a band the
+        // grading table calls Uday and a score of 78 in one it calls Unnat.
         const finalScorePercent = r.band === 'LOW'
-          ? Math.round(Math.random() * 3999) / 100
-          : Math.round(7600 + Math.random() * 2400) / 100;
-        const gradeBandCode = r.band === 'LOW' ? 'NEEDS_IMPROVEMENT' : 'EXCELLENT';
+          ? Math.round(Math.random() * 5499) / 100
+          : Math.round(8000 + Math.random() * 2000) / 100;
+        const gradeBandCode = r.band === 'LOW' ? 'UDAY' : 'UTKARSH';
         return {
           cycleId: cycle.id,
           schoolUdise: r.udise,

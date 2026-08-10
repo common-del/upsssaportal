@@ -11,6 +11,7 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { REAL_FRAMEWORK_DATA } from './realFrameworkData';
 import { REAL_FRAMEWORK_EVIDENCE_DATA } from './realFrameworkEvidenceData';
+import { GRADE_BANDS } from './backfillGradeBands';
 
 const prisma = new PrismaClient();
 const evidenceByCode = new Map(REAL_FRAMEWORK_EVIDENCE_DATA.map((e) => [e.code, e]));
@@ -136,11 +137,13 @@ async function main() {
 
   // 3. Grade bands (percent thresholds match the low/high-performing cutoffs
   // already used elsewhere in the app: <40 / >=76).
-  const gradeBands = [
-    { key: 'NEEDS_IMPROVEMENT', labelEn: 'Needs Improvement', labelHi: 'सुधार आवश्यक', minPercent: 0, maxPercent: 40, order: 1 },
-    { key: 'SATISFACTORY', labelEn: 'Satisfactory', labelHi: 'संतोषजनक', minPercent: 40, maxPercent: 76, order: 2 },
-    { key: 'EXCELLENT', labelEn: 'Excellent', labelHi: 'उत्कृष्ट', minPercent: 76, maxPercent: 100, order: 3 },
-  ];
+  // Uday / Unnat / Utkarsh at 55 and 80, per the UPSQAAF School Grading Category
+  // table cited in src/lib/public/dummyData.ts — the scale already shown to the
+  // public. This previously carried Needs Improvement / Satisfactory / Excellent
+  // at 40 and 76, cutoffs taken from elsewhere in the app rather than from the
+  // table, so a school on 50% was Uday to a parent and Satisfactory to an officer.
+  // backfillGradeBands.ts is what applies this to a database already seeded.
+  const gradeBands = GRADE_BANDS;
   for (const gb of gradeBands) {
     await prisma.gradeBand.upsert({
       where: { frameworkId_key: { frameworkId: framework.id, key: gb.key } },

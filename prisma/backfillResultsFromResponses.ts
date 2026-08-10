@@ -197,10 +197,15 @@ async function main() {
     if (applicable.length === 0) continue;
     checked++;
 
+    // An empty response set is not a score of zero. computeScore returns 0 when
+    // nothing has been answered — achieved 0 out of a real possible — and storing
+    // that reads as "this school scored nothing", which is untrue for a school
+    // that has merely opened the form, and drags down every average it lands in.
     const selfMap = new Map(sa.responses.map((r) => [r.parameterId, r.selectedOptionKey]));
-    const selfScorePercent = computeScore(selfMap, applicable);
+    const selfScorePercent = selfMap.size > 0 ? computeScore(selfMap, applicable) : null;
 
-    const vMap = vBy.get(sa.schoolUdise);
+    const raw = vBy.get(sa.schoolUdise);
+    const vMap = raw && raw.size > 0 ? raw : null;
     const verifierScorePercent = vMap ? computeScore(vMap, applicable) : null;
 
     // No final score without a verifier score, matching computeAndStoreResult.

@@ -7,6 +7,7 @@
 import { PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 import { generateSchoolName, type MockSchoolCategory } from './indianSchoolNames';
+import { personName } from './indianPersonNames';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -651,7 +652,10 @@ async function main() {
     const createdAt = new Date(thirtyDaysAgo + faker.number.int({ min: 0, max: 30 * 86400000 }));
     const resolvedAt = status === 'RESOLVED' ? new Date(createdAt.getTime() + faker.number.int({ min: 86400000, max: 7 * 86400000 })) : null;
 
-    const submitterName = faker.person.fullName();
+    // Keyed on idx so it matches backfillComplainantNames.ts, which walks the
+    // same rota over the same ids — a re-seed and a backfill agree rather than
+    // fighting over who filed what.
+    const submitterName = personName(idx);
 
     const ticket = await prisma.ticket.upsert({
       where: { id: `dummy_dispute_${idx + 1}` },

@@ -1,8 +1,31 @@
 import Link from 'next/link';
-import { buildAppeals } from '@/lib/sssa/appeals';
+import { buildAppeals, type Scored } from '@/lib/sssa/appeals';
 import { AppealsTabs, type AppealsTab } from '@/components/sssa/AppealsTabs';
 
 const NAVY = '#1B2A6B';
+
+/**
+ * A score over the band it falls in.
+ *
+ * One decimal, not rounded to whole. Two indicators out of dozens move a
+ * weighted percentage by a few tenths, so rounding printed a school's self score
+ * and its verified score as the same number and made the appeal look like a
+ * mistake. The band underneath is what actually matters to a school — a tenth of
+ * a point either side of 40 is the difference between Needs Improvement and
+ * Satisfactory.
+ */
+function Score({ value, tone = 'ink' }: { value: Scored; tone?: 'ink' | 'red' | 'green' }) {
+  if (value.score == null) return <span className="text-gray-400">—</span>;
+  const color = tone === 'red' ? '#C8372D' : tone === 'green' ? '#1C7A4A' : '#111827';
+  return (
+    <span className="flex flex-col items-end leading-tight">
+      <span className="font-bold tabular-nums" style={{ color }}>
+        {value.score.toFixed(1)}
+      </span>
+      {value.band && <span className="text-[10.5px] text-gray-500">{value.band}</span>}
+    </span>
+  );
+}
 
 /**
  * Appeals: schools disputing their verification.
@@ -41,7 +64,8 @@ export default async function AppealsPage({
       {tab === 'appeals' ? (
         <section>
           <p className="text-xs text-gray-500">
-            One appeal per school per cycle. Indicators shows those still undecided.
+            One appeal per school per cycle. Final is the verified score with the school&apos;s answer
+            restored wherever an appeal was upheld.
           </p>
 
           {data.rows.length === 0 ? (
@@ -50,36 +74,47 @@ export default async function AppealsPage({
             </div>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[760px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+              <table className="w-full min-w-[920px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
                 <thead>
                   <tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">School</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">District</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Block</th>
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Verifier</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Indicators</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">School said</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Verifier said</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Self</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Verified</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Final</th>
                     <th className="border-b border-gray-100 px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {data.rows.map((r) => (
                     <tr key={r.id} className="border-t border-gray-100 first:border-t-0">
-                      <td className="px-4 py-3">
-                        <span className="block font-semibold" style={{ color: NAVY }}>
-                          {r.school}
-                        </span>
-                        <span className="text-xs text-gray-500">{r.district}</span>
+                      <td className="px-4 py-3 font-semibold" style={{ color: NAVY }}>
+                        {r.school}
                       </td>
+                      <td className="px-4 py-3 text-gray-700">{r.district}</td>
+                      <td className="px-4 py-3 text-gray-700">{r.block ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-700">{r.verifier ?? '—'}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        <b style={{ color: r.pending ? '#C8372D' : '#1C7A4A' }}>{r.pending}</b>
-                        <span className="text-gray-500"> of {r.items}</span>
+                      <td className="px-4 py-3 text-right">
+                        <Score value={r.self} />
                       </td>
-                      <td className="px-4 py-3 text-right font-bold tabular-nums text-gray-900">
-                        {r.selfScore != null ? Math.round(r.selfScore) : '—'}
+                      <td className="px-4 py-3 text-right">
+                        <Score value={r.verified} tone="red" />
                       </td>
-                      <td className="px-4 py-3 text-right font-bold tabular-nums" style={{ color: '#C8372D' }}>
-                        {r.verifierScore != null ? Math.round(r.verifierScore) : '—'}
+                      {/* Green only when the appeal actually moved it — otherwise Final is
+                          simply the verified score and colour would imply a change. */}
+                      <td className="px-4 py-3 text-right">
+                        <Score
+                          value={r.final}
+                          tone={
+                            r.final.score != null &&
+                            r.verified.score != null &&
+                            r.final.score > r.verified.score
+                              ? 'green'
+                              : 'ink'
+                          }
+                        />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link

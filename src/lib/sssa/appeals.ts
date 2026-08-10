@@ -11,17 +11,25 @@ import { prisma } from '@/lib/db';
  * are grouped by who did the scoring rather than who complained.
  */
 
+/** A score with the grade band it falls in, since a number alone does not say
+ *  whether a school passed a threshold that matters. */
+export type Scored = { score: number | null; band: string | null };
+
 export type AppealRow = {
   id: string;
   udise: string;
   school: string;
   district: string;
+  block: string | null;
   verifier: string | null;
   verifierId: string | null;
   items: number;
   pending: number;
-  selfScore: number | null;
-  verifierScore: number | null;
+  self: Scored;
+  verified: Scored;
+  /** Verifier's score with the school's answer restored on every upheld
+   *  indicator. Equal to verified until an appeal goes the school's way. */
+  final: Scored;
   submittedAt: Date | null;
 };
 
@@ -55,7 +63,13 @@ export async function buildAppeals(): Promise<AppealsData> {
       schoolUdise: true,
       status: true,
       submittedAt: true,
-      school: { select: { nameEn: true, district: { select: { nameEn: true } } } },
+      school: {
+        select: {
+          nameEn: true,
+          district: { select: { nameEn: true } },
+          block: { select: { nameEn: true } },
+        },
+      },
       items: { select: { decision: true } },
     },
     orderBy: { submittedAt: 'asc' },
@@ -63,10 +77,15 @@ export async function buildAppeals(): Promise<AppealsData> {
 
   const udises = appeals.map((a) => a.schoolUdise);
 
-  const [results, verifications] = await Promise.all([
+  const [results, verifications, gradeBands] = await Promise.all([
     prisma.result.findMany({
       where: { cycleId: cycle.id, schoolUdise: { in: udises } },
-      select: { schoolUdise: true, selfScorePercent: true, verifierScorePercent: true },
+      select: {
+        schoolUdise: true,
+        selfScorePercent: true,
+        verifierScorePercent: true,
+        finalScorePercent: true,
+      },
     }),
     // Only completed verifications: a draft is not a scoring decision, so counting
     // it would deflate every verifier's appeal rate by whatever they have open.
@@ -77,7 +96,30 @@ export async function buildAppeals(): Promise<AppealsData> {
         verifier: { select: { id: true, name: true, username: true } },
       },
     }),
+    prisma.gradeBand.findMany({
+      where: { framework: { cycleId: cycle.id } },
+      select: { labelEn: true, minPercent: true, maxPercent: true },
+      orderBy: { order: 'asc' },
+    }),
   ]);
+
+  /** The band a score falls in. Upper bound is exclusive except on the top band,
+   *  matching computeAndStoreResult, so 76.0 reads as Excellent and 100 still fits. */
+  const bandFor = (score: number | null): string | null => {
+    if (score == null) return null;
+    for (let i = 0; i < gradeBands.length; i++) {
+      const b = gradeBands[i]!;
+      const last = i === gradeBands.length - 1;
+      if (score >= b.minPercent && (last ? score <= b.maxPercent : score < b.maxPercent)) {
+        return b.labelEn;
+      }
+    }
+    return null;
+  };
+  const scored = (score: number | null | undefined): Scored => {
+    const s = score ?? null;
+    return { score: s, band: bandFor(s) };
+  };
 
   const resultBy = new Map(results.map((r) => [r.schoolUdise, r]));
   // Keyed on the verifier's id, not their display name — grouping by name would
@@ -96,12 +138,14 @@ export async function buildAppeals(): Promise<AppealsData> {
       udise: a.schoolUdise,
       school: a.school?.nameEn ?? a.schoolUdise,
       district: a.school?.district?.nameEn ?? '—',
+      block: a.school?.block?.nameEn ?? null,
       verifier: verifierBy.get(a.schoolUdise)?.name ?? null,
       verifierId: verifierBy.get(a.schoolUdise)?.id ?? null,
       items: a.items.length,
       pending: a.items.filter((i) => i.decision === 'PENDING').length,
-      selfScore: r?.selfScorePercent ?? null,
-      verifierScore: r?.verifierScorePercent ?? null,
+      self: scored(r?.selfScorePercent),
+      verified: scored(r?.verifierScorePercent),
+      final: scored(r?.finalScorePercent),
       submittedAt: a.submittedAt,
     };
   });

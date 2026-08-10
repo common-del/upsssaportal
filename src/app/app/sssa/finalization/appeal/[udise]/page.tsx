@@ -68,7 +68,11 @@ export default async function AppealDecisionPage({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-navy-900">{t('decideAppealTitle')}</h1>
+      {/* Both states used to be headed "Decide Appeal", so arriving from View gave
+          no clue that there was nothing to decide. */}
+      <h1 className="text-2xl font-bold text-navy-900">
+        {appeal.status === 'DECIDED' ? t('appealDecisionTitle') : t('decideAppealTitle')}
+      </h1>
       <p className="mt-1 text-sm text-text-secondary">{appeal.school.nameHi} / {appeal.school.nameEn} — {udise}</p>
 
       <AppealDecisionForm

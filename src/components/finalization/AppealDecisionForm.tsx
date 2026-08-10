@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Lock } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { decideAppeal } from '@/lib/actions/finalization';
 import EvidenceViewer, { type EvidenceFile } from '@/components/evidence/EvidenceViewer';
 
@@ -88,22 +88,41 @@ export default function AppealDecisionForm({
             </div>
           )}
 
-          <div className="mt-3 flex gap-3">
-            <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${decisions[item.id] === 'ACCEPT_SCHOOL' ? 'border-green-400 bg-green-50 text-green-700' : 'border-border text-text-secondary hover:bg-surface'}`}>
-              <input type="radio" name={`dec-${item.id}`} disabled={isDecided}
-                checked={decisions[item.id] === 'ACCEPT_SCHOOL'}
-                onChange={() => setDecisions((p) => ({ ...p, [item.id]: 'ACCEPT_SCHOOL' }))}
-                className="accent-green-600" />
-              {t('acceptSchool')}
-            </label>
-            <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${decisions[item.id] === 'KEEP_VERIFIER' ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-border text-text-secondary hover:bg-surface'}`}>
-              <input type="radio" name={`dec-${item.id}`} disabled={isDecided}
-                checked={decisions[item.id] === 'KEEP_VERIFIER'}
-                onChange={() => setDecisions((p) => ({ ...p, [item.id]: 'KEEP_VERIFIER' }))}
-                className="accent-navy-600" />
-              {t('keepVerifier')}
-            </label>
-          </div>
+          {/* A settled appeal is a record, not a form. It used to render the same
+              two radio buttons with one selected and the inputs disabled, which
+              reads as a choice you are being asked to make — so View and Decide
+              looked like the same screen and the only real difference, a missing
+              submit button, was below the fold. Stating the outcome removes the
+              question. */}
+          {isDecided ? (
+            <div
+              className={`mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
+                decisions[item.id] === 'ACCEPT_SCHOOL'
+                  ? 'bg-green-50 text-green-800'
+                  : 'bg-navy-50 text-navy-800'
+              }`}
+            >
+              <Check size={14} />
+              {decisions[item.id] === 'ACCEPT_SCHOOL' ? t('outcomeAccepted') : t('outcomeKept')}
+            </div>
+          ) : (
+            <div className="mt-3 flex gap-3">
+              <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${decisions[item.id] === 'ACCEPT_SCHOOL' ? 'border-green-400 bg-green-50 text-green-700' : 'border-border text-text-secondary hover:bg-surface'}`}>
+                <input type="radio" name={`dec-${item.id}`}
+                  checked={decisions[item.id] === 'ACCEPT_SCHOOL'}
+                  onChange={() => setDecisions((p) => ({ ...p, [item.id]: 'ACCEPT_SCHOOL' }))}
+                  className="accent-green-600" />
+                {t('acceptSchool')}
+              </label>
+              <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${decisions[item.id] === 'KEEP_VERIFIER' ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-border text-text-secondary hover:bg-surface'}`}>
+                <input type="radio" name={`dec-${item.id}`}
+                  checked={decisions[item.id] === 'KEEP_VERIFIER'}
+                  onChange={() => setDecisions((p) => ({ ...p, [item.id]: 'KEEP_VERIFIER' }))}
+                  className="accent-navy-600" />
+                {t('keepVerifier')}
+              </label>
+            </div>
+          )}
         </div>
       ))}
 

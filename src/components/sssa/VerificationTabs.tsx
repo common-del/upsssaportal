@@ -410,6 +410,16 @@ export function VerificationTabs({
             onClick={() => {
               setTab(t.id);
               setEditing(null);
+              // Written straight into the history entry, not pushed through the
+              // router: the tab is client state, so without this the URL stayed
+              // /verifiers and opening a school then pressing Back returned to a
+              // page with no ?tab= — which defaults to the first tab, not the one
+              // you were on. replaceState updates the entry in place, so no
+              // navigation happens and the district and search filters survive.
+              if (typeof window !== 'undefined') {
+                const path = window.location.pathname;
+                window.history.replaceState(null, '', t.id === 'todo' ? path : `${path}?tab=${t.id}`);
+              }
             }}
             className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-[13.5px] font-semibold ${
               t.id === tab

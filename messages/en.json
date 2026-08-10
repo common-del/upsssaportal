@@ -846,7 +846,11 @@
     "alreadyDecided": "This appeal has already been decided.",
     "appealEvidence": "Appeal Evidence",
     "cycleBanner": "Active cycle: {total} schools, {sa} with SA submitted, {verified} with verification.",
-    "computeHelper": "Compute will generate results for schools with submitted assessments. If verifier is missing, self assessment is used as the final score."
+    "computeHelper": "Compute will generate results for schools with submitted assessments. If verifier is missing, self assessment is used as the final score.",
+    "appealDecisionTitle": "Appeal Decision",
+    "outcomeAccepted": "SSSA accepted the school's answer",
+    "outcomeKept": "SSSA kept the verifier's score",
+    "decidedOn": "Decided"
   },
   "userMgmt": {
     "title": "User Management",

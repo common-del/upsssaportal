@@ -25,6 +25,17 @@ export const MANAGEMENT_LABELS_HI: Record<ManagementCode, string> = {
   AIDED: 'सहायता प्राप्त विद्यालय',
 };
 
+/**
+ * The same three, without the noun. A dashboard card names one group once and reads
+ * better plural; a register column repeats itself down thirty thousand rows, where
+ * "Schools" on every line is width spent saying what the table already is.
+ */
+export const MANAGEMENT_LABELS_SHORT: Record<ManagementCode, string> = {
+  PRIVATE: 'Private',
+  GOVERNMENT: 'Government',
+  AIDED: 'Government Aided',
+};
+
 export function isManagementCode(v: string | null | undefined): v is ManagementCode {
   return v != null && (MANAGEMENT_CODES as readonly string[]).includes(v);
 }

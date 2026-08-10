@@ -16,7 +16,9 @@ export default async function VerificationPage() {
     <div className="flex flex-col gap-5">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">Verification</h1>
-        <p className="mt-1 text-sm text-gray-500">Getting submissions checked</p>
+        <p className="mt-1 text-sm text-gray-500">
+          Getting submissions checked, and what came of the ones already done
+        </p>
       </header>
 
       {!data ? (

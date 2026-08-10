@@ -12,7 +12,7 @@ import { isManagementCode, MANAGEMENT_LABELS_SHORT } from '@/lib/schoolManagemen
  *
  * This replaced four separate tallies — expired documents, incomplete sets, no fee
  * disclosure, fully compliant — that were four readings of the same four facts. The
- * facts are now one status per school and a count of what is missing.
+ * facts are now one status per school: completed, pending, or not started.
  *
  * Government schools are not asked to disclose fees; the school-side page is hidden
  * for them. So their profile is three parts, not four. Counting them short for a form
@@ -165,8 +165,9 @@ export async function buildCompliance(filters: ComplianceFilters = {}): Promise<
   const filtered = all.filter((r) => {
     if (filters.district && r.district !== filters.district) return false;
     if (filters.management && r.management !== filters.management) return false;
-    if (filters.status === 'complete' && r.status !== 'COMPLETE') return false;
-    if (filters.status === 'incomplete' && r.status === 'COMPLETE') return false;
+    if (filters.status === 'completed' && r.status !== 'COMPLETE') return false;
+    if (filters.status === 'pending' && r.status !== 'PARTIAL') return false;
+    if (filters.status === 'notstarted' && r.status !== 'EMPTY') return false;
     if (q && !r.name.toLowerCase().includes(q) && !r.udise.includes(filters.q!.trim())) return false;
     return true;
   });

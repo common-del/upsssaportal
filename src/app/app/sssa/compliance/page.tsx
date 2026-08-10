@@ -13,6 +13,14 @@ const STATUS_STYLE: Record<ProfileStatus, string> = {
   EMPTY: 'bg-[#FBE9E7] text-[#96271E]',
 };
 
+/** Three words, and the filter below uses the same three. A column that says
+ *  Pending beside a filter that says Incomplete is two vocabularies for one fact. */
+const STATUS_LABEL: Record<ProfileStatus, string> = {
+  COMPLETE: 'Completed',
+  PARTIAL: 'Pending',
+  EMPTY: 'Not started',
+};
+
 /**
  * Compliance: whether each school has completed its profile.
  *
@@ -30,9 +38,10 @@ export default async function CompliancePage({
   const filters = {
     district: sp.district ?? '',
     management: sp.management ?? '',
-    // Incomplete by default: this page is a worklist, and the schools that have
-    // finished are not the ones anybody opened it to find.
-    status: sp.status ?? 'incomplete',
+    // No default filter. The sort already puts the schools with the furthest to go
+    // at the top, so hiding the finished ones would only make somebody wonder where
+    // they went.
+    status: sp.status ?? '',
     q: sp.q ?? '',
   };
 
@@ -66,9 +75,9 @@ export default async function CompliancePage({
       )}
 
       <StatGrid>
-        <StatCard label="Profile complete" value={data.complete} tone="green" />
-        <StatCard label="Partly filled" value={data.partial} tone="amber" />
-        <StatCard label="Nothing entered" value={data.empty} tone="red" />
+        <StatCard label="Completed" value={data.complete} tone="green" />
+        <StatCard label="Pending" value={data.partial} tone="amber" />
+        <StatCard label="Not started" value={data.empty} tone="red" />
       </StatGrid>
 
       <Section
@@ -102,9 +111,10 @@ export default async function CompliancePage({
             ))}
           </select>
           <select name="status" defaultValue={filters.status} className={selectCls}>
-            <option value="incomplete">Incomplete</option>
-            <option value="complete">Complete</option>
-            <option value="">All</option>
+            <option value="">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="notstarted">Not started</option>
           </select>
           <button
             type="submit"
@@ -152,22 +162,18 @@ export default async function CompliancePage({
                     {r.management ?? <span className="text-gray-400">Not recorded</span>}
                   </Td>
                   <Td>
-                    {/* The count is the useful half. "2 of 4 missing" is a different
-                        conversation from "nothing entered", and both are different from
-                        done. */}
                     <span
                       className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_STYLE[r.status]}`}
                     >
-                      {r.status === 'COMPLETE'
-                        ? 'Complete'
-                        : r.status === 'EMPTY'
-                          ? 'Nothing entered'
-                          : `${r.missing} of ${r.applicable} missing`}
+                      {STATUS_LABEL[r.status]}
                     </span>
                   </Td>
                   <Td align="right">
+                    {/* The public school profile, which is what a profile is — the
+                        page a parent sees. /app/sssa/monitoring/schools/... is the
+                        self-assessment drill-down, a different question entirely. */}
                     <Link
-                      href={`/app/sssa/monitoring/schools/${r.udise}`}
+                      href={`/public/schools/${r.udise}`}
                       className="whitespace-nowrap text-[12px] font-bold hover:underline"
                       style={{ color: NAVY }}
                     >

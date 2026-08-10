@@ -5,6 +5,7 @@ import { ResultsSortSelect } from '@/components/public/ResultsSortSelect';
 import { FindResultsTable, type FindResultRow } from '@/components/public/FindResultsTable';
 import { SCHOOLS } from '@/lib/public/dummyData';
 import { illustrativeDistanceKm } from '@/lib/public/nearbyDummyData';
+import { verifiedUdises } from '@/lib/public/verifiedStatus';
 import { searchSchools } from '@/lib/actions/findSchools';
 import type { Prisma } from '@prisma/client';
 
@@ -71,6 +72,7 @@ async function loadResults(
     });
 
     if (schools.length > 0) {
+      const verified = await verifiedUdises(schools.map((s) => s.udise));
       return schools.map((s) => ({
         udise: s.udise,
         name: s.nameEn,
@@ -79,6 +81,7 @@ async function loadResults(
         distanceKm: illustrativeDistanceKm(s.udise),
         feesMin: s.feesRangeMin,
         feesMax: s.feesRangeMax,
+        verified: verified.has(s.udise),
       }));
     }
   } catch {
@@ -94,6 +97,9 @@ async function loadResults(
     feesMax,
   });
 
+  // Reached only when the query above failed, so there is no verification record to
+  // read. Unverified is the honest default: an unavailable database is not evidence
+  // that an inspection happened.
   return schools.map((s) => ({
     udise: s.udise,
     name: s.name,
@@ -102,6 +108,7 @@ async function loadResults(
     distanceKm: illustrativeDistanceKm(s.udise),
     feesMin: s.feesMin,
     feesMax: s.feesMax,
+    verified: false,
   }));
 }
 
@@ -120,6 +127,8 @@ function dummyRowsForDistrict(districtName: string, blockName?: string): FindRes
       distanceKm: illustrativeDistanceKm(s.udise),
       feesMin: null,
       feesMax: null,
+      // Demo rows, not register rows. Nothing has been verified.
+      verified: false,
     }));
 }
 

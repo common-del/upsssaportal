@@ -44,7 +44,6 @@ type DirectoryRow = {
   type: SchoolType;
   performanceLevel: PerformanceLevel;
   feeDisclosed: boolean;
-  accreditation: 'SQAAF Verified' | 'Pending';
   /** Who runs the school, from School.management. Null where the UDISE extract has
    *  not been imported — shown as unknown rather than filed under a guess. */
   management: string | null;
@@ -193,7 +192,6 @@ export default async function SssaSchoolDirectoryPage(props: {
         type: s.type,
         performanceLevel: s.performanceLevel,
         feeDisclosed: s.feeDisclosed,
-        accreditation: s.accreditation,
         // The dummy set predates management and the score columns, so these read
         // as unknown rather than borrowing a value from the demo data.
         management: null,

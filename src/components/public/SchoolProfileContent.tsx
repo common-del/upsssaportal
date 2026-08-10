@@ -38,6 +38,13 @@ import type { PerformanceLevel } from '@/lib/public/constants';
 
 const NAVY = '#1B2A6B';
 const TABS = ['Overview', 'Performance (SQAAF)', 'Fee Disclosure', 'School Report Card'] as const;
+
+/** Day-month-year, the way a date is written on an Indian public notice. */
+function formatVerifiedOn(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 type TabId = (typeof TABS)[number];
 
 function CompareBars({
@@ -99,8 +106,15 @@ export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }
         className="relative rounded-xl px-6 py-6 text-white shadow-md"
         style={{ backgroundColor: NAVY }}
       >
-        <span className="absolute right-4 top-4 rounded-full bg-[#F5B731] px-3 py-1 text-xs font-bold text-[#1B2A6B]">
-          Self Evaluated
+        {/* Was the hardcoded string "Self Evaluated" on every school, including the
+            ones a verifier had already checked. It now says which of the two this is. */}
+        <span
+          className={cn(
+            'absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-bold',
+            profile.verified ? 'bg-[#E7F5EE] text-[#14603A]' : 'bg-[#F5B731] text-[#1B2A6B]',
+          )}
+        >
+          {profile.verified ? 'Verified' : 'Self assessed'}
         </span>
         <h1 className="pr-32 text-2xl font-bold sm:text-3xl">{profile.name}</h1>
         <p className="mt-2 text-sm text-white/85">
@@ -302,8 +316,17 @@ function OverviewTab({ profile }: { profile: SchoolProfileData }) {
   const level = profile.performanceLevel as PerformanceLevel;
   const waterAvailable = o.drinkingWater === 'Available';
 
+  // Accreditation is gone rather than corrected. It read "SQAAF Verified" or
+  // "Pending" — the same fact the tag in the header now carries from real data — and
+  // it was computed from a hash of the UDISE code, so it labelled roughly a third of
+  // the register verified at random. Status takes its place and says where the score
+  // came from, which is what a reader was trying to learn from it.
   const infoBoxes = [
-    { label: 'Accreditation', value: profile.accreditation, showLevel: true },
+    {
+      label: 'Status',
+      value: profile.verified ? 'Verified by SSSA' : 'Self assessed',
+      showLevel: true,
+    },
     { label: 'Recognition', value: profile.recognition, showLevel: false },
     { label: 'Board', value: profile.board, showLevel: false },
     { label: 'Classes', value: profile.classes, showLevel: false },
@@ -753,16 +776,32 @@ function ReportCardTab({ profile }: { profile: SchoolProfileData }) {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start gap-3 rounded-xl bg-[#FEF3C7] p-4">
-        <FileText className="mt-0.5 h-5 w-5 shrink-0 text-[#92400E]" aria-hidden />
-        <div>
-          <p className="font-semibold text-[#92400E]">Self Evaluated</p>
-          <p className="mt-0.5 text-sm text-[#92400E]/80">
-            These results were submitted by the school and have not been independently verified
-            by an external evaluator yet.
-          </p>
+      {/* This told every reader the results were unverified, on verified schools too.
+          Both branches are now true of the school being read. */}
+      {profile.verified ? (
+        <div className="flex items-start gap-3 rounded-xl bg-[#E7F5EE] p-4">
+          <Check className="mt-0.5 h-5 w-5 shrink-0 text-[#14603A]" aria-hidden />
+          <div>
+            <p className="font-semibold text-[#14603A]">Verified by SSSA</p>
+            <p className="mt-0.5 text-sm text-[#14603A]/85">
+              A state verifier checked this school&rsquo;s assessment
+              {profile.verifiedOn ? ` on ${formatVerifiedOn(profile.verifiedOn)}` : ''}. Where the
+              verifier&rsquo;s score differed from the school&rsquo;s own, the verified score stands.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-start gap-3 rounded-xl bg-[#FEF3C7] p-4">
+          <FileText className="mt-0.5 h-5 w-5 shrink-0 text-[#92400E]" aria-hidden />
+          <div>
+            <p className="font-semibold text-[#92400E]">Self assessed</p>
+            <p className="mt-0.5 text-sm text-[#92400E]/80">
+              These results were submitted by the school and have not been independently verified
+              by an external evaluator yet.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-[#1B2A6B]">School Report Card</h2>

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { TierStars } from '@/components/public/TierStars';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
+import { verifiedUdises } from '@/lib/public/verifiedStatus';
 import { feeLabel } from '@/lib/public/fees';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
@@ -27,7 +28,9 @@ type DirectoryRow = {
       of them - feeLabel falls back to an illustrative band. */
   feesMin: number | null;
   feesMax: number | null;
-  accreditation: 'SQAAF Verified' | 'Pending';
+  /** Whether a verifier has actually checked this school. Loaded from
+      VerificationSubmission, never derived — see verifiedStatus.ts. */
+  verified: boolean;
 };
 
 export default async function DirectoryPage(props: {
@@ -71,9 +74,12 @@ export default async function DirectoryPage(props: {
       orderBy: { nameEn: 'asc' },
     });
 
+    const verified = await verifiedUdises(matches.map((s) => s.udise));
+
     rows = matches.map((s) => {
       const extra = deriveResultFields(s.udise);
       return {
+        verified: verified.has(s.udise),
         id: s.id,
         udise: s.udise,
         nameEn: s.nameEn,
@@ -108,7 +114,7 @@ export default async function DirectoryPage(props: {
         feeDisclosed: s.feeDisclosed,
         feesMin: null,
         feesMax: null,
-        accreditation: s.accreditation,
+        verified: false,
       }));
   }
 
@@ -210,13 +216,17 @@ export default async function DirectoryPage(props: {
                     {feeLabel(r.udise, r.type, r.feesMin, r.feesMax)}
                   </td>
                   <td className="px-3 py-5">
-                    {r.accreditation === 'SQAAF Verified' ? (
-                      <span className="whitespace-nowrap rounded-full bg-[#F5B731] px-2.5 py-0.5 text-xs font-semibold text-[#1B2A6B]">
-                        SQAAF Verified
+                    {/* Was a hash of the UDISE code deciding a public verification
+                        claim. Reads the register now, and says "Self assessed" rather
+                        than "Pending" — nothing is pending, the school has filed and
+                        nobody has checked it yet. */}
+                    {r.verified ? (
+                      <span className="whitespace-nowrap rounded-full bg-[#E7F5EE] px-2.5 py-0.5 text-xs font-semibold text-[#14603A]">
+                        Verified
                       </span>
                     ) : (
-                      <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                        Pending
+                      <span className="whitespace-nowrap rounded-full bg-[#FBF1DE] px-2.5 py-0.5 text-xs font-medium text-[#7A5209]">
+                        Self assessed
                       </span>
                     )}
                   </td>

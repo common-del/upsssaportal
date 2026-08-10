@@ -23,6 +23,10 @@ export type FindResultRow = {
       of them - illustrativeFeeBand fills in below. */
   feesMin: number | null;
   feesMax: number | null;
+  /** Whether a verifier has checked this school. Passed in from the server page:
+      this used to come from deriveResultFields, which decided it with a hash of the
+      UDISE code. A client component must not be able to invent it again. */
+  verified: boolean;
 };
 
 function truncateName(name: string, max = 42): string {
@@ -75,7 +79,7 @@ export function FindResultsTable({
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Level</th>
                 <th className="px-4 py-3">Annual Fee</th>
-                <th className="px-4 py-3">Accreditation</th>
+                <th className="px-4 py-3">Status</th>
                 {/* Named, because an unlabelled column tells a parent nothing
                     about what it is for. */}
                 <th className="px-4 py-3">Compare</th>
@@ -113,13 +117,13 @@ export function FindResultsTable({
                       {feeLabel(row.udise, extra.type as SchoolType, row.feesMin, row.feesMax)}
                     </td>
                     <td className="px-4 py-3">
-                      {extra.accreditation === 'SQAAF Verified' ? (
-                        <span className="rounded-full bg-[#1B2A6B] px-2.5 py-0.5 text-xs font-medium text-white">
-                          SQAAF Verified
+                      {row.verified ? (
+                        <span className="whitespace-nowrap rounded-full bg-[#E7F5EE] px-2.5 py-0.5 text-xs font-semibold text-[#14603A]">
+                          Verified
                         </span>
                       ) : (
-                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                          Pending
+                        <span className="whitespace-nowrap rounded-full bg-[#FBF1DE] px-2.5 py-0.5 text-xs font-medium text-[#7A5209]">
+                          Self assessed
                         </span>
                       )}
                     </td>

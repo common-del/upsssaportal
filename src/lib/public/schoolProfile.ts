@@ -38,8 +38,6 @@ function weightedOverallScore(domainRawScores: { weightage: number; ourScore: nu
   );
 }
 
-export type AccreditationStatus = 'SQAAF Verified' | 'Pending';
-
 export function scoreToLevel(score: number): PerformanceLevel {
   if (score <= 55) return 'Uday';
   if (score <= 80) return 'Unnat';
@@ -104,7 +102,6 @@ export function deriveResultFields(
   type: SchoolType;
   performanceLevel: PerformanceLevel;
   feeDisclosed: boolean;
-  accreditation: AccreditationStatus;
   overallScore: number;
 } {
   const real = management ? MANAGEMENT_TO_TYPE[management] : undefined;
@@ -114,7 +111,6 @@ export function deriveResultFields(
       type: real ?? match.type,
       performanceLevel: match.performanceLevel,
       feeDisclosed: match.feeDisclosed,
-      accreditation: match.accreditation,
       overallScore: match.overallScore,
     };
   }
@@ -125,7 +121,6 @@ export function deriveResultFields(
     type: real ?? types[h % 3],
     performanceLevel: scoreToLevel(score),
     feeDisclosed: h % 2 === 0,
-    accreditation: h % 3 === 0 ? 'SQAAF Verified' : 'Pending',
     overallScore: score,
   };
 }
@@ -151,7 +146,16 @@ export type SchoolProfileData = SchoolProfileBase & {
   performanceLevel: PerformanceLevel;
   overallScore: number;
   feeDisclosed: boolean;
-  accreditation: AccreditationStatus;
+  /**
+   * Whether a verifier has actually checked this school's assessment, and when.
+   *
+   * Supplied by the page from `verifiedStatus.ts`, never derived here. This replaced
+   * an `accreditation` field computed as `h % 3 === 0 ? 'SQAAF Verified' : 'Pending'`
+   * from a hash of the UDISE code — a public claim about a school's verification
+   * decided by arithmetic on its own number.
+   */
+  verified: boolean;
+  verifiedOn: string | null;
   recognition: string;
   board: string;
   classes: string;
@@ -240,7 +244,16 @@ function pctClamp(value: number): number {
   return Math.min(99, Math.max(30, Math.round(value)));
 }
 
-export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileData {
+/**
+ * `real` carries the facts this builder cannot invent — whether a verifier has been,
+ * and the school's photographs. Everything else here is derived from the UDISE hash
+ * because the columns do not exist yet; these two must not be, because one is a
+ * public claim about an inspection and the other is a picture of a real place.
+ */
+export function buildSchoolProfileData(
+  base: SchoolProfileBase,
+  real: { verified?: boolean; verifiedOn?: string | null; photos?: SchoolPhoto[] } = {},
+): SchoolProfileData {
   const dummy = getDummySchoolRecord(base.udise);
   const derived = deriveResultFields(base.udise);
   const h = hashUdise(base.udise);
@@ -286,14 +299,17 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
 
   return {
     ...base,
-    // Nothing to read: no photo field on School, no upload flow. The carousel shows
-    // labelled placeholders for this, which is the truthful state of the record.
-    photos: [],
+    // Still empty from every caller: no photo field on School and no upload flow yet.
+    // The carousel shows labelled placeholders for that, which is the truthful state
+    // of the record. Passed in rather than hardcoded so the upload work changes the
+    // page, not this builder.
+    photos: real.photos ?? [],
     type: dummy?.type ?? derived.type,
     performanceLevel: level,
     overallScore: score,
     feeDisclosed: dummy?.feeDisclosed ?? derived.feeDisclosed,
-    accreditation: dummy?.accreditation ?? derived.accreditation,
+    verified: real.verified ?? false,
+    verifiedOn: real.verifiedOn ?? null,
     recognition: 'Recognized',
     board: derived.type === 'Private' ? 'CBSE' : 'UP Board',
     classes: classRange,

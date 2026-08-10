@@ -46,12 +46,24 @@ const CATEGORY_TO_CODE_LEVEL: Record<string, string> = {
   Secondary: 'SECONDARY',
 };
 
+/**
+ * The categories the public can file under, matching seed.ts.
+ *
+ * This list used to hold a different five — Evidence Mismatch, Score Mismatch,
+ * Documentation Conflict, Procedural, Evaluator Observation Conflict — which are
+ * the language of a school disputing its verification. That is Appeals. Because
+ * this script upserts whatever it finds here into the same DisputeCategory table
+ * the public form reads from, those five became options on the public form, and
+ * the mock complaints filed under them made the SSSA page report audit
+ * vocabulary as public sentiment.
+ */
 const DISPUTE_CATEGORY_CODES = [
-  { code: 'EVD_MISMATCH', nameEn: 'Evidence Mismatch', nameHi: 'साक्ष्य बेमेल' },
-  { code: 'SCORE_MISMATCH', nameEn: 'Score Mismatch', nameHi: 'स्कोर बेमेल' },
-  { code: 'DOC_CONFLICT', nameEn: 'Documentation Conflict', nameHi: 'दस्तावेज़ विवाद' },
-  { code: 'PROCEDURAL', nameEn: 'Procedural', nameHi: 'प्रक्रियात्मक' },
-  { code: 'EVAL_OBS', nameEn: 'Evaluator Observation Conflict', nameHi: 'मूल्यांकनकर्ता अवलोकन विवाद' },
+  { code: 'CAT_FEE_FALSE', nameEn: 'False Fee Information', nameHi: 'गलत शुल्क जानकारी' },
+  { code: 'CAT_INFRA_FALSE', nameEn: 'False Infrastructure Claims', nameHi: 'गलत बुनियादी ढाँचा दावे' },
+  { code: 'CAT_SAFETY', nameEn: 'Safety Concern', nameHi: 'सुरक्षा चिंता' },
+  { code: 'CAT_GRADE_DISPUTE', nameEn: 'Grade / Score Dispute', nameHi: 'ग्रेड / अंक विवाद' },
+  { code: 'CAT_STAFF_CONDUCT', nameEn: 'Staff Conduct Issue', nameHi: 'कर्मचारी आचरण समस्या' },
+  { code: 'CAT_OTHER', nameEn: 'Other', nameHi: 'अन्य' },
 ];
 
 const DISPUTE_STATUSES = ['OPEN', 'UNDER_REVIEW', 'CLARIFICATION_PENDING', 'RESOLVED'];

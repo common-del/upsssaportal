@@ -2,8 +2,6 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 import {
   DOMAIN_CHART_LABELS,
-  DISPUTE_CATEGORIES_CHART,
-  DISPUTE_CATEGORIES_TABLE,
   INFRASTRUCTURE_GAPS,
   WORKFLOW_STAGES,
 } from '@/lib/up-sqaaf-framework';
@@ -222,16 +220,14 @@ async function disputeAnalytics(scope: {
       .slice(0, n)
       .map(([name, count]) => ({ name, count }));
 
-  const categories =
-    total > 0
-      ? DISPUTE_CATEGORIES_TABLE.map((name, i) => {
-          const count =
-            catCounts[name] ??
-            catCounts[Object.keys(catCounts)[i % Math.max(1, Object.keys(catCounts).length)]] ??
-            Math.floor(total / DISPUTE_CATEGORIES_TABLE.length);
-          return { name, count: Math.min(count, total), pct: pct(count, total) };
-        })
-      : DISPUTE_CATEGORIES_TABLE.map((name) => ({ name, count: 0, pct: 0 }));
+  // Counted, not filled in. This walked a hardcoded list of category names and,
+  // for any name with no complaints against it, borrowed another category's count
+  // or split the total evenly — so "Most common dispute categories" showed numbers
+  // for categories nobody had ever filed under, including names that exist in no
+  // seed and no table. A category with no complaints is now simply absent.
+  const categories = Object.entries(catCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({ name, count, pct: pct(count, total) }));
 
   return {
     total,
@@ -744,10 +740,12 @@ export async function buildDisputesDashboardData() {
   for (const t of tickets) {
     categoryTally[t.category.nameEn] = (categoryTally[t.category.nameEn] ?? 0) + 1;
   }
-  const categoryCounts =
-    tickets.length > 0
-      ? Object.entries(categoryTally).map(([name, count]) => ({ name, count }))
-      : DISPUTE_CATEGORIES_CHART.map((name) => ({ name, count: 0 }));
+  // The empty case used to render six invented category names at zero, three of
+  // which ("Evidence Not Considered", "Clarification Needed", "Misreporting by
+  // School") exist in no seed and no table. Nothing filed means nothing to show.
+  const categoryCounts = Object.entries(categoryTally)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({ name, count }));
 
   const tableRows = tickets.slice(0, 50).map((t) => {
     const st = statusMap(t.status);

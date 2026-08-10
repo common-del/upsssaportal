@@ -99,22 +99,11 @@ export const INFRASTRUCTURE_GAPS = [
   'INADEQUATE CLASSROOMS',
 ] as const;
 
-export const DISPUTE_CATEGORIES_CHART = [
-  'Evidence Mismatch',
-  'Evidence Not Considered',
-  'Clarification Needed',
-  'Documentation Conflict',
-  'Procedural',
-  'Misreporting by School',
-] as const;
-
-export const DISPUTE_CATEGORIES_TABLE = [
-  'Evidence mismatch',
-  'Score mismatch',
-  'Missing documents',
-  'Evaluator observation conflict',
-  'Infrastructure claim mismatch',
-] as const;
+// Two hardcoded lists of complaint categories used to live here and were used to
+// fill empty charts. Between them they named five categories that exist in no
+// seed and no table, so a page with no complaints displayed categories nobody
+// could ever file under. Complaint categories come from DisputeCategory, which
+// prisma/seed.ts owns; charts now show what was actually filed.
 
 /**
  * Listed in the order a school actually moves through them, so the progress bar

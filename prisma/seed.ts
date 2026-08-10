@@ -99,6 +99,20 @@ const seedDimensions = [
 ];
 
 /* ── Dispute Categories ────────────────────────────────── */
+/**
+ * What a member of the public can file a complaint about.
+ *
+ * This list is the whole vocabulary — the public form renders every active
+ * DisputeCategory row, so anything left active here becomes an option a parent
+ * sees. seed-dummy.ts once wrote a second set into the same table (Evidence
+ * Mismatch, Score Mismatch, Documentation Conflict, Procedural, Evaluator
+ * Observation Conflict) and the form quietly grew to eleven options, half of
+ * them describing a school disputing its own verification.
+ *
+ * That is Appeals, not Complaints. A parent reporting an unsafe school has no
+ * use for "Evaluator Observation Conflict", so main() deactivates anything not
+ * listed here rather than trusting that no other script will add to the table.
+ */
 const seedCategories = [
   { code: 'CAT_FEE_FALSE', nameEn: 'False Fee Information', nameHi: 'गलत शुल्क जानकारी' },
   { code: 'CAT_INFRA_FALSE', nameEn: 'False Infrastructure Claims', nameHi: 'गलत बुनियादी ढाँचा दावे' },
@@ -197,6 +211,18 @@ async function main() {
     });
   }
   console.log(`  upserted ${seedCategories.length} dispute categories`);
+
+  // Deactivated rather than deleted: tickets carry categoryCode as a foreign key,
+  // so a delete would either fail or strip the label off complaints already filed.
+  // Inactive is enough — the form lists only active rows and submitDispute rejects
+  // an inactive code, so a stale bookmarked form cannot post one either.
+  const retired = await prisma.disputeCategory.updateMany({
+    where: { code: { notIn: seedCategories.map((c) => c.code) }, isActive: true },
+    data: { isActive: false },
+  });
+  if (retired.count > 0) {
+    console.log(`  deactivated ${retired.count} categories the public cannot file under`);
+  }
 
   console.log('Done.');
 }

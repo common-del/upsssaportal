@@ -8,7 +8,7 @@ export type NavItem = {
 export type NavSection = { label?: string; items: NavItem[] };
 
 /**
- * Eight working destinations, then a rule, then the three you touch rarely.
+ * Eight working destinations, then a rule, then the four you touch rarely.
  *
  * The group headings are gone: at this length they labelled the obvious and each
  * cost a line of vertical space. Two entries were removed rather than renamed —
@@ -16,13 +16,16 @@ export type NavSection = { label?: string; items: NavItem[] };
  * and what is wrong", which is now split between the Dashboard and the pages that
  * own each question.
  *
- * Complaints and Appeals are separate entries because they are separate mechanisms,
- * not two views of one queue. A parent complaining about a school is a Ticket: filed
- * on the public form, tracked by mobile, escalating on `nextDueAt` through
- * SCHOOL → DISTRICT → SSSA. A school disputing its verification is an Appeal with
- * AppealItem rows: one per school per cycle, argued indicator by indicator, decided
- * only by SSSA, with no ladder and no clock. Different filer, different object,
- * different resolution path. The only thing they share is that someone is unhappy.
+ * Appeals is no longer an entry: an appeal is one of the two ways a verification
+ * ends, so it is a queue on Verification rather than a page of its own.
+ *
+ * Complaints stays separate, and should not be folded in with it. A parent
+ * complaining about a school is a Ticket: filed on the public form, tracked by
+ * mobile, escalating on `nextDueAt` through SCHOOL → DISTRICT → SSSA. A school
+ * disputing its verification is an Appeal with AppealItem rows: one per school per
+ * cycle, argued indicator by indicator, decided only by SSSA, with no ladder and no
+ * clock. Different filer, different object, different resolution path. The only
+ * thing they share is that someone is unhappy.
  *
  * `exact` is required on the Dashboard: without it the prefix match would light it
  * up on every /app/sssa/* page.
@@ -37,6 +40,10 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // verification ends, so a separate sidebar item split one process in half and
       // listed appealed schools in two places at once.
       { href: '/app/sssa/verifiers', label: 'Verification' },
+      // Verification is two queues of outstanding work. The finished ones — every
+      // completed verification with its final score, and every appeal already ruled
+      // on — are here. Built and working, and until now linked from nowhere.
+      { href: '/app/sssa/finalization', label: 'Results' },
       { href: '/app/sssa/disputes', label: 'Complaints' },
       { href: '/app/sssa/framework', label: 'Framework' },
       { href: '/app/sssa/users', label: 'Users' },

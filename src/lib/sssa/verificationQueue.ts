@@ -79,11 +79,9 @@ export type VerificationQueue = {
   verifiers: VerifierSummary[];
   /** Completed verifications, whatever came of them. */
   verified: VerifiedRow[];
-  /** Settled: the score stands and nobody owes anything. Covers a school that
-   *  never appealed and one whose appeal SSSA has already ruled on — from an
-   *  officer's side those are the same thing, which is nothing to do. */
-  settledCount: number;
-  /** The only outstanding work on this page: appeals SSSA has not answered. */
+  /** The only outstanding work on this page beyond the queue itself: appeals SSSA
+   *  has not answered. Completed verifications are counted nowhere here, because
+   *  finished work is not workload — Finalization & Results lists those. */
   awaitingDecisionCount: number;
 };
 
@@ -282,7 +280,6 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
       // Emptiest first, so the list doubles as the answer to "who has room".
       .sort((a, b) => a.assigned - b.assigned || a.name.localeCompare(b.name)),
     verified,
-    settledCount: verified.length - awaitingDecisionCount,
     awaitingDecisionCount,
   };
 }

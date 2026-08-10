@@ -18,15 +18,17 @@ const MAX_PER_VERIFIER = 50;
 const inr = (n: number) => n.toLocaleString('en-IN');
 const waitColor = (d: number) => (d >= 14 ? RED : d >= 7 ? '#B8791A' : '#111827');
 
-export type VerificationTab = 'todo' | 'settled' | 'decide';
+export type VerificationTab = 'todo' | 'decide';
 
 /**
- * The verification lifecycle as two queues and a record.
+ * Two queues, and nothing else.
  *
- * To check is work for a verifier. To decide is work for SSSA. Score accepted is
- * everything finished. Each tab count is therefore a number somebody can act on,
- * or a number already dealt with — never a mixture, which is what every earlier
- * version of this page got wrong:
+ * To check is work for a verifier. To decide is work for SSSA. Every number on this
+ * page is therefore a count of things somebody has to do — a completed verification
+ * is not work and has no place here. Finalization & Results holds the finished ones,
+ * with the final score and an appeal filter.
+ *
+ * Each earlier version put something on the bar that was not workload:
  *
  * "Unassigned" was `rows.filter(r => !r.verifierId)`, a strict subset of the queue
  * beside it, so two counts described overlapping piles of the same schools. It is
@@ -39,7 +41,10 @@ export type VerificationTab = 'todo' | 'settled' | 'decide';
  *
  * "Appealed" then held ruled appeals alongside open ones, so its count answered
  * "how many appeals have ever existed" when the only useful question is how many
- * are unanswered. A ruling is finished work and sits with the rest of it.
+ * are unanswered.
+ *
+ * "Score accepted" was 278 rows of finished business on a page whose other two
+ * numbers were queues, so the bar mixed a backlog with an archive.
  *
  * Appeals was also a separate sidebar page, which listed appealed schools twice and
  * never beside the verification they dispute. The verifier list has moved to Users,
@@ -129,13 +134,8 @@ export function VerificationTabs({
   );
   /** For the toggle's own count, which has to survive the toggle being on. */
   const unassignedCount = useMemo(() => matched.filter((r) => !r.verifierId).length, [matched]);
-  // Split on whether SSSA still owes an answer, not on whether an appeal exists.
-  // A ruled appeal is settled — there is nothing on it to do, so it sits with the
-  // schools that never appealed rather than padding a queue.
-  const settledRows = useMemo(
-    () => data.verified.filter((r) => match(r) && !r.appealPending),
-    [data.verified, match],
-  );
+  // Only appeals SSSA has not answered. A ruled appeal is finished work and lives
+  // on Finalization & Results with the other completed verifications.
   const toDecideRows = useMemo(
     () => data.verified.filter((r) => match(r) && r.appealPending),
     [data.verified, match],
@@ -321,7 +321,11 @@ export function VerificationTabs({
     );
   }
 
-  function VerifiedTable({ rows, appeal }: { rows: VerifiedRow[]; appeal?: boolean }) {
+  /** Appeals waiting on SSSA. Self and verified are what the school is arguing
+   *  about; Final is not shown, because until the decision is made it is only ever
+   *  a copy of Verified — a column that repeats its neighbour on every row and then
+   *  changes the moment you leave the page. */
+  function AppealTable({ rows }: { rows: VerifiedRow[] }) {
     if (rows.length === 0) {
       return (
         <div className="rounded-2xl border border-gray-200 bg-white px-4 py-7 text-center text-[13px] text-gray-500">
@@ -331,7 +335,7 @@ export function VerificationTabs({
     }
     return (
       <div className="overflow-x-auto">
-        <table className={`w-full ${appeal ? 'min-w-[940px]' : 'min-w-[840px]'} overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]`}>
+        <table className="w-full min-w-[840px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
           <thead>
             <tr>
               <th className={`${th} text-left`}>School</th>
@@ -340,18 +344,13 @@ export function VerificationTabs({
               <th className={`${th} text-left`}>Verifier</th>
               <th className={`${th} text-right`}>Self</th>
               <th className={`${th} text-right`}>Verified</th>
-              {/* Final only where an appeal can move it. On the accepted tab it
-                  would repeat Verified on every row. */}
-              {appeal && <th className={`${th} text-right`}>Final</th>}
-              <th className={th} />
+              <th className={th} style={{ width: ACTION_COL }} />
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => {
               const dropped =
                 r.selfScore != null && r.verifiedScore != null && r.verifiedScore < r.selfScore;
-              const raised =
-                r.finalScore != null && r.verifiedScore != null && r.finalScore > r.verifiedScore;
               return (
                 <tr key={r.udise} className="border-t border-gray-100 first:border-t-0">
                   <td className="px-4 py-3 font-semibold" style={{ color: NAVY }}>
@@ -374,29 +373,13 @@ export function VerificationTabs({
                   <td className="px-4 py-3 text-right">
                     <Score score={r.verifiedScore} band={r.verifiedBand} tone={dropped ? 'red' : 'ink'} />
                   </td>
-                  {appeal && (
-                    <td className="px-4 py-3 text-right">
-                      {/* Green only where the appeal actually moved it — colour on an
-                          unchanged figure would imply a decision that never happened. */}
-                      <Score score={r.finalScore} band={r.finalBand} tone={raised ? 'green' : 'ink'} />
-                    </td>
-                  )}
-                  {/* Three labels, three destinations, no overlap. Decide is the only
-                      one that asks anything of you. Appeal opens a ruling SSSA has
-                      already made — keyed on the row, not the tab, so a settled
-                      appeal stays reachable instead of linking to the school page and
-                      losing the decision. View is just the school. */}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" style={{ width: ACTION_COL }}>
                     <Link
-                      href={
-                        r.appealed
-                          ? `/app/sssa/finalization/appeal/${r.udise}`
-                          : `/public/schools/${r.udise}`
-                      }
+                      href={`/app/sssa/finalization/appeal/${r.udise}`}
                       className="inline-block whitespace-nowrap rounded-lg border px-3 py-1.5 text-[12px] font-bold hover:bg-gray-50"
                       style={{ borderColor: NAVY, color: NAVY }}
                     >
-                      {r.appealPending ? 'Decide' : r.appealed ? 'Appeal' : 'View'}
+                      Decide
                     </Link>
                   </td>
                 </tr>
@@ -408,12 +391,10 @@ export function VerificationTabs({
     );
   }
 
-  // Both work tabs are named for the verb. Every count on this bar is a number of
-  // things somebody has to do, except the middle one, which is the number already
-  // done — so no count on the page needs a caveat about what it includes.
+  // Two counts, both of them work outstanding. Nothing on this bar needs a caveat
+  // about what it includes.
   const TABS: { id: VerificationTab; label: string; count: number; hot?: boolean }[] = [
     { id: 'todo', label: 'To check', count: data.waiting },
-    { id: 'settled', label: 'Score accepted', count: data.settledCount },
     { id: 'decide', label: 'To decide', count: data.awaitingDecisionCount, hot: true },
   ];
 
@@ -514,14 +495,7 @@ export function VerificationTabs({
             </button>
           )}
           <span className="ml-auto text-[12.5px] tabular-nums text-gray-500">
-            {inr(
-              tab === 'todo'
-                ? queueRows.length
-                : tab === 'settled'
-                  ? settledRows.length
-                  : toDecideRows.length,
-            )}{' '}
-            shown
+            {inr(tab === 'todo' ? queueRows.length : toDecideRows.length)} shown
           </span>
         </div>
 
@@ -535,9 +509,7 @@ export function VerificationTabs({
         <SchoolTable rows={queueRows} action={unassignedOnly ? 'Assign to' : 'Verifier'} />
       )}
 
-      {tab === 'settled' && <VerifiedTable rows={settledRows} />}
-
-      {tab === 'decide' && <VerifiedTable rows={toDecideRows} appeal />}
+      {tab === 'decide' && <AppealTable rows={toDecideRows} />}
     </div>
   );
 }

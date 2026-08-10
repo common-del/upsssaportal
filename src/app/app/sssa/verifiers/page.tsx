@@ -14,22 +14,19 @@ export default async function VerificationPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [data, sp] = await Promise.all([buildVerificationQueue(), searchParams]);
-  // 'appealed' and 'accepted' are the previous names for these tabs, still live in
-  // notification links and the /appeals redirect, so they resolve rather than
-  // silently dropping someone on the wrong list.
+  // 'appealed' is the previous name for To decide and is live in notification links
+  // and the /appeals redirect, so it still resolves. 'accepted' and 'settled' named
+  // a tab that no longer exists — those fall through to To check rather than 404,
+  // and the finished list they wanted is on Finalization & Results.
   const tab: VerificationTab =
-    sp.tab === 'settled' || sp.tab === 'accepted'
-      ? 'settled'
-      : sp.tab === 'decide' || sp.tab === 'appealed'
-        ? 'decide'
-        : 'todo';
+    sp.tab === 'decide' || sp.tab === 'appealed' ? 'decide' : 'todo';
 
   return (
     <div className="flex flex-col gap-5">
       <header>
         <h1 className="text-2xl font-bold text-gray-900">Verification</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Getting submissions checked, and what came of the ones already done
+          Two queues: schools waiting on a verifier, and appeals waiting on SSSA
         </p>
       </header>
 

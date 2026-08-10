@@ -298,7 +298,9 @@ export function VerificationTabs({
                   Remind
                 </th>
               )}
-              <th className={th} style={{ width: ACTION_COL }} />
+              <th className={`${th} text-left`} style={{ width: ACTION_COL }}>
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>

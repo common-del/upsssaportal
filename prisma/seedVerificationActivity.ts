@@ -217,9 +217,17 @@ async function main() {
     return p.options[Math.min(idx, p.options.length - 1)]?.key ?? null;
   };
 
-  /** Verifiers mostly agree. When they don't, they more often mark down than up
-   *  — which is what gives a school something to appeal. How often a verifier
-   *  disagrees varies by verifier, so caseloads are not interchangeable. */
+  /** Verifiers agree, or they mark down. Never up.
+   *
+   *  This used to move a school's answer up a quarter of the time, which looked
+   *  like realistic disagreement and broke the process. A verification that
+   *  raises a school's score gives it nothing to contest, so the appeal built on
+   *  top of it read as a school arguing against a mark in its own favour — and
+   *  where up-moves cancelled down-moves, a school appeared on Appeals with its
+   *  self and verified scores identical.
+   *
+   *  How often a verifier disagrees varies by verifier, so caseloads are not
+   *  interchangeable and one of them can be an outlier. */
   const verifierKeyFor = (
     p: (typeof params)[number],
     selfKey: string | null,
@@ -231,9 +239,8 @@ async function main() {
     if (unit(`agree:${udise}:${p.id}`) > strictness) return selfKey;
     const idx = p.options.findIndex((o) => o.key === selfKey);
     if (idx === -1) return selfKey;
-    const down = unit(`dir:${udise}:${p.id}`) < 0.75;
-    const next = Math.min(p.options.length - 1, Math.max(0, idx + (down ? 1 : -1)));
-    return p.options[next]!.key;
+    // Options are ordered best-first, so the next index is the weaker option.
+    return p.options[Math.min(p.options.length - 1, idx + 1)]!.key;
   };
 
   const saRows: { submissionId: string; parameterId: string; selectedOptionKey: string }[] = [];

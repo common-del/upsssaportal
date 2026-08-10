@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/backfillSchoolManagement.ts || true; tsx prisma/backfillMockSchoolNames.ts || true; next build",
+    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/backfillSchoolManagement.ts || true; tsx prisma/backfillMockSchoolNames.ts || true; tsx prisma/backfillSchoolAccounts.ts || true; next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
@@ -17,7 +17,8 @@
     "db:backfill:mock-school-names": "tsx prisma/backfillMockSchoolNames.ts",
     "postinstall": "prisma generate",
     "db:backfill:management": "tsx prisma/backfillSchoolManagement.ts",
-    "db:backfill:names": "tsx prisma/backfillMockSchoolNames.ts"
+    "db:backfill:names": "tsx prisma/backfillMockSchoolNames.ts",
+    "db:backfill:accounts": "tsx prisma/backfillSchoolAccounts.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

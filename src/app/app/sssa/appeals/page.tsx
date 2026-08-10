@@ -13,5 +13,5 @@ import { redirect } from 'next/navigation';
  * page went.
  */
 export default function AppealsMovedPage() {
-  redirect('/app/sssa/verifiers?tab=appealed');
+  redirect('/app/sssa/verifiers?tab=decide');
 }

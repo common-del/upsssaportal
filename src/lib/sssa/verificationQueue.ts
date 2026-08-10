@@ -79,10 +79,12 @@ export type VerificationQueue = {
   verifiers: VerifierSummary[];
   /** Completed verifications, whatever came of them. */
   verified: VerifiedRow[];
-  /** Verified and not appealed — the school took the verifier's score. */
-  acceptedCount: number;
-  appealedCount: number;
-  appealPendingCount: number;
+  /** Settled: the score stands and nobody owes anything. Covers a school that
+   *  never appealed and one whose appeal SSSA has already ruled on — from an
+   *  officer's side those are the same thing, which is nothing to do. */
+  settledCount: number;
+  /** The only outstanding work on this page: appeals SSSA has not answered. */
+  awaitingDecisionCount: number;
 };
 
 /** The tabs filter client-side, so the whole queue ships rather than a page of it.
@@ -256,7 +258,10 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
       return dropB - dropA || a.school.localeCompare(b.school);
     });
 
-  const appealedCount = verified.filter((v) => v.appealed).length;
+  // Split on whether a decision is owed, not on whether an appeal exists. An
+  // appeal SSSA has already ruled on is finished, and counting it as appealed made
+  // the tab's number mean "cases that once existed" rather than "work to do".
+  const awaitingDecisionCount = verified.filter((v) => v.appealPending).length;
 
   return {
     cycleId: cycle.id,
@@ -277,8 +282,7 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
       // Emptiest first, so the list doubles as the answer to "who has room".
       .sort((a, b) => a.assigned - b.assigned || a.name.localeCompare(b.name)),
     verified,
-    acceptedCount: verified.length - appealedCount,
-    appealedCount,
-    appealPendingCount: verified.filter((v) => v.appealPending).length,
+    settledCount: verified.length - awaitingDecisionCount,
+    awaitingDecisionCount,
   };
 }

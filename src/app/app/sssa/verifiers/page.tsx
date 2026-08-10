@@ -14,8 +14,15 @@ export default async function VerificationPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [data, sp] = await Promise.all([buildVerificationQueue(), searchParams]);
+  // 'appealed' and 'accepted' are the previous names for these tabs, still live in
+  // notification links and the /appeals redirect, so they resolve rather than
+  // silently dropping someone on the wrong list.
   const tab: VerificationTab =
-    sp.tab === 'accepted' ? 'accepted' : sp.tab === 'appealed' ? 'appealed' : 'todo';
+    sp.tab === 'settled' || sp.tab === 'accepted'
+      ? 'settled'
+      : sp.tab === 'decide' || sp.tab === 'appealed'
+        ? 'decide'
+        : 'todo';
 
   return (
     <div className="flex flex-col gap-5">

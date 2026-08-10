@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
 import { CycleFunnel, BehindBlocks } from '@/components/sssa/CycleFunnel';
 import { SchoolsTabs, type SchoolsTab } from '@/components/sssa/SchoolsTabs';
+import { lastRemindedByBlock } from '@/lib/actions/reminders';
 import { buildCycleCounts, buildBehindBlocks, type CycleCounts, type BehindBlock } from '@/lib/sssa/cycleCounts';
 import { deriveResultFields, DIRECTORY_LEVEL_BADGE } from '@/lib/public/schoolProfile';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
@@ -45,9 +46,16 @@ export default async function SssaSchoolDirectoryPage(props: {
   let usingFallback = false;
   let funnel: CycleCounts | null = null;
   let behind: BehindBlock[] = [];
+  let lastReminded: Record<string, string> = {};
 
   try {
-    [funnel, behind] = await Promise.all([buildCycleCounts(), buildBehindBlocks(district)]);
+    [funnel, behind, lastReminded] = await Promise.all([
+      buildCycleCounts(),
+      buildBehindBlocks(district),
+      // Only needed by the Furthest behind tab, so it is not paid for on the
+      // register, which is the tab most visits land on.
+      tab === 'behind' ? lastRemindedByBlock() : Promise.resolve({}),
+    ]);
 
     const districtRecords = await prisma.district.findMany({ orderBy: { nameEn: 'asc' } });
     districts = districtRecords.map((d) => ({ code: d.code, nameEn: d.nameEn, nameHi: d.nameHi }));
@@ -157,7 +165,14 @@ export default async function SssaSchoolDirectoryPage(props: {
         query={{ district, block, q }}
       />
 
-      {tab === 'behind' && <BehindBlocks blocks={behind} district={district} districts={districts} />}
+      {tab === 'behind' && (
+        <BehindBlocks
+          blocks={behind}
+          district={district}
+          districts={districts}
+          lastReminded={lastReminded}
+        />
+      )}
 
       {tab === 'register' && (
         <>

@@ -1,4 +1,5 @@
 import type { BehindBlock, CycleCounts } from '@/lib/sssa/cycleCounts';
+import { RemindButton } from '@/components/sssa/RemindButton';
 
 const NAVY = '#1B2A6B';
 const inr = (n: number) => n.toLocaleString('en-IN');
@@ -64,10 +65,13 @@ export function BehindBlocks({
   blocks,
   district = '',
   districts = [],
+  lastReminded = {},
 }: {
   blocks: BehindBlock[];
   district?: string;
   districts?: { code: string; nameEn: string }[];
+  /** Block code → ISO timestamp of the most recent reminder sent to its schools. */
+  lastReminded?: Record<string, string>;
 }) {
   return (
     <section>
@@ -118,6 +122,7 @@ export function BehindBlocks({
               <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Schools</th>
               <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Yet to start</th>
               <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Started</th>
+              <th className="border-b border-gray-100 px-4 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -138,6 +143,13 @@ export function BehindBlocks({
                   }}
                 >
                   {b.startedPct}%
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <RemindButton
+                    blockCode={b.code}
+                    notStarted={b.schools - b.started}
+                    lastRemindedAt={lastReminded[b.code]}
+                  />
                 </td>
               </tr>
             ))}

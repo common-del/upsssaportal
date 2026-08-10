@@ -28,9 +28,7 @@ import { cn } from '@/lib/cn';
 import { BackButton } from '@/components/common/BackButton';
 import { LevelBadge } from '@/components/public/LevelBadge';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
-import { NearbyCompare, type NearbyComparable } from '@/components/public/NearbyCompare';
 import { SchoolPhotoCarousel } from '@/components/public/SchoolPhotoCarousel';
-import type { ComparableSchool } from '@/components/public/CompareReportCard';
 import {
   levelDescription,
   scoreToLevel,
@@ -78,15 +76,7 @@ function CompareBars({
   );
 }
 
-export function SchoolProfileContent({
-  profile,
-  currentComparable,
-  nearbyComparable = [],
-}: {
-  profile: SchoolProfileData;
-  currentComparable: ComparableSchool;
-  nearbyComparable?: NearbyComparable[];
-}) {
+export function SchoolProfileContent({ profile }: { profile: SchoolProfileData }) {
   const [tab, setTab] = useState<TabId>('Overview');
   const [compareMode, setCompareMode] = useState<'state' | 'district'>('state');
   const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({});
@@ -150,13 +140,7 @@ export function SchoolProfileContent({
           />
         )}
         {tab === 'Fee Disclosure' && <FeeTab profile={profile} />}
-        {tab === 'School Report Card' && (
-          <ReportCardTab
-            profile={profile}
-            currentComparable={currentComparable}
-            nearbyComparable={nearbyComparable}
-          />
-        )}
+        {tab === 'School Report Card' && <ReportCardTab profile={profile} />}
       </div>
     </div>
   );
@@ -759,15 +743,7 @@ function FeeTab({ profile }: { profile: SchoolProfileData }) {
   );
 }
 
-function ReportCardTab({
-  profile,
-  currentComparable,
-  nearbyComparable,
-}: {
-  profile: SchoolProfileData;
-  currentComparable: ComparableSchool;
-  nearbyComparable: NearbyComparable[];
-}) {
+function ReportCardTab({ profile }: { profile: SchoolProfileData }) {
   const rc = profile.reportCard;
   const levelForDomain = (name: string): PerformanceLevel => {
     const match = rc.domainScores.find((s) => s.name === name);
@@ -901,8 +877,6 @@ function ReportCardTab({
           </ul>
         </section>
       </div>
-
-      <NearbyCompare current={currentComparable} nearby={nearbyComparable} />
     </div>
   );
 }

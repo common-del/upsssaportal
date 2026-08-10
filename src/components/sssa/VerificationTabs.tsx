@@ -262,7 +262,17 @@ export function VerificationTabs({
     );
   }
 
-  function SchoolTable({ rows, action }: { rows: QueueRow[]; action: string }) {
+  function SchoolTable({
+    rows,
+    action,
+    showRemind,
+  }: {
+    rows: QueueRow[];
+    action: string;
+    /** Dropped entirely on the Not assigned view: every row there has nobody to
+     *  chase, so the column would be a header over a column of blanks. */
+    showRemind: boolean;
+  }) {
     if (rows.length === 0) {
       return (
         <div className="rounded-2xl border border-gray-200 bg-white px-4 py-7 text-center text-[13px] text-gray-500">
@@ -272,7 +282,9 @@ export function VerificationTabs({
     }
     return (
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[880px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+        <table
+          className={`w-full ${showRemind ? 'min-w-[880px]' : 'min-w-[760px]'} overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]`}
+        >
           <thead>
             <tr>
               <th className={`${th} text-left`}>School</th>
@@ -281,10 +293,12 @@ export function VerificationTabs({
               <th className={`${th} text-left`} style={{ width: VERIFIER_COL }}>
                 {action}
               </th>
+              {showRemind && (
+                <th className={`${th} text-right`} style={{ width: REMIND_COL }}>
+                  Remind
+                </th>
+              )}
               <th className={th} style={{ width: ACTION_COL }} />
-              <th className={`${th} text-right`} style={{ width: REMIND_COL }}>
-                Remind
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -306,18 +320,17 @@ export function VerificationTabs({
                 <td className="px-4 py-3" style={{ width: VERIFIER_COL }}>
                   <VerifierCell row={r} />
                 </td>
+                {/* Left blank rather than dashed on an unassigned row in the All
+                    view: there is nobody to chase, and a dash reads as a value. */}
+                {showRemind && (
+                  <td className="px-4 py-3 text-right" style={{ width: REMIND_COL }}>
+                    {r.verifierId ? (
+                      <RemindVerifierButton udise={r.udise} lastRemindedAt={r.remindedAt ?? undefined} />
+                    ) : null}
+                  </td>
+                )}
                 <td className="px-4 py-3" style={{ width: ACTION_COL }}>
                   <VerifierAction row={r} />
-                </td>
-                {/* Only where there is somebody to chase. An unassigned row already
-                    has its action — the picker beside it — and a Remind button there
-                    would offer to notify nobody. */}
-                <td className="px-4 py-3 text-right" style={{ width: REMIND_COL }}>
-                  {r.verifierId ? (
-                    <RemindVerifierButton udise={r.udise} lastRemindedAt={r.remindedAt ?? undefined} />
-                  ) : (
-                    <span className="text-[11px] text-gray-300">—</span>
-                  )}
                 </td>
               </tr>
             ))}
@@ -551,7 +564,11 @@ export function VerificationTabs({
       )}
 
       {tab === 'todo' && (
-        <SchoolTable rows={queueRows} action={assignment === 'unassigned' ? 'Assign to' : 'Verifier'} />
+        <SchoolTable
+          rows={queueRows}
+          action={assignment === 'unassigned' ? 'Assign to' : 'Verifier'}
+          showRemind={assignment !== 'unassigned'}
+        />
       )}
 
       {tab === 'decide' && <AppealTable rows={toDecideRows} />}

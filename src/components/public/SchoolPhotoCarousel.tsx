@@ -81,7 +81,11 @@ export function SchoolPhotoCarousel({
         </p>
       )}
 
-      <div className="relative mt-4">
+      {/* Capped rather than full-bleed: a photograph across the whole content
+          column would be over 1100px wide, and at any sensible height that is a
+          letterbox, not a picture of a school. 16:9 inside 768px is a photo shape
+          at every screen size, without fixed heights per breakpoint. */}
+      <div className="relative mt-4 max-w-3xl">
         <div
           ref={stripRef}
           onScroll={handleScroll}
@@ -91,7 +95,7 @@ export function SchoolPhotoCarousel({
           {slides.map((s) => (
             <div key={s.key} className="w-full shrink-0 snap-start">
               {s.url ? (
-                <div className="h-64 w-full overflow-hidden rounded-xl bg-gray-100 sm:h-80 lg:h-[26rem]">
+                <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-gray-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={s.url}
@@ -101,7 +105,7 @@ export function SchoolPhotoCarousel({
                   />
                 </div>
               ) : (
-                <div className="flex h-64 w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-[#F8F9FA] sm:h-80 lg:h-[26rem]">
+                <div className="flex aspect-[16/9] w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-[#F8F9FA]">
                   <span className="grid h-14 w-14 place-items-center rounded-full bg-white shadow-sm">
                     <Camera className="h-6 w-6 text-gray-400" strokeWidth={1.75} aria-hidden />
                   </span>
@@ -135,7 +139,9 @@ export function SchoolPhotoCarousel({
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      {/* Same cap as the frame, so the caption sits under the picture and the dots
+          under its right edge rather than out at the far side of the page. */}
+      <div className="mt-3 flex max-w-3xl flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
           <span className="font-medium text-gray-800">{slides[index]?.caption}</span>
           {slides.length > 1 && (

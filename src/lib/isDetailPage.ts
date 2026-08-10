@@ -1,7 +1,6 @@
 const SECTION_HOME_SUFFIXES = new Set([
   'new',
   'bulk',
-  'verifiers-by-district',
   'appeals',
   'settings',
   'evidence',

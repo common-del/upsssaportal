@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { buildComplaints } from '@/lib/sssa/complaints';
+import { prisma } from '@/lib/db';
+import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
+import { RunEscalationsButton } from '@/components/tickets/RunEscalationsButton';
 
 const NAVY = '#1B2A6B';
 const inr = (n: number) => n.toLocaleString('en-IN');
@@ -17,16 +20,36 @@ const LEVEL_STYLE: Record<string, string> = {
  * Appeals used to be one queue, which hid that they are different mechanisms with
  * different resolution paths — and hid the escalation ladder that makes a case
  * arriving here mean two levels already let it lapse.
+ *
+ * The escalation control lives here now. It used to be the only thing on
+ * /app/sssa/tickets, a second page over the same Ticket table that nothing in the
+ * app linked to — so this page reported the deadline breach while the only way to
+ * act on it was a URL nobody could find.
  */
 export default async function ComplaintsPage() {
+  // Escalating on read, as the old page did. A ticket's handler level is a
+  // function of how long it has sat unanswered, so leaving it to a cron would mean
+  // this page showing a level that expired hours ago.
+  const stale = await prisma.ticket.findMany({
+    where: { status: { notIn: ['RESOLVED', 'REJECTED'] }, nextDueAt: { lt: new Date() } },
+    select: { id: true },
+    take: 100,
+  });
+  for (const t of stale) await ensureEscalationUpToDate(t.id);
+
   const data = await buildComplaints();
   const maxCat = data.categories[0]?.count ?? 1;
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
-        <p className="mt-1 text-sm text-gray-500">Raised by parents and the public</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
+          <p className="mt-1 text-sm text-gray-500">Raised by parents and the public</p>
+        </div>
+        {/* Beside the overdue count rather than buried: an officer who can see the
+            SLA has been breached should be able to act on it from the same screen. */}
+        <RunEscalationsButton />
       </header>
 
       {data.open === 0 ? (

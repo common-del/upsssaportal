@@ -43,6 +43,10 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
   {
     items: [
       { href: '/app/sssa/notifications', label: 'Notifications' },
+      // Built, working, and reachable from nowhere until now. It sits in the
+      // utility group rather than above with the workflow pages: an audit trail is
+      // something you go looking for, not part of anyone's daily round.
+      { href: '/app/sssa/activity', label: 'Activity log' },
       { href: '/app/sssa/help/sqaaf', label: 'Help' },
       { href: '/app/sssa/settings', label: 'Settings' },
     ],

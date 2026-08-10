@@ -19,7 +19,7 @@ const MAX_PER_VERIFIER = 50;
 const inr = (n: number) => n.toLocaleString('en-IN');
 const waitColor = (d: number) => (d >= 14 ? RED : d >= 7 ? '#B8791A' : '#111827');
 
-type Tab = 'queue' | 'unassigned' | 'people' | 'verified';
+type Tab = 'todo' | 'checked';
 
 /** How each ending reads, and how hard it should pull the eye. Marked down and
  *  accepted is amber rather than green: the school took the score, but a drop is
@@ -33,26 +33,32 @@ const OUTCOMES: { id: VerifiedOutcome; label: string; chip: string }[] = [
 const outcomeOf = (id: VerifiedOutcome) => OUTCOMES.find((o) => o.id === id)!;
 
 /**
- * Verification as four tabs over one dataset.
+ * Verification as two tabs: work outstanding, and work done.
  *
- * Three of them are work outstanding — waiting, unassigned, and who is free to
- * take it. The fourth is the record of work done, which had nowhere to live: a
- * verification that agreed with the school, or that marked it down without being
- * contested, needs no decision from anyone and so does not belong on Appeals.
- * Those rows were sitting there anyway, which is how a school with identical
- * scores ended up with a Decide button beside it.
+ * It was four. "Unassigned" was not a third list — the code behind it was
+ * `rows.filter(r => !r.verifierId)`, a strict subset of the queue beside it, so
+ * two counts sat next to each other describing overlapping piles of the same
+ * schools. It is a toggle on this tab now.
  *
- * Assignment happens in the row, on either school tab. The picker only offers
- * verifiers in that school's district, so the rule is enforced by what is in the
- * list rather than by a notice above it.
+ * The verifier list has moved to Users, where a verifier's profile already lives.
+ * It duplicated Appeals' by-verifier table and an unlinked page at
+ * /app/sssa/users/verifiers-by-district; caseload and appeal rate describe one
+ * person and now sit in one row. Assignment does not need it — the picker in each
+ * row already shows how loaded every verifier is.
+ *
+ * Assignment happens in the row. The picker only offers verifiers in that
+ * school's district, so the rule is enforced by what is in the list rather than
+ * by a notice above it.
  */
 export function VerificationTabs({ data }: { data: VerificationQueue }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('queue');
+  const [tab, setTab] = useState<Tab>('todo');
   const [district, setDistrict] = useState('');
   const [block, setBlock] = useState('');
   const [q, setQ] = useState('');
   const [outcome, setOutcome] = useState<VerifiedOutcome | ''>('');
+  /** Was its own tab. The rows never differed, only the filter. */
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -114,8 +120,13 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
     [district, block, q],
   );
 
-  const queueRows = useMemo(() => data.rows.filter(match), [data.rows, match]);
-  const unassignedRows = useMemo(() => queueRows.filter((r) => !r.verifierId), [queueRows]);
+  const matched = useMemo(() => data.rows.filter(match), [data.rows, match]);
+  const queueRows = useMemo(
+    () => (unassignedOnly ? matched.filter((r) => !r.verifierId) : matched),
+    [matched, unassignedOnly],
+  );
+  /** For the toggle's own count, which has to survive the toggle being on. */
+  const unassignedCount = useMemo(() => matched.filter((r) => !r.verifierId).length, [matched]);
   const verifiedRows = useMemo(
     () => data.verified.filter((r) => match(r) && (!outcome || r.outcome === outcome)),
     [data.verified, match, outcome],
@@ -367,10 +378,8 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
   }
 
   const TABS: { id: Tab; label: string; count: number; hot?: boolean }[] = [
-    { id: 'queue', label: 'Queue', count: data.waiting },
-    { id: 'unassigned', label: 'Unassigned', count: data.unassigned, hot: true },
-    { id: 'people', label: 'Verifiers', count: data.verifiers.length },
-    { id: 'verified', label: 'Verified', count: data.verified.length },
+    { id: 'todo', label: 'To check', count: data.waiting },
+    { id: 'checked', label: 'Checked', count: data.verified.length },
   ];
 
   return (
@@ -410,8 +419,7 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
         ))}
       </div>
 
-      {tab !== 'people' && (
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
           <input
             type="search"
             value={q}
@@ -442,7 +450,25 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
               </option>
             ))}
           </select>
-          {tab === 'verified' && (
+          {tab === 'todo' && (
+            // This was a tab of its own. As a toggle the relationship is obvious —
+            // these schools are part of the list, not a separate pile — and the two
+            // counts can no longer be read as adding up.
+            <button
+              type="button"
+              onClick={() => setUnassignedOnly((v) => !v)}
+              aria-pressed={unassignedOnly}
+              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-bold ${
+                unassignedOnly ? 'border-[#1B2A6B] bg-[#1B2A6B] text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              No verifier yet{' '}
+              <span className={`tabular-nums ${unassignedOnly ? 'opacity-80' : 'text-red-700'}`}>
+                {inr(unassignedCount)}
+              </span>
+            </button>
+          )}
+          {tab === 'checked' && (
             // The question worth asking here is rarely "show me everything". It is
             // which schools were marked down and did not appeal — either good
             // verification, or schools who do not know appealing is open to them.
@@ -460,17 +486,9 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
             </select>
           )}
           <span className="ml-auto text-[12.5px] tabular-nums text-gray-500">
-            {inr(
-              tab === 'queue'
-                ? queueRows.length
-                : tab === 'verified'
-                  ? verifiedRows.length
-                  : unassignedRows.length,
-            )}{' '}
-            shown
+            {inr(tab === 'todo' ? queueRows.length : verifiedRows.length)} shown
           </span>
         </div>
-      )}
 
       {message && (
         <p className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-[13px] text-gray-700">
@@ -478,10 +496,11 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
         </p>
       )}
 
-      {tab === 'queue' && <SchoolTable rows={queueRows} action="Verifier" />}
-      {tab === 'unassigned' && <SchoolTable rows={unassignedRows} action="Assign to" />}
+      {tab === 'todo' && (
+        <SchoolTable rows={queueRows} action={unassignedOnly ? 'Assign to' : 'Verifier'} />
+      )}
 
-      {tab === 'verified' && (
+      {tab === 'checked' && (
         <div className="flex flex-col gap-3">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {OUTCOMES.map((o) => (
@@ -508,66 +527,6 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
           </div>
           <VerifiedTable rows={verifiedRows} />
         </div>
-      )}
-
-      {tab === 'people' && (
-        <>
-          <p className="text-[12.5px] text-gray-500">
-            Emptiest first. Open a name for their profile.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
-              <thead>
-                <tr>
-                  <th className={`${th} text-left`}>Verifier</th>
-                  <th className={`${th} text-left`}>District</th>
-                  <th className={`${th} text-right`}>Assigned</th>
-                  <th className={`${th} text-right`}>Verified</th>
-                  <th className={th} />
-                </tr>
-              </thead>
-              <tbody>
-                {data.verifiers.map((v) => {
-                  const load = loadOf(v);
-                  const cap = v.capacity ?? MAX_PER_VERIFIER;
-                  const pct = cap > 0 ? Math.min(100, Math.round((load / cap) * 100)) : 0;
-                  return (
-                    <tr key={v.id} className="border-t border-gray-100 first:border-t-0">
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/app/sssa/users/${v.id}`}
-                          className="font-semibold hover:underline"
-                          style={{ color: NAVY }}
-                        >
-                          {v.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">{v.district ?? '—'}</td>
-                      <td
-                        className="px-4 py-3 text-right font-bold tabular-nums"
-                        style={{ color: load === 0 ? RED : '#111827' }}
-                      >
-                        {load}
-                        <span className="font-normal text-gray-500"> of {cap}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-gray-500">
-                        {v.verified}
-                      </td>
-                      <td className="px-4 py-3" style={{ width: 120 }}>
-                        <span className="block h-1.5 overflow-hidden rounded bg-gray-100">
-                          <span
-                            className="block h-full rounded"
-                            style={{ width: `${pct}%`, background: pct >= 100 ? RED : NAVY }}
-                          />
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
       )}
     </div>
   );

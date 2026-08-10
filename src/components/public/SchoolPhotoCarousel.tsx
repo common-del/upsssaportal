@@ -85,7 +85,7 @@ export function SchoolPhotoCarousel({
           column would be over 1100px wide, and at any sensible height that is a
           letterbox, not a picture of a school. 16:9 inside 768px is a photo shape
           at every screen size, without fixed heights per breakpoint. */}
-      <div className="relative mt-4 max-w-3xl">
+      <div className="relative mx-auto mt-4 max-w-3xl">
         <div
           ref={stripRef}
           onScroll={handleScroll}
@@ -139,9 +139,10 @@ export function SchoolPhotoCarousel({
         )}
       </div>
 
-      {/* Same cap as the frame, so the caption sits under the picture and the dots
-          under its right edge rather than out at the far side of the page. */}
-      <div className="mt-3 flex max-w-3xl flex-wrap items-center justify-between gap-3">
+      {/* Same cap and centring as the frame, so the caption sits under the picture
+          and the dots under its right edge rather than out at the far side of the
+          page. */}
+      <div className="mx-auto mt-3 flex max-w-3xl flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
           <span className="font-medium text-gray-800">{slides[index]?.caption}</span>
           {slides.length > 1 && (

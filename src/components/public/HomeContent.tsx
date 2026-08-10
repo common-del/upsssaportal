@@ -14,33 +14,20 @@ import {
   Compass,
 } from 'lucide-react';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
-import {
-  ALL_DISTRICTS,
-  districtSqaafStats,
-} from '@/lib/public/dummyData';
 import { SearchableSelect } from '@/components/public/SearchableSelect';
+import type { RegisterStats } from '@/lib/public/registerStats';
 
-// Statewide totals — 2,48,998 total schools in UP
-const STATE_TOTALS = {
-  government: 179200,
-  aided: 14000,
-  private: 47850,
-  other: 7948,
-};
+const ALL_DISTRICTS_LABEL = 'All Districts';
 
 function formatIN(n: number) {
   return n.toLocaleString('en-IN');
 }
 
-function districtTotals(district: string) {
-  if (district === 'All Districts') {
-    const { government, aided, private: priv, other } = STATE_TOTALS;
-    return { government, aided, private: priv, other };
-  }
-  const stats = districtSqaafStats(district);
-  const other = Math.max(0, stats.totalSchools - stats.govt - stats.aided - stats.private);
-  return { government: stats.govt, aided: stats.aided, private: stats.private, other };
-}
+/* STATE_TOTALS and districtTotals are gone with the multipliers that used them. The
+   first was a hardcoded 2,48,998 — a statewide figure for Uttar Pradesh presented as
+   this portal's school count. The second reached districtSqaafStats, which invents a
+   district's entire profile from a hash of its name for any district outside a short
+   curated list. Neither belongs behind a number a parent reads as fact. */
 
 // Grounded in the real SQAAF domain weightages (constants.ts) and the
 // self-assessment/verification flow already established elsewhere on the
@@ -69,13 +56,22 @@ const DID_YOU_KNOW = [
   },
 ] as const;
 
-export function HomeContent() {
-  const [district, setDistrict] = useState('All Districts');
+export function HomeContent({ stats }: { stats: RegisterStats | null }) {
+  const [district, setDistrict] = useState(ALL_DISTRICTS_LABEL);
 
-  const totals = districtTotals(district);
-  const totalSchools = totals.government + totals.aided + totals.private + totals.other;
-  const assessed = Math.round(totalSchools * 0.3);
-  const verified = Math.round(totalSchools * 0.256);
+  // Was: totalSchools from a hardcoded 2,48,998 statewide figure, then
+  // `assessed = totalSchools * 0.3` and `verified = totalSchools * 0.256`. Three
+  // headline numbers on the front page of a government portal, two of them
+  // arithmetic and all three recomputed as the selector moved, so the invented ones
+  // changed per district and read exactly like data.
+  const counts =
+    stats == null
+      ? null
+      : district === ALL_DISTRICTS_LABEL
+        ? stats.state
+        : (stats.byDistrict[district] ?? { schools: 0, assessed: 0, verified: 0 });
+
+  const districtOptions = stats?.districts ?? [];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -176,10 +172,13 @@ export function HomeContent() {
         </div>
       </section>
 
-      {/* Statewide numbers — one simple band, district filter folded in */}
+      {/* Register counts, district filter folded in. Absent entirely when the register
+          cannot be read — three dashes and an empty district picker is worse than no
+          band at all, and there is nothing honest to put there. */}
+      {counts && (
       <section className="mt-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-900">Statewide Numbers</h2>
+          <h2 className="text-base font-semibold text-gray-900">Schools on this portal</h2>
           <div className="flex items-center gap-2">
             <label htmlFor="home-district" className="text-xs font-medium text-gray-500">
               District:
@@ -188,9 +187,9 @@ export function HomeContent() {
               id="home-district"
               value={district}
               onChange={setDistrict}
-              options={ALL_DISTRICTS.map((d) => ({ value: d, label: d }))}
-              allLabel="All Districts"
-              allValue="All Districts"
+              options={districtOptions.map((d) => ({ value: d, label: d }))}
+              allLabel={ALL_DISTRICTS_LABEL}
+              allValue={ALL_DISTRICTS_LABEL}
               searchPlaceholder="Search district..."
               ariaLabel="Filter District"
               className="w-[180px]"
@@ -204,8 +203,10 @@ export function HomeContent() {
               <Building2 size={20} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{formatIN(totalSchools)}</p>
-              <p className="text-xs font-medium text-gray-500">Total Schools</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {counts ? formatIN(counts.schools) : '—'}
+              </p>
+              <p className="text-xs font-medium text-gray-500">Schools on the register</p>
             </div>
           </div>
           <div className="flex items-center gap-3.5 py-4 sm:px-5 sm:py-0">
@@ -213,8 +214,10 @@ export function HomeContent() {
               <GraduationCap size={20} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{formatIN(assessed)}</p>
-              <p className="text-xs font-medium text-gray-500">Schools Assessed</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {counts ? formatIN(counts.assessed) : '—'}
+              </p>
+              <p className="text-xs font-medium text-gray-500">Self-assessments filed</p>
             </div>
           </div>
           <div className="flex items-center gap-3.5 py-4 sm:px-5 sm:py-0">
@@ -222,12 +225,15 @@ export function HomeContent() {
               <BadgeCheck size={20} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{formatIN(verified)}</p>
-              <p className="text-xs font-medium text-gray-500">SQAAF Verified</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {counts ? formatIN(counts.verified) : '—'}
+              </p>
+              <p className="text-xs font-medium text-gray-500">Checked by a verifier</p>
             </div>
           </div>
         </div>
       </section>
+      )}
 
       {/* Grievance redressal — promoted, visible without deep scrolling */}
       <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#EEF0F8] p-5 sm:p-6">

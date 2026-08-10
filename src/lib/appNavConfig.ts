@@ -8,7 +8,7 @@ export type NavItem = {
 export type NavSection = { label?: string; items: NavItem[] };
 
 /**
- * Eight working destinations, then a rule, then the four you touch rarely.
+ * Seven working destinations, then a rule, then the four you touch rarely.
  *
  * The group headings are gone: at this length they labelled the obvious and each
  * cost a line of vertical space. Two entries were removed rather than renamed —
@@ -40,10 +40,6 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // verification ends, so a separate sidebar item split one process in half and
       // listed appealed schools in two places at once.
       { href: '/app/sssa/verifiers', label: 'Verification' },
-      // Verification is two queues of outstanding work. The finished ones — every
-      // completed verification with its final score, and every appeal already ruled
-      // on — are here. Built and working, and until now linked from nowhere.
-      { href: '/app/sssa/finalization', label: 'Results' },
       { href: '/app/sssa/disputes', label: 'Complaints' },
       { href: '/app/sssa/framework', label: 'Framework' },
       { href: '/app/sssa/users', label: 'Users' },

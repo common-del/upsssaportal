@@ -84,7 +84,7 @@ export type VerificationQueue = {
   verified: VerifiedRow[];
   /** The only outstanding work on this page beyond the queue itself: appeals SSSA
    *  has not answered. Completed verifications are counted nowhere here, because
-   *  finished work is not workload — Finalization & Results lists those. */
+   *  finished work is not workload — /app/sssa/finalization lists those. */
   awaitingDecisionCount: number;
 };
 

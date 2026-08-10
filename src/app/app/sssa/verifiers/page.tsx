@@ -14,12 +14,12 @@ export default async function VerificationPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [data, sp] = await Promise.all([buildVerificationQueue(), searchParams]);
-  // 'appealed' is the previous name for To decide and is live in notification links
-  // and the /appeals redirect, so it still resolves. 'accepted' and 'settled' named
-  // a tab that no longer exists — those fall through to To check rather than 404,
-  // and the finished list they wanted is on Finalization & Results.
+  // 'decide' and 'appealed' are earlier names for the Appeals tab and are live in
+  // notification links and the /appeals redirect, so they still resolve. 'accepted'
+  // and 'settled' named a tab that no longer exists and fall through to To check
+  // rather than erroring.
   const tab: VerificationTab =
-    sp.tab === 'decide' || sp.tab === 'appealed' ? 'decide' : 'todo';
+    sp.tab === 'appeals' || sp.tab === 'decide' || sp.tab === 'appealed' ? 'appeals' : 'todo';
 
   return (
     <div className="flex flex-col gap-5">

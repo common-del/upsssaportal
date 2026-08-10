@@ -144,9 +144,14 @@ export function SssaAdminLayout({
       </header>
 
       <div className="mx-auto flex max-w-[1720px]">
+        {/* Pinned under the 64px header rather than scrolling away with the page.
+            self-start is what makes sticky work here — a stretched flex item is as
+            tall as the whole page and has nowhere to stick to. The fixed height plus
+            overflow-y-auto means a nav longer than the viewport scrolls inside
+            itself instead of being cut off. */}
         <aside
-          className="hidden shrink-0 lg:block"
-          style={{ width: 232, backgroundColor: NAVY_INK, minHeight: 'calc(100vh - 64px)' }}
+          className="sticky top-16 hidden shrink-0 self-start overflow-y-auto lg:block"
+          style={{ width: 232, backgroundColor: NAVY_INK, height: 'calc(100vh - 64px)' }}
         >
           {sidebarNav}
         </aside>

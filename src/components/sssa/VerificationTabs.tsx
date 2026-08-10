@@ -19,14 +19,14 @@ const MAX_PER_VERIFIER = 50;
 const inr = (n: number) => n.toLocaleString('en-IN');
 const waitColor = (d: number) => (d >= 14 ? RED : d >= 7 ? '#B8791A' : '#111827');
 
-export type VerificationTab = 'todo' | 'decide';
+export type VerificationTab = 'todo' | 'appeals';
 
 /**
  * Two queues, and nothing else.
  *
- * To check is work for a verifier. To decide is work for SSSA. Every number on this
+ * To check is work for a verifier. Appeals is work for SSSA. Every number on this
  * page is therefore a count of things somebody has to do — a completed verification
- * is not work and has no place here. Finalization & Results holds the finished ones,
+ * is not work and has no place here; /app/sssa/finalization lists the finished ones,
  * with the final score and an appeal filter.
  *
  * Each earlier version put something on the bar that was not workload:
@@ -51,6 +51,9 @@ export type VerificationTab = 'todo' | 'decide';
  * never beside the verification they dispute. The verifier list has moved to Users,
  * where a verifier's profile already lives; assignment does not need it, because
  * the picker in each row shows how loaded everyone is.
+ *
+ * The tab id stays free of the label: 'decide' and 'appealed' were what it was
+ * called before and are still in notification links, so both resolve to 'appeals'.
  */
 export function VerificationTabs({
   data,
@@ -143,8 +146,8 @@ export function VerificationTabs({
    *  while another chip is active. */
   const assignedCount = useMemo(() => matched.filter((r) => r.verifierId).length, [matched]);
   // Only appeals SSSA has not answered. A ruled appeal is finished work and lives
-  // on Finalization & Results with the other completed verifications.
-  const toDecideRows = useMemo(
+  // at /app/sssa/finalization with the other completed verifications.
+  const appealRows = useMemo(
     () => data.verified.filter((r) => match(r) && r.appealPending),
     [data.verified, match],
   );
@@ -432,7 +435,7 @@ export function VerificationTabs({
   // about what it includes.
   const TABS: { id: VerificationTab; label: string; count: number; hot?: boolean }[] = [
     { id: 'todo', label: 'To check', count: data.waiting },
-    { id: 'decide', label: 'To decide', count: data.awaitingDecisionCount, hot: true },
+    { id: 'appeals', label: 'Appeals', count: data.awaitingDecisionCount, hot: true },
   ];
 
   return (
@@ -555,7 +558,7 @@ export function VerificationTabs({
             </span>
           )}
           <span className="ml-auto text-[12.5px] tabular-nums text-gray-500">
-            {inr(tab === 'todo' ? queueRows.length : toDecideRows.length)} shown
+            {inr(tab === 'todo' ? queueRows.length : appealRows.length)} shown
           </span>
         </div>
 
@@ -573,7 +576,7 @@ export function VerificationTabs({
         />
       )}
 
-      {tab === 'decide' && <AppealTable rows={toDecideRows} />}
+      {tab === 'appeals' && <AppealTable rows={appealRows} />}
     </div>
   );
 }

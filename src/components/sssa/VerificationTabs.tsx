@@ -181,6 +181,13 @@ export function VerificationTabs({
   const selectCls =
     'rounded-lg border border-gray-300 px-3 py-2 text-[12.5px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]';
 
+  /** Widths are fixed so the picker and the name occupy the same span. Without
+   *  that, clicking Change swaps a short name for a 240px select and every column
+   *  to its left jumps. */
+  const VERIFIER_COL = 264;
+  const ACTION_COL = 96;
+
+  /** The name, or the picker when there is nobody yet or somebody is changing it. */
   function VerifierCell({ row }: { row: QueueRow }) {
     const isEditing = editing === row.udise;
     const options = eligibleFor(row.districtCode, row.verifierId).filter(
@@ -189,23 +196,13 @@ export function VerificationTabs({
 
     if (row.verifierId && !isEditing) {
       return (
-        <>
-          <Link
-            href={`/app/sssa/users/${row.verifierId}`}
-            className="font-semibold hover:underline"
-            style={{ color: NAVY }}
-          >
-            {row.verifierName}
-          </Link>
-          <button
-            type="button"
-            onClick={() => setEditing(row.udise)}
-            disabled={pending && busy === row.udise}
-            className="ml-2 rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-bold text-gray-500 hover:border-[#1B2A6B] hover:text-[#1B2A6B] disabled:opacity-50"
-          >
-            {busy === row.udise ? 'Saving…' : 'Change'}
-          </button>
-        </>
+        <Link
+          href={`/app/sssa/users/${row.verifierId}`}
+          className="font-semibold hover:underline"
+          style={{ color: NAVY }}
+        >
+          {row.verifierName}
+        </Link>
       );
     }
 
@@ -224,7 +221,7 @@ export function VerificationTabs({
           if (row.verifierId) change(row, v.id, v.name);
           else assign(row, v.id, v.name);
         }}
-        className={`w-[240px] max-w-full truncate rounded-lg border px-2.5 py-1.5 text-[12.5px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B] disabled:opacity-50 ${
+        className={`w-full truncate rounded-lg border px-2.5 py-1.5 text-[12.5px] focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B] disabled:opacity-50 ${
           row.verifierId ? 'border-gray-300' : 'border-[#E0A49C]'
         }`}
       >
@@ -240,6 +237,22 @@ export function VerificationTabs({
     );
   }
 
+  /** Its own column. Sharing a cell with the name meant it started wherever that
+   *  name happened to end, so the buttons stepped raggedly down the page. */
+  function VerifierAction({ row }: { row: QueueRow }) {
+    if (!row.verifierId || editing === row.udise) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(row.udise)}
+        disabled={pending && busy === row.udise}
+        className="rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-bold text-gray-500 hover:border-[#1B2A6B] hover:text-[#1B2A6B] disabled:opacity-50"
+      >
+        {busy === row.udise ? 'Saving…' : 'Change'}
+      </button>
+    );
+  }
+
   function SchoolTable({ rows, action }: { rows: QueueRow[]; action: string }) {
     if (rows.length === 0) {
       return (
@@ -250,15 +263,16 @@ export function VerificationTabs({
     }
     return (
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+        <table className="w-full min-w-[760px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
           <thead>
             <tr>
               <th className={`${th} text-left`}>School</th>
               <th className={`${th} text-left`}>District</th>
               <th className={`${th} text-right`}>Waiting</th>
-              <th className={`${th} text-left`} style={{ width: 268 }}>
+              <th className={`${th} text-left`} style={{ width: VERIFIER_COL }}>
                 {action}
               </th>
+              <th className={th} style={{ width: ACTION_COL }} />
             </tr>
           </thead>
           <tbody>
@@ -277,8 +291,11 @@ export function VerificationTabs({
                 >
                   {r.daysWaiting} days
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" style={{ width: VERIFIER_COL }}>
                   <VerifierCell row={r} />
+                </td>
+                <td className="px-4 py-3" style={{ width: ACTION_COL }}>
+                  <VerifierAction row={r} />
                 </td>
               </tr>
             ))}

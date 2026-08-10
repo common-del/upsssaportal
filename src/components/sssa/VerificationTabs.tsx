@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { assignSchoolsToVerifier, reassignVerifier } from '@/lib/actions/verification';
+import { RemindVerifierButton } from '@/components/sssa/RemindVerifierButton';
 import type {
   QueueRow,
   VerificationQueue,
@@ -64,8 +65,9 @@ export function VerificationTabs({
   const [district, setDistrict] = useState('');
   const [block, setBlock] = useState('');
   const [q, setQ] = useState('');
-  /** Was its own tab. The rows never differed, only the filter. */
-  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  /** Was its own tab, then a single toggle whose label only described one of the
+   *  two groups. Three states, each named for what it shows. */
+  const [assignment, setAssignment] = useState<'' | 'assigned' | 'unassigned'>('');
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -129,11 +131,17 @@ export function VerificationTabs({
 
   const matched = useMemo(() => data.rows.filter(match), [data.rows, match]);
   const queueRows = useMemo(
-    () => (unassignedOnly ? matched.filter((r) => !r.verifierId) : matched),
-    [matched, unassignedOnly],
+    () =>
+      assignment === 'assigned'
+        ? matched.filter((r) => r.verifierId)
+        : assignment === 'unassigned'
+          ? matched.filter((r) => !r.verifierId)
+          : matched,
+    [matched, assignment],
   );
-  /** For the toggle's own count, which has to survive the toggle being on. */
-  const unassignedCount = useMemo(() => matched.filter((r) => !r.verifierId).length, [matched]);
+  /** Counted off `matched`, not `queueRows`, so each chip keeps its own number
+   *  while another chip is active. */
+  const assignedCount = useMemo(() => matched.filter((r) => r.verifierId).length, [matched]);
   // Only appeals SSSA has not answered. A ruled appeal is finished work and lives
   // on Finalization & Results with the other completed verifications.
   const toDecideRows = useMemo(
@@ -186,6 +194,7 @@ export function VerificationTabs({
    *  to its left jumps. */
   const VERIFIER_COL = 264;
   const ACTION_COL = 96;
+  const REMIND_COL = 104;
 
   /** The name, or the picker when there is nobody yet or somebody is changing it. */
   function VerifierCell({ row }: { row: QueueRow }) {
@@ -263,7 +272,7 @@ export function VerificationTabs({
     }
     return (
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+        <table className="w-full min-w-[880px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
           <thead>
             <tr>
               <th className={`${th} text-left`}>School</th>
@@ -273,6 +282,9 @@ export function VerificationTabs({
                 {action}
               </th>
               <th className={th} style={{ width: ACTION_COL }} />
+              <th className={`${th} text-right`} style={{ width: REMIND_COL }}>
+                Remind
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -296,6 +308,16 @@ export function VerificationTabs({
                 </td>
                 <td className="px-4 py-3" style={{ width: ACTION_COL }}>
                   <VerifierAction row={r} />
+                </td>
+                {/* Only where there is somebody to chase. An unassigned row already
+                    has its action — the picker beside it — and a Remind button there
+                    would offer to notify nobody. */}
+                <td className="px-4 py-3 text-right" style={{ width: REMIND_COL }}>
+                  {r.verifierId ? (
+                    <RemindVerifierButton udise={r.udise} lastRemindedAt={r.remindedAt ?? undefined} />
+                  ) : (
+                    <span className="text-[11px] text-gray-300">—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -477,22 +499,45 @@ export function VerificationTabs({
             ))}
           </select>
           {tab === 'todo' && (
-            // This was a tab of its own. As a toggle the relationship is obvious —
-            // these schools are part of the list, not a separate pile — and the two
-            // counts can no longer be read as adding up.
-            <button
-              type="button"
-              onClick={() => setUnassignedOnly((v) => !v)}
-              aria-pressed={unassignedOnly}
-              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-bold ${
-                unassignedOnly ? 'border-[#1B2A6B] bg-[#1B2A6B] text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              No verifier yet{' '}
-              <span className={`tabular-nums ${unassignedOnly ? 'opacity-80' : 'text-red-700'}`}>
-                {inr(unassignedCount)}
-              </span>
-            </button>
+            // Both halves are nameable and reachable. One toggle labelled "No verifier
+            // yet" only described the state it switched to, so its count read as a
+            // badge on the whole list rather than the size of one group in it.
+            <span className="inline-flex overflow-hidden rounded-full border border-gray-300">
+              {(
+                [
+                  { id: '', label: 'All', count: matched.length },
+                  { id: 'assigned', label: 'Waiting on verifier', count: assignedCount },
+                  {
+                    id: 'unassigned',
+                    label: 'Not assigned',
+                    count: matched.length - assignedCount,
+                    hot: true,
+                  },
+                ] as const
+              ).map((f, i) => {
+                const on = assignment === f.id;
+                return (
+                  <button
+                    key={f.id || 'all'}
+                    type="button"
+                    onClick={() => setAssignment(f.id)}
+                    aria-pressed={on}
+                    className={`whitespace-nowrap px-3 py-1.5 text-[12px] font-bold ${
+                      i > 0 ? 'border-l border-gray-300' : ''
+                    } ${on ? 'bg-[#1B2A6B] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {f.label}{' '}
+                    <span
+                      className={`tabular-nums ${
+                        on ? 'opacity-80' : 'hot' in f && f.hot && f.count > 0 ? 'text-red-700' : 'text-gray-400'
+                      }`}
+                    >
+                      {inr(f.count)}
+                    </span>
+                  </button>
+                );
+              })}
+            </span>
           )}
           <span className="ml-auto text-[12.5px] tabular-nums text-gray-500">
             {inr(tab === 'todo' ? queueRows.length : toDecideRows.length)} shown
@@ -506,7 +551,7 @@ export function VerificationTabs({
       )}
 
       {tab === 'todo' && (
-        <SchoolTable rows={queueRows} action={unassignedOnly ? 'Assign to' : 'Verifier'} />
+        <SchoolTable rows={queueRows} action={assignment === 'unassigned' ? 'Assign to' : 'Verifier'} />
       )}
 
       {tab === 'decide' && <AppealTable rows={toDecideRows} />}

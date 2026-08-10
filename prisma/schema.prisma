@@ -595,7 +595,14 @@ model Notification {
   body      String
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
+  /// Which school this is about, when it is about one. Nullable because most
+  /// notifications are not: a cycle opening or a deadline concerns the whole
+  /// register. Set on a verifier reminder so a row can say when it was last
+  /// chased without matching on the text of the message.
+  schoolUdise String?
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([type, schoolUdise])
 }
 
 model NotificationPreference {

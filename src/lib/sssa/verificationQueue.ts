@@ -27,6 +27,9 @@ export type QueueRow = {
   verifierName: string | null;
   /** Needed to reassign; null when there is no assignment to move. */
   assignmentId: string | null;
+  /** When this school's verifier was last chased about it, so the row can say so
+   *  before anyone clicks. Null when never. */
+  remindedAt: string | null;
 };
 
 export type VerifierSummary = {
@@ -96,8 +99,17 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
 
   const now = Date.now();
 
-  const [submissions, assignments, completed, verifiers, districts, results, gradeBands, appeals] =
-    await Promise.all([
+  const [
+    submissions,
+    assignments,
+    completed,
+    verifiers,
+    districts,
+    results,
+    gradeBands,
+    appeals,
+    reminders,
+  ] = await Promise.all([
     prisma.selfAssessmentSubmission.findMany({
       where: { cycleId: cycle.id, status: 'SUBMITTED' },
       select: {
@@ -165,6 +177,13 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
       where: { cycleId: cycle.id, status: { notIn: ['DRAFT'] } },
       select: { schoolUdise: true, items: { select: { decision: true } } },
     }),
+    // Newest first, so the first hit for a school is its latest reminder.
+    prisma.notification.findMany({
+      where: { type: 'DEADLINE_REMINDER', schoolUdise: { not: null } },
+      select: { schoolUdise: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 2_000,
+    }),
     ]);
 
   const districtName = new Map(districts.map((d) => [d.code, d.nameEn]));
@@ -172,6 +191,13 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
   const assignmentBy = new Map(assignments.map((a) => [a.schoolUdise, a]));
   const resultBy = new Map(results.map((r) => [r.schoolUdise, r]));
   const appealBy = new Map(appeals.map((a) => [a.schoolUdise, a]));
+
+  const remindedBy: Record<string, string> = {};
+  for (const r of reminders) {
+    if (r.schoolUdise && !remindedBy[r.schoolUdise]) {
+      remindedBy[r.schoolUdise] = r.createdAt.toISOString();
+    }
+  }
 
   /** Upper bound exclusive except on the top band, matching computeAndStoreResult. */
   const bandFor = (score: number | null): string | null => {
@@ -205,6 +231,7 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
         verifierId: a?.verifier?.id ?? null,
         verifierName: a?.verifier ? (a.verifier.name ?? a.verifier.username) : null,
         assignmentId: a?.id ?? null,
+        remindedAt: remindedBy[s.schoolUdise] ?? null,
       };
     })
     .sort((a, b) => b.daysWaiting - a.daysWaiting);

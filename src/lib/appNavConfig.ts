@@ -33,9 +33,11 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       { href: '/app/sssa', label: 'Dashboard', exact: true },
       { href: '/app/sssa/schools', label: 'Schools' },
       { href: '/app/sssa/compliance', label: 'Compliance' },
+      // Verification carries appeals as a tab. An appeal is one of the two ways a
+      // verification ends, so a separate sidebar item split one process in half and
+      // listed appealed schools in two places at once.
       { href: '/app/sssa/verifiers', label: 'Verification' },
       { href: '/app/sssa/disputes', label: 'Complaints' },
-      { href: '/app/sssa/appeals', label: 'Appeals' },
       { href: '/app/sssa/framework', label: 'Framework' },
       { href: '/app/sssa/users', label: 'Users' },
     ],

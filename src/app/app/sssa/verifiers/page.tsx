@@ -1,16 +1,21 @@
 import { buildVerificationQueue } from '@/lib/sssa/verificationQueue';
-import { VerificationTabs } from '@/components/sssa/VerificationTabs';
+import { VerificationTabs, type VerificationTab } from '@/components/sssa/VerificationTabs';
 
 /**
- * Verification.
+ * Verification: the whole lifecycle of getting a school checked.
  *
- * Was four stacked lists on one scroll — a queue, an idle-verifier table, and an
- * assignment panel carrying its own Unassigned and Assigned tabs — two of which
- * were the same schools shown twice. Now three tabs over one dataset: every school
- * waiting, the same list narrowed to those with nobody on them, and the verifiers.
+ * Three tabs — waiting to be checked, score accepted, appealed. Appeals used to be
+ * its own sidebar page, which split one process across two places and meant an
+ * appealed school could not be read beside the verification it disputes.
  */
-export default async function VerificationPage() {
-  const data = await buildVerificationQueue();
+export default async function VerificationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const [data, sp] = await Promise.all([buildVerificationQueue(), searchParams]);
+  const tab: VerificationTab =
+    sp.tab === 'accepted' ? 'accepted' : sp.tab === 'appealed' ? 'appealed' : 'todo';
 
   return (
     <div className="flex flex-col gap-5">
@@ -27,7 +32,7 @@ export default async function VerificationPage() {
         </div>
       ) : (
         <>
-          {data.waiting > 0 && (
+          {tab === 'todo' && data.waiting > 0 && (
             <p className="max-w-[62ch] text-[16px] leading-relaxed text-gray-600">
               <b className="font-bold tabular-nums text-gray-900">
                 {data.waiting.toLocaleString('en-IN')}
@@ -46,7 +51,7 @@ export default async function VerificationPage() {
               .
             </p>
           )}
-          <VerificationTabs data={data} />
+          <VerificationTabs data={data} initialTab={tab} />
         </>
       )}
     </div>

@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/db';
-import { BackButton } from '@/components/common/BackButton';
 import AppealDecisionForm from '@/components/finalization/AppealDecisionForm';
 
 export default async function AppealDecisionPage({ params }: { params: Promise<{ udise: string }> }) {
@@ -69,7 +68,6 @@ export default async function AppealDecisionPage({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <BackButton fallbackHref="/app/sssa/finalization" label={t('backToFinalization')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
       <h1 className="text-2xl font-bold text-navy-900">{t('decideAppealTitle')}</h1>
       <p className="mt-1 text-sm text-text-secondary">{appeal.school.nameHi} / {appeal.school.nameEn} — {udise}</p>
 

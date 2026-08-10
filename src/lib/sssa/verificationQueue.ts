@@ -40,14 +40,14 @@ export type VerifierSummary = {
 };
 
 /**
- * How a completed verification ended.
+ * A completed verification.
  *
- * Derived, never stored. A verification either matched the school's own scoring
- * or it did not, and the school either contested the difference or accepted it —
- * so the state falls out of two comparisons and needs no column of its own.
+ * Once a verifier submits, a school does one of two things: it accepts the score
+ * or it appeals. Nothing else can happen, so nothing else needs naming. An
+ * earlier version split this four ways — matched, marked down and accepted, under
+ * appeal, appeal decided — which described the data accurately and gave an officer
+ * four labels to hold in their head for two possible actions.
  */
-export type VerifiedOutcome = 'CLEAN' | 'ACCEPTED' | 'APPEAL_OPEN' | 'APPEAL_DECIDED';
-
 export type VerifiedRow = {
   udise: string;
   school: string;
@@ -61,7 +61,13 @@ export type VerifiedRow = {
   selfBand: string | null;
   verifiedScore: number | null;
   verifiedBand: string | null;
-  outcome: VerifiedOutcome;
+  /** The verified score with the school's answer restored on every upheld
+   *  indicator. Only meaningful once an appeal exists. */
+  finalScore: number | null;
+  finalBand: string | null;
+  appealed: boolean;
+  /** At least one indicator still undecided — this is what SSSA owes an answer on. */
+  appealPending: boolean;
 };
 
 export type VerificationQueue = {
@@ -71,15 +77,13 @@ export type VerificationQueue = {
   oldestDays: number;
   rows: QueueRow[];
   verifiers: VerifierSummary[];
-  /** Completed verifications, whatever came of them. The queue's other tabs are
-   *  work outstanding; this is the record of work done. */
+  /** Completed verifications, whatever came of them. */
   verified: VerifiedRow[];
-  verifiedCounts: Record<VerifiedOutcome, number>;
+  /** Verified and not appealed — the school took the verifier's score. */
+  acceptedCount: number;
+  appealedCount: number;
+  appealPendingCount: number;
 };
-
-/** Scores are held as floats and rounded to one decimal for display, so a
- *  difference smaller than this is representation noise, not a disagreement. */
-const SCORE_EPSILON = 0.05;
 
 /** The tabs filter client-side, so the whole queue ships rather than a page of it.
  *  Well within reason at a few hundred rows; revisit if a cycle ever leaves
@@ -145,7 +149,12 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
     prisma.district.findMany({ select: { code: true, nameEn: true } }),
     prisma.result.findMany({
       where: { cycleId: cycle.id },
-      select: { schoolUdise: true, selfScorePercent: true, verifierScorePercent: true },
+      select: {
+        schoolUdise: true,
+        selfScorePercent: true,
+        verifierScorePercent: true,
+        finalScorePercent: true,
+      },
     }),
     prisma.gradeBand.findMany({
       where: { framework: { cycleId: cycle.id } },
@@ -216,25 +225,9 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
   const verified: VerifiedRow[] = completed
     .map((c) => {
       const r = resultBy.get(c.schoolUdise);
-      const selfScore = r?.selfScorePercent ?? null;
-      const verifiedScore = r?.verifierScorePercent ?? null;
       const appeal = appealBy.get(c.schoolUdise);
-
-      // An appeal answers the question outright: the school disagreed and said so.
-      // Only when there is none does the comparison decide, and a school that was
-      // marked down without appealing has accepted the verifier's score — which is
-      // what the process expects of it.
-      const outcome: VerifiedOutcome = appeal
-        ? appeal.items.some((i) => i.decision === 'PENDING')
-          ? 'APPEAL_OPEN'
-          : 'APPEAL_DECIDED'
-        : selfScore != null &&
-            verifiedScore != null &&
-            Math.abs(selfScore - verifiedScore) < SCORE_EPSILON
-          ? 'CLEAN'
-          : selfScore == null || verifiedScore == null
-            ? 'CLEAN'
-            : 'ACCEPTED';
+      const verifiedScore = r?.verifierScorePercent ?? null;
+      const finalScore = r?.finalScorePercent ?? null;
 
       return {
         udise: c.schoolUdise,
@@ -245,11 +238,14 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
         blockCode: c.school?.blockCode ?? '',
         verifierId: c.verifier?.id ?? null,
         verifierName: c.verifier ? (c.verifier.name ?? c.verifier.username) : null,
-        selfScore,
-        selfBand: bandFor(selfScore),
+        selfScore: r?.selfScorePercent ?? null,
+        selfBand: bandFor(r?.selfScorePercent ?? null),
         verifiedScore,
         verifiedBand: bandFor(verifiedScore),
-        outcome,
+        finalScore,
+        finalBand: bandFor(finalScore),
+        appealed: !!appeal,
+        appealPending: !!appeal && appeal.items.some((i) => i.decision === 'PENDING'),
       };
     })
     // Biggest drop first: a school that lost several points is the one worth a
@@ -260,13 +256,7 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
       return dropB - dropA || a.school.localeCompare(b.school);
     });
 
-  const verifiedCounts: Record<VerifiedOutcome, number> = {
-    CLEAN: 0,
-    ACCEPTED: 0,
-    APPEAL_OPEN: 0,
-    APPEAL_DECIDED: 0,
-  };
-  for (const v of verified) verifiedCounts[v.outcome]++;
+  const appealedCount = verified.filter((v) => v.appealed).length;
 
   return {
     cycleId: cycle.id,
@@ -287,6 +277,8 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
       // Emptiest first, so the list doubles as the answer to "who has room".
       .sort((a, b) => a.assigned - b.assigned || a.name.localeCompare(b.name)),
     verified,
-    verifiedCounts,
+    acceptedCount: verified.length - appealedCount,
+    appealedCount,
+    appealPendingCount: verified.filter((v) => v.appealPending).length,
   };
 }

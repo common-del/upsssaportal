@@ -7,7 +7,6 @@ import { assignSchoolsToVerifier, reassignVerifier } from '@/lib/actions/verific
 import type {
   QueueRow,
   VerificationQueue,
-  VerifiedOutcome,
   VerifiedRow,
   VerifierSummary,
 } from '@/lib/sssa/verificationQueue';
@@ -19,44 +18,49 @@ const MAX_PER_VERIFIER = 50;
 const inr = (n: number) => n.toLocaleString('en-IN');
 const waitColor = (d: number) => (d >= 14 ? RED : d >= 7 ? '#B8791A' : '#111827');
 
-type Tab = 'todo' | 'checked';
-
-/** How each ending reads, and how hard it should pull the eye. Marked down and
- *  accepted is amber rather than green: the school took the score, but a drop is
- *  still the thing an officer might want to look into. */
-const OUTCOMES: { id: VerifiedOutcome; label: string; chip: string }[] = [
-  { id: 'CLEAN', label: 'No discrepancy', chip: 'bg-[#E7F5EE] text-[#14603A]' },
-  { id: 'ACCEPTED', label: 'Marked down, accepted', chip: 'bg-[#FBF1DE] text-[#7A5209]' },
-  { id: 'APPEAL_OPEN', label: 'Under appeal', chip: 'bg-[#FBE9E7] text-[#96271E]' },
-  { id: 'APPEAL_DECIDED', label: 'Appeal decided', chip: 'bg-[#E8EBF6] text-[#22307A]' },
-];
-const outcomeOf = (id: VerifiedOutcome) => OUTCOMES.find((o) => o.id === id)!;
+export type VerificationTab = 'todo' | 'accepted' | 'appealed';
 
 /**
- * Verification as two tabs: work outstanding, and work done.
+ * The whole verification lifecycle, in three tabs named after what has to happen.
  *
- * It was four. "Unassigned" was not a third list — the code behind it was
- * `rows.filter(r => !r.verifierId)`, a strict subset of the queue beside it, so
- * two counts sat next to each other describing overlapping piles of the same
- * schools. It is a toggle on this tab now.
+ * A school submits, a verifier checks it, and then exactly one of two things
+ * follows: the school takes the score, or it appeals. So there are three states
+ * anyone can act on — waiting to be checked, settled, and with SSSA. Each is a tab.
+ *
+ * Getting here took removing three things that all described the data correctly
+ * and still made the page hard to read:
+ *
+ * "Unassigned" was `rows.filter(r => !r.verifierId)` — a strict subset of the
+ * queue beside it, so two counts sat side by side over overlapping piles of the
+ * same schools. It is a toggle on the first tab.
+ *
+ * Four outcome labels — matched, marked down and accepted, under appeal, appeal
+ * decided — were four things to remember for two possible actions. Whether the
+ * scores happened to match is not a different situation from the school accepting
+ * a lower one; in both the verification stands and nobody owes anything. Open
+ * versus decided is carried by the Decide button and the waiting count, which is
+ * where an officer looks anyway.
+ *
+ * Appeals was a separate sidebar page. It was the third outcome of this one, and
+ * splitting it meant an appealed school appeared in two places with two tables and
+ * no way to see it beside the verification it disputes.
  *
  * The verifier list has moved to Users, where a verifier's profile already lives.
- * It duplicated Appeals' by-verifier table and an unlinked page at
- * /app/sssa/users/verifiers-by-district; caseload and appeal rate describe one
- * person and now sit in one row. Assignment does not need it — the picker in each
- * row already shows how loaded every verifier is.
- *
- * Assignment happens in the row. The picker only offers verifiers in that
- * school's district, so the rule is enforced by what is in the list rather than
- * by a notice above it.
+ * Assignment does not need it — the picker in each row shows how loaded everyone is.
  */
-export function VerificationTabs({ data }: { data: VerificationQueue }) {
+export function VerificationTabs({
+  data,
+  initialTab = 'todo',
+}: {
+  data: VerificationQueue;
+  /** From ?tab= so a link can open the right list and the view is shareable. */
+  initialTab?: VerificationTab;
+}) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('todo');
+  const [tab, setTab] = useState<VerificationTab>(initialTab);
   const [district, setDistrict] = useState('');
   const [block, setBlock] = useState('');
   const [q, setQ] = useState('');
-  const [outcome, setOutcome] = useState<VerifiedOutcome | ''>('');
   /** Was its own tab. The rows never differed, only the filter. */
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -127,9 +131,13 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
   );
   /** For the toggle's own count, which has to survive the toggle being on. */
   const unassignedCount = useMemo(() => matched.filter((r) => !r.verifierId).length, [matched]);
-  const verifiedRows = useMemo(
-    () => data.verified.filter((r) => match(r) && (!outcome || r.outcome === outcome)),
-    [data.verified, match, outcome],
+  const acceptedRows = useMemo(
+    () => data.verified.filter((r) => match(r) && !r.appealed),
+    [data.verified, match],
+  );
+  const appealedRows = useMemo(
+    () => data.verified.filter((r) => match(r) && r.appealed),
+    [data.verified, match],
   );
 
   function assign(row: QueueRow, verifierId: string, verifierName: string) {
@@ -279,13 +287,15 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
     );
   }
 
-  /** A score over the band it lands in. One decimal, because a drop of a few
-   *  tenths can still cross a band boundary and rounding to whole numbers hid it. */
-  function Score({ score, band, drop }: { score: number | null; band: string | null; drop?: boolean }) {
+  /** A score over its band. One decimal: two indicators out of dozens shift a
+   *  weighted percentage by tenths, and rounding to whole numbers printed a
+   *  school's self and verified scores as the same figure. */
+  function Score({ score, band, tone = 'ink' }: { score: number | null; band: string | null; tone?: 'ink' | 'red' | 'green' }) {
     if (score == null) return <span className="text-gray-400">—</span>;
+    const color = tone === 'red' ? RED : tone === 'green' ? '#1C7A4A' : '#111827';
     return (
       <span className="flex flex-col items-end leading-tight">
-        <span className="font-bold tabular-nums" style={{ color: drop ? RED : '#111827' }}>
+        <span className="font-bold tabular-nums" style={{ color }}>
           {score.toFixed(1)}
         </span>
         {band && <span className="text-[10.5px] text-gray-500">{band}</span>}
@@ -293,17 +303,17 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
     );
   }
 
-  function VerifiedTable({ rows }: { rows: VerifiedRow[] }) {
+  function VerifiedTable({ rows, appeal }: { rows: VerifiedRow[]; appeal?: boolean }) {
     if (rows.length === 0) {
       return (
         <div className="rounded-2xl border border-gray-200 bg-white px-4 py-7 text-center text-[13px] text-gray-500">
-          No verification here matches those filters.
+          Nothing here matches those filters.
         </div>
       );
     }
     return (
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+        <table className={`w-full ${appeal ? 'min-w-[940px]' : 'min-w-[840px]'} overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]`}>
           <thead>
             <tr>
               <th className={`${th} text-left`}>School</th>
@@ -312,15 +322,18 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
               <th className={`${th} text-left`}>Verifier</th>
               <th className={`${th} text-right`}>Self</th>
               <th className={`${th} text-right`}>Verified</th>
-              <th className={`${th} text-left`}>Outcome</th>
+              {/* Final only where an appeal can move it. On the accepted tab it
+                  would repeat Verified on every row. */}
+              {appeal && <th className={`${th} text-right`}>Final</th>}
               <th className={th} />
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => {
-              const o = outcomeOf(r.outcome);
               const dropped =
                 r.selfScore != null && r.verifiedScore != null && r.verifiedScore < r.selfScore;
+              const raised =
+                r.finalScore != null && r.verifiedScore != null && r.finalScore > r.verifiedScore;
               return (
                 <tr key={r.udise} className="border-t border-gray-100 first:border-t-0">
                   <td className="px-4 py-3 font-semibold" style={{ color: NAVY }}>
@@ -341,31 +354,26 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
                     <Score score={r.selfScore} band={r.selfBand} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Score score={r.verifiedScore} band={r.verifiedBand} drop={dropped} />
+                    <Score score={r.verifiedScore} band={r.verifiedBand} tone={dropped ? 'red' : 'ink'} />
                   </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${o.chip}`}
-                    >
-                      {o.label}
-                    </span>
-                  </td>
+                  {appeal && (
+                    <td className="px-4 py-3 text-right">
+                      {/* Green only where the appeal actually moved it — colour on an
+                          unchanged figure would imply a decision that never happened. */}
+                      <Score score={r.finalScore} band={r.finalBand} tone={raised ? 'green' : 'ink'} />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-right">
-                    {/* An appealed school is a legitimate answer to both "what
-                        happened here" and "what must I decide", so this links across
-                        rather than repeating the decision controls. */}
                     <Link
                       href={
-                        r.outcome === 'APPEAL_OPEN' || r.outcome === 'APPEAL_DECIDED'
+                        appeal
                           ? `/app/sssa/finalization/appeal/${r.udise}`
                           : `/public/schools/${r.udise}`
                       }
-                      className="whitespace-nowrap text-[12px] font-bold hover:underline"
-                      style={{ color: NAVY }}
+                      className="inline-block whitespace-nowrap rounded-lg border px-3 py-1.5 text-[12px] font-bold hover:bg-gray-50"
+                      style={{ borderColor: NAVY, color: NAVY }}
                     >
-                      {r.outcome === 'APPEAL_OPEN' || r.outcome === 'APPEAL_DECIDED'
-                        ? 'Appeal →'
-                        : 'View'}
+                      {appeal ? (r.appealPending ? 'Decide' : 'View') : 'View'}
                     </Link>
                   </td>
                 </tr>
@@ -377,9 +385,17 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
     );
   }
 
-  const TABS: { id: Tab; label: string; count: number; hot?: boolean }[] = [
+  const TABS: { id: VerificationTab; label: string; count: number; hot?: boolean }[] = [
     { id: 'todo', label: 'To check', count: data.waiting },
-    { id: 'checked', label: 'Checked', count: data.verified.length },
+    { id: 'accepted', label: 'Score accepted', count: data.acceptedCount },
+    // Hot only while something is undecided: an appealed school SSSA has already
+    // ruled on is not work, and colouring the tab red for it would cry wolf.
+    {
+      id: 'appealed',
+      label: 'Appealed',
+      count: data.appealedCount,
+      hot: data.appealPendingCount > 0,
+    },
   ];
 
   return (
@@ -468,25 +484,20 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
               </span>
             </button>
           )}
-          {tab === 'checked' && (
-            // The question worth asking here is rarely "show me everything". It is
-            // which schools were marked down and did not appeal — either good
-            // verification, or schools who do not know appealing is open to them.
-            <select
-              value={outcome}
-              onChange={(e) => setOutcome(e.target.value as VerifiedOutcome | '')}
-              className={selectCls}
-            >
-              <option value="">All outcomes</option>
-              {OUTCOMES.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label} ({inr(data.verifiedCounts[o.id])})
-                </option>
-              ))}
-            </select>
+          {tab === 'appealed' && data.appealPendingCount > 0 && (
+            <span className="whitespace-nowrap text-[12.5px] tabular-nums text-gray-500">
+              <b style={{ color: RED }}>{inr(data.appealPendingCount)}</b> waiting on a decision
+            </span>
           )}
           <span className="ml-auto text-[12.5px] tabular-nums text-gray-500">
-            {inr(tab === 'todo' ? queueRows.length : verifiedRows.length)} shown
+            {inr(
+              tab === 'todo'
+                ? queueRows.length
+                : tab === 'accepted'
+                  ? acceptedRows.length
+                  : appealedRows.length,
+            )}{' '}
+            shown
           </span>
         </div>
 
@@ -500,34 +511,9 @@ export function VerificationTabs({ data }: { data: VerificationQueue }) {
         <SchoolTable rows={queueRows} action={unassignedOnly ? 'Assign to' : 'Verifier'} />
       )}
 
-      {tab === 'checked' && (
-        <div className="flex flex-col gap-3">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {OUTCOMES.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                // The tallies are the filter. Reading "176 marked down, accepted"
-                // and then hunting for a dropdown to see them is a step that does
-                // not need to exist.
-                onClick={() => setOutcome(outcome === o.id ? '' : o.id)}
-                aria-pressed={outcome === o.id}
-                className={`flex flex-col items-start rounded-2xl border px-4 py-3 text-left ${
-                  outcome === o.id ? 'border-[#1B2A6B] bg-gray-50' : 'border-gray-200 bg-white'
-                }`}
-              >
-                <span className="text-xl font-bold tabular-nums text-gray-900">
-                  {inr(data.verifiedCounts[o.id])}
-                </span>
-                <span className="mt-0.5 text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
-                  {o.label}
-                </span>
-              </button>
-            ))}
-          </div>
-          <VerifiedTable rows={verifiedRows} />
-        </div>
-      )}
+      {tab === 'accepted' && <VerifiedTable rows={acceptedRows} />}
+
+      {tab === 'appealed' && <VerifiedTable rows={appealedRows} appeal />}
     </div>
   );
 }

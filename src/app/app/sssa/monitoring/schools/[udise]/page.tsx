@@ -4,7 +4,6 @@ import { getTranslations } from 'next-intl/server';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
-import { BackButton } from '@/components/common/BackButton';
 import MonitoringSchoolTabs from '@/components/monitoring/MonitoringSchoolTabs';
 
 const CATEGORY_TO_CODE: Record<string, string> = {
@@ -35,7 +34,6 @@ export default async function MonitoringSchoolDetailPage({
   if (!cycle) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-8">
-        <BackButton fallbackHref="/app/sssa/monitoring" label={t('backToMonitoring')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
         <h1 className="text-xl font-bold text-navy-900">{school.nameEn}</h1>
         <p className="mt-2 text-text-secondary">{t('noCycle')}</p>
       </div>
@@ -143,8 +141,6 @@ export default async function MonitoringSchoolDetailPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <BackButton fallbackHref="/app/sssa/monitoring?view=schools" label={t('backToMonitoring')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
-
       <div className="mb-6 rounded-xl border border-border bg-white p-5">
         <div className="flex items-start justify-between gap-4">
           <div>

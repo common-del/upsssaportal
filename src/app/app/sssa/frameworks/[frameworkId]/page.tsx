@@ -3,7 +3,6 @@ import { redirect, notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Lock } from 'lucide-react';
 import { getFrameworkFull } from '@/lib/actions/framework';
-import { BackButton } from '@/components/common/BackButton';
 import FrameworkEditor from '@/components/framework/FrameworkEditor';
 
 export default async function FrameworkEditorPage({
@@ -25,12 +24,6 @@ export default async function FrameworkEditorPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <BackButton
-        fallbackHref="/app/sssa/frameworks"
-        label={t('backToFrameworks')}
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900"
-      />
-
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <h1 className="text-2xl font-bold text-navy-900">{t('editorTitle')}</h1>
         <span className="text-sm text-text-secondary">{framework.cycle.name}</span>

@@ -31,9 +31,9 @@ export type VerifierListRow = {
   upheld: number;
 };
 
-/** Mirrors MIN_VERIFICATIONS_FOR_RATE in lib/sssa/appeals.ts. Below this an appeal
- *  rate says more about the sample than the verifier, so it is withheld rather
- *  than shown with a caveat nobody reads. */
+/** Below this an appeal rate says more about the sample than the verifier, so it is
+ *  withheld rather than shown with a caveat nobody reads. One appeal against three
+ *  verifications is 33% and means nothing. */
 const MIN_FOR_RATE = 20;
 const DEFAULT_CAPACITY = 50;
 

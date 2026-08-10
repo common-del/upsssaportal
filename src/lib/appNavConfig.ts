@@ -74,16 +74,44 @@ export const DISTRICT_ADMIN_DASHBOARD_NAV_ITEMS: NavItem[] = [
   { href: '/app/dashboard/faq', label: 'FAQ' },
 ];
 
-export const SCHOOL_NAV_ITEMS: NavItem[] = [
-  { href: '/app/school', label: 'School Dashboard', exact: true },
-  { href: '/app/school/sqaaf', label: 'SQAAF Update' },
-  { href: '/app/school/evidence', label: 'Evidence Manager' },
-  { href: '/app/school/documents', label: 'Mandatory Required Documents' },
-  { href: '/app/school/fee-disclosure', label: 'Fee Disclosure', hideForGovt: true },
-  { href: '/app/school/report-card', label: 'School Report Card' },
-  { href: '/app/school/help/sqaaf', label: 'How to fill SQAAF' },
-  { href: '/app/school/faq', label: 'FAQ' },
-  { href: '/app/school/settings', label: 'Settings' },
+/**
+ * The school's own sidebar, in the same shape as the officials' above.
+ *
+ * Three of these entries are not new pages. Verifier Feedback and Complaints were
+ * built, working, and linked from nowhere at all; Appeals was reachable only from
+ * Verifier Feedback, which was itself unreachable. So the whole route by which a
+ * school reads its verifier's reasoning, answers a parent, or contests a score was
+ * closed — and complaints escalate on a `nextDueAt` clock whether the school ever
+ * saw them or not.
+ *
+ * Labels lose the word "School": the sidebar sits inside the school's own portal, so
+ * repeating it on four entries spends width a 232px column does not have.
+ *
+ * There is no School Profile entry yet. That page does not exist, and a nav link to
+ * a 404 is a worse fault than the one being fixed here. It goes in with the page.
+ */
+export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { href: '/app/school', label: 'Dashboard', exact: true },
+      { href: '/app/school/sqaaf', label: 'SQAAF Update' },
+      { href: '/app/school/evidence', label: 'Evidence Manager' },
+      { href: '/app/school/documents', label: 'Mandatory Documents' },
+      { href: '/app/school/fee-disclosure', label: 'Fee Disclosure', hideForGovt: true },
+      { href: '/app/school/verifier-feedback', label: 'Verifier Feedback' },
+      { href: '/app/school/appeals', label: 'Appeals' },
+      { href: '/app/school/tickets', label: 'Complaints' },
+      { href: '/app/school/report-card', label: 'Report Card' },
+    ],
+  },
+  {
+    items: [
+      { href: '/app/school/notifications', label: 'Notifications' },
+      { href: '/app/school/help/sqaaf', label: 'How to fill SQAAF' },
+      { href: '/app/school/faq', label: 'FAQ' },
+      { href: '/app/school/settings', label: 'Settings' },
+    ],
+  },
 ];
 
 export const VERIFIER_NAV_ITEMS: NavItem[] = [

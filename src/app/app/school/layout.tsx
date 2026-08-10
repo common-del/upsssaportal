@@ -1,8 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import { SchoolAdminLayout } from '@/components/school/SchoolTopNav';
-import { schoolInitials } from '@/lib/school/helpers';
+import { SchoolAdminLayout } from '@/components/school/SchoolAdminLayout';
 
 export default async function SchoolLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -23,7 +22,6 @@ export default async function SchoolLayout({ children }: { children: React.React
   return (
     <SchoolAdminLayout
       schoolName={school?.nameEn ?? 'School'}
-      schoolInitials={schoolInitials(school?.nameEn ?? 'UP')}
       schoolCategory={school?.category ?? 'GOVT'}
       unreadCount={unreadCount}
     >

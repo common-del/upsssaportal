@@ -939,5 +939,9 @@
   "common": {
     "back": "Back",
     "comingSoon": "Coming in the next step"
+  },
+  "demoNotice": {
+    "title": "Demonstration site.",
+    "body": "The schools, scores, grades and figures shown here are sample data used to demonstrate the portal. They do not describe any real school."
   }
 }

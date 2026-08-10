@@ -551,10 +551,18 @@ function OverviewTab({ profile }: { profile: SchoolProfileData }) {
 /**
  * The views this school would be photographed from, drawn from what it reports.
  *
- * A generic six-slot strip would put a library placeholder on the profile of a
- * school that has told us it has no library, which reads as a missing photo of a
- * real room rather than a room that does not exist. Order runs from the whole
- * building inwards, which is how somebody looks at a place.
+ * A fixed strip would put a library placeholder on the profile of a school that has
+ * told us it has no library, which reads as a missing photo of a real room rather
+ * than a room that does not exist. Order runs from the whole building inwards,
+ * which is how somebody looks at a place.
+ *
+ * Worth knowing how little that filter currently does: `infrastructureTags` is a
+ * hardcoded four-item list in buildSchoolProfileData, so every school claims a
+ * library, a science lab, a computer lab and a playground. Only drinkingWater
+ * varies, and only because it is derived from the UDISE hash. So today this returns
+ * eight captions for four schools in five and seven for the fifth. It is written
+ * against the fields rather than the constant so that it starts telling the truth
+ * the moment those fields do.
  */
 function photoCaptionsFor(profile: SchoolProfileData): string[] {
   const o = profile.overview;

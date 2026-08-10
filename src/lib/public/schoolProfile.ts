@@ -137,6 +137,15 @@ export type SchoolProfileBase = {
   block: string;
 };
 
+/** One photograph of a school. Lives here rather than in the carousel so the data
+ *  shape does not depend on the component that happens to draw it. */
+export type SchoolPhoto = {
+  /** Absolute or app-relative URL. */
+  url: string;
+  /** What the photograph shows, e.g. "Classroom". Shown under the frame. */
+  caption: string;
+};
+
 export type SchoolProfileData = SchoolProfileBase & {
   type: SchoolType;
   performanceLevel: PerformanceLevel;
@@ -206,6 +215,17 @@ export type SchoolProfileData = SchoolProfileBase & {
       subjects: { name: string; pct: number; stateAvg: number }[];
     }[];
   };
+  /**
+   * Photographs of the school, for the carousel at the bottom of the Overview tab.
+   *
+   * Always empty today: there is no photo field on `School` and no upload flow, so
+   * there is nothing to read. The field exists so the profile carries the shape a
+   * photo will arrive in — when an upload flow lands, this is the only place that
+   * changes, not the component. Deliberately not derived from the UDISE hash the
+   * way this builder derives enrolment: a fabricated photograph of a real school
+   * is a different kind of lie from a fabricated number.
+   */
+  photos: SchoolPhoto[];
 };
 
 const CLASS_LEVELS = ['Primary', 'Upper Primary', 'Secondary', 'Higher Secondary'] as const;
@@ -266,6 +286,9 @@ export function buildSchoolProfileData(base: SchoolProfileBase): SchoolProfileDa
 
   return {
     ...base,
+    // Nothing to read: no photo field on School, no upload flow. The carousel shows
+    // labelled placeholders for this, which is the truthful state of the record.
+    photos: [],
     type: dummy?.type ?? derived.type,
     performanceLevel: level,
     overallScore: score,

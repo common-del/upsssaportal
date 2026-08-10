@@ -29,6 +29,7 @@ import { BackButton } from '@/components/common/BackButton';
 import { LevelBadge } from '@/components/public/LevelBadge';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
 import { NearbyCompare, type NearbyComparable } from '@/components/public/NearbyCompare';
+import { SchoolPhotoCarousel } from '@/components/public/SchoolPhotoCarousel';
 import type { ComparableSchool } from '@/components/public/CompareReportCard';
 import {
   levelDescription,
@@ -40,31 +41,6 @@ import type { PerformanceLevel } from '@/lib/public/constants';
 const NAVY = '#1B2A6B';
 const TABS = ['Overview', 'Performance (SQAAF)', 'Fee Disclosure', 'School Report Card'] as const;
 type TabId = (typeof TABS)[number];
-
-function ProgressBarRow({
-  label,
-  value,
-  max = 100,
-  color = NAVY,
-}: {
-  label: string;
-  value: number;
-  max?: number;
-  color?: string;
-}) {
-  const pct = Math.min(100, (value / max) * 100);
-  return (
-    <div>
-      <div className="mb-1 flex justify-between text-xs text-gray-600">
-        <span>{label}</span>
-        <span>{value}%</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
-      </div>
-    </div>
-  );
-}
 
 function CompareBars({
   our,
@@ -560,8 +536,40 @@ function OverviewTab({ profile }: { profile: SchoolProfileData }) {
           </div>
         </section>
       )}
+
+      {/* Photos, last: everything above is the school's record, this is the look of
+          the place. Empty for every school today — see SchoolPhotoCarousel. */}
+      <SchoolPhotoCarousel
+        photos={profile.photos}
+        placeholderCaptions={photoCaptionsFor(profile)}
+        schoolName={profile.name}
+      />
     </div>
   );
+}
+
+/**
+ * The views this school would be photographed from, drawn from what it reports.
+ *
+ * A generic six-slot strip would put a library placeholder on the profile of a
+ * school that has told us it has no library, which reads as a missing photo of a
+ * real room rather than a room that does not exist. Order runs from the whole
+ * building inwards, which is how somebody looks at a place.
+ */
+function photoCaptionsFor(profile: SchoolProfileData): string[] {
+  const o = profile.overview;
+  const has = (tag: string) => o.infrastructureTags.includes(tag);
+
+  return [
+    'School Building',
+    o.totalClassrooms > 0 ? 'Classroom' : null,
+    has('Library') ? 'Library' : null,
+    has('Science Lab') ? 'Science Lab' : null,
+    has('Computer Lab') ? 'Computer Lab' : null,
+    has('Playground') ? 'Playground' : null,
+    o.drinkingWater === 'Available' ? 'Drinking Water' : null,
+    o.functionalToilets > 0 ? 'Toilets' : null,
+  ].filter((c): c is string => c !== null);
 }
 
 function PerformanceTab({

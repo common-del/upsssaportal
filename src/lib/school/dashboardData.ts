@@ -10,6 +10,30 @@ import { ensureMandatoryDocuments, getAssessmentStatus } from '@/lib/actions/sch
 
 export type PendingTask = { text: string; dotColor: string };
 
+/**
+ * Where the school stands, which its own dashboard did not say.
+ *
+ * A parent could read this school's score and level on the public profile and SSSA
+ * could read all three columns, while the school's home page showed document counts
+ * and a progress bar. `bandChanged` is the reason this is here at all: a school that
+ * dropped a level on a verifier's judgement should meet that fact on the page it
+ * lands on, with the appeal route beside it, rather than discovering it later.
+ */
+export type ScoreSummary = {
+  selfPercent: number | null;
+  selfBand: string | null;
+  verifiedPercent: number | null;
+  verifiedBand: string | null;
+  /** Null until a verifier has submitted. */
+  verifiedOn: string | null;
+  /** Verified minus self, negative when the verifier marked the school down. */
+  delta: number | null;
+  /** True when self and verified fall in different bands. */
+  bandChanged: boolean;
+  /** Indicators where the verifier's answer differs from the school's. */
+  disputedCount: number;
+};
+
 export type DashboardData = {
   school: {
     nameEn: string;
@@ -27,6 +51,9 @@ export type DashboardData = {
   evidenceRequired: number;
   notifications: { id: string; title: string; body: string; createdAt: string; read: boolean }[];
   unreadCount: number;
+  scores: ScoreSummary;
+  /** Complaints filed about this school that it has not answered. */
+  openComplaints: number;
 };
 
 export async function getSchoolDashboardData(
@@ -176,6 +203,77 @@ export async function getSchoolDashboardData(
     });
   }
 
+  // Scores, bands and the two counts the dashboard was missing. Grade bands come from
+  // the framework rather than hardcoded thresholds — the published table is
+  // Uday/Unnat/Utkarsh and it has been changed once already.
+  const [result, gradeBands, openComplaints, disputedCount] = await Promise.all([
+    cycle
+      ? prisma.result.findUnique({
+          where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise } },
+          select: { selfScorePercent: true, verifierScorePercent: true },
+        })
+      : null,
+    framework
+      ? prisma.gradeBand.findMany({
+          where: { frameworkId: framework.id },
+          select: { labelEn: true, minPercent: true, maxPercent: true },
+          orderBy: { order: 'asc' },
+        })
+      : [],
+    prisma.ticket.count({
+      where: { schoolUdise, status: { notIn: ['RESOLVED', 'REJECTED'] } },
+    }),
+    // Indicators where the verifier chose a different option from the school. This is
+    // what an appeal is argued over, so the count belongs beside the score.
+    verification && saSubmission
+      ? countDisputedIndicators(saSubmission.id, verification.id)
+      : 0,
+  ]);
+
+  /** Upper bound exclusive except on the top band, matching computeAndStoreResult. */
+  const bandFor = (score: number | null): string | null => {
+    if (score == null) return null;
+    for (let i = 0; i < gradeBands.length; i++) {
+      const b = gradeBands[i]!;
+      const last = i === gradeBands.length - 1;
+      if (score >= b.minPercent && (last ? score <= b.maxPercent : score < b.maxPercent)) {
+        return b.labelEn;
+      }
+    }
+    return null;
+  };
+
+  const selfPercent = result?.selfScorePercent ?? null;
+  const verifiedPercent = result?.verifierScorePercent ?? null;
+  const selfBand = bandFor(selfPercent);
+  const verifiedBand = bandFor(verifiedPercent);
+
+  const scores: ScoreSummary = {
+    selfPercent,
+    selfBand,
+    verifiedPercent,
+    verifiedBand,
+    verifiedOn:
+      verification?.status === 'SUBMITTED'
+        ? (verification.submittedAt ?? verification.updatedAt)?.toLocaleDateString('en-IN') ?? null
+        : null,
+    delta:
+      selfPercent != null && verifiedPercent != null
+        ? Math.round((verifiedPercent - selfPercent) * 10) / 10
+        : null,
+    // Both bands must exist. A school with no verification has not changed band, it
+    // simply has not been checked.
+    bandChanged: selfBand != null && verifiedBand != null && selfBand !== verifiedBand,
+    disputedCount,
+  };
+
+  if (openComplaints > 0) {
+    pendingTasks.unshift({
+      text: `Answer ${openComplaints} open ${openComplaints === 1 ? 'complaint' : 'complaints'}`,
+      dotColor: 'bg-red-500',
+    });
+  }
+
   if (pendingTasks.length === 0) {
     pendingTasks.push({ text: 'No pending tasks — you are up to date', dotColor: 'bg-green-500' });
   }
@@ -209,7 +307,41 @@ export async function getSchoolDashboardData(
       read: n.read,
     })),
     unreadCount,
+    scores,
+    openComplaints,
   };
+}
+
+/**
+ * How many indicators the verifier answered differently from the school.
+ *
+ * Compares selected options rather than scores: two options can carry the same weight
+ * on a parameter, and a school arguing an appeal is arguing about the answer, not the
+ * arithmetic. Only counts parameters the school actually answered — a verifier filling
+ * a gap the school left blank is not a disagreement.
+ */
+async function countDisputedIndicators(
+  saSubmissionId: string,
+  vSubmissionId: string,
+): Promise<number> {
+  const [selfResponses, verifierResponses] = await Promise.all([
+    prisma.selfAssessmentResponse.findMany({
+      where: { submissionId: saSubmissionId },
+      select: { parameterId: true, selectedOptionKey: true },
+    }),
+    prisma.verificationResponse.findMany({
+      where: { submissionId: vSubmissionId },
+      select: { parameterId: true, selectedOptionKey: true },
+    }),
+  ]);
+
+  const selfBy = new Map(selfResponses.map((r) => [r.parameterId, r.selectedOptionKey]));
+  let disputed = 0;
+  for (const v of verifierResponses) {
+    const own = selfBy.get(v.parameterId);
+    if (own != null && own !== v.selectedOptionKey) disputed++;
+  }
+  return disputed;
 }
 
 export { assessmentStatusLabel, isGovernmentSchool };

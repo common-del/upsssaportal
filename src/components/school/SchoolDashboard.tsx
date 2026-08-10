@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  AlertTriangle,
   ClipboardList,
   FileText,
   FolderOpen,
@@ -72,6 +73,142 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
+const BAND_STYLE: Record<string, string> = {
+  Uday: 'bg-[#FBE9E7] text-[#96271E]',
+  Unnat: 'bg-[#FBF1DE] text-[#7A5209]',
+  Utkarsh: 'bg-[#E7F5EE] text-[#14603A]',
+};
+
+function BandPill({ band }: { band: string | null }) {
+  if (!band) return null;
+  return (
+    <span
+      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+        BAND_STYLE[band] ?? 'bg-gray-100 text-gray-700'
+      }`}
+    >
+      {band}
+    </span>
+  );
+}
+
+function one(n: number) {
+  return n.toFixed(1);
+}
+
+/**
+ * Where the school stands, and what it can do about it.
+ *
+ * The dashboard used to show documents uploaded and evidence linked and never once a
+ * score, so a parent could read a school's grade on the public site while the school
+ * itself could not see it here. The banner is the part that earns its place: a band
+ * lost on a verifier's judgement should arrive with the appeal route attached, not be
+ * left to be discovered.
+ *
+ * Absent entirely before a self-assessment is scored. An empty row of dashes on a
+ * school that has not filed yet says nothing it does not already know.
+ */
+function ScoreBand({
+  scores,
+  openComplaints,
+}: {
+  scores: DashboardData['scores'];
+  openComplaints: number;
+}) {
+  if (scores.selfPercent == null && scores.verifiedPercent == null) return null;
+
+  const checked = scores.verifiedPercent != null;
+  const markedDown = scores.delta != null && scores.delta < 0;
+
+  return (
+    <section className="space-y-4">
+      {scores.bandChanged && markedDown && (
+        <div className="flex items-start gap-3 rounded-2xl border border-[#EBD9A8] bg-[#FBF1DE] p-4 text-sm text-[#6B4A00]">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <div>
+            <p className="font-semibold">
+              Your verified score is {one(Math.abs(scores.delta!))} points below your
+              self-assessment, which moved you from {scores.selfBand} to {scores.verifiedBand}.
+            </p>
+            <p className="mt-1">
+              {scores.disputedCount > 0
+                ? `The verifier answered ${scores.disputedCount} ${
+                    scores.disputedCount === 1 ? 'indicator' : 'indicators'
+                  } differently from you.`
+                : 'The verifier scored your assessment lower than you did.'}{' '}
+              <Link href="/app/school/verifier-feedback" className="font-bold underline">
+                Review the differences
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
+            {checked ? 'Your score' : 'Your self-assessment'}
+          </p>
+          <p className="mt-1.5 text-3xl font-bold tabular-nums" style={{ color: NAVY }}>
+            {one(checked ? scores.verifiedPercent! : scores.selfPercent!)}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <BandPill band={checked ? scores.verifiedBand : scores.selfBand} />
+            <span
+              className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                checked ? 'bg-[#E7F5EE] text-[#14603A]' : 'bg-[#F5B731] text-[#5C4300]'
+              }`}
+            >
+              {checked ? 'Verified' : 'Self assessed'}
+            </span>
+          </div>
+        </div>
+
+        {checked && scores.selfPercent != null && (
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
+              You assessed
+            </p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums text-gray-400">
+              {one(scores.selfPercent)}
+            </p>
+            <div className="mt-2">
+              <BandPill band={scores.selfBand} />
+            </div>
+          </div>
+        )}
+
+        {checked && scores.verifiedOn && (
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
+              Checked on
+            </p>
+            <p className="mt-1.5 text-xl font-bold text-gray-900">{scores.verifiedOn}</p>
+            <p className="mt-1 text-xs text-gray-500">by a state verifier</p>
+          </div>
+        )}
+
+        {openComplaints > 0 && (
+          <Link
+            href="/app/school/tickets"
+            className="rounded-2xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500">
+              Complaints open
+            </p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums text-[#96271E]">
+              {openComplaints}
+            </p>
+            <p className="mt-1 text-xs font-semibold" style={{ color: NAVY }}>
+              Answer them →
+            </p>
+          </Link>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ProgressBar({ pct, color = NAVY }: { pct: number; color?: string }) {
   return (
     <div className="h-2 overflow-hidden rounded-full bg-gray-100">
@@ -121,6 +258,8 @@ export function SchoolDashboard({ data }: { data: DashboardData }) {
           </div>
         )}
       </section>
+
+      <ScoreBand scores={data.scores} openComplaints={data.openComplaints} />
 
       {/* Section B: Quick Actions */}
       <section>

@@ -113,10 +113,16 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
                   value: counts.students,
                   label: 'Students enrolled',
                   // The denominator travels with the number, so a partial figure can
-                  // never be mistaken for a register-wide one.
-                  note: `from ${formatIN(counts.studentProfiles)} school ${
-                    counts.studentProfiles === 1 ? 'profile' : 'profiles'
-                  }`,
+                  // never be mistaken for a register-wide one. Dropped once every school
+                  // is counted: "from 32,579 school profiles" beside "32,579 schools on
+                  // the register" states the same fact twice and reads as a caveat where
+                  // there is none.
+                  note:
+                    counts.studentProfiles < counts.schools
+                      ? `from ${formatIN(counts.studentProfiles)} school ${
+                          counts.studentProfiles === 1 ? 'profile' : 'profiles'
+                        }`
+                      : undefined,
                 },
               ]
             : []),

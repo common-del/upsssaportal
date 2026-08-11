@@ -1,14 +1,12 @@
 import Link from 'next/link';
 import {
   AlertTriangle,
-  ClipboardList,
   FileText,
   FolderOpen,
   IndianRupee,
-  Bell,
-  Settings,
   MapPin,
   Award,
+  UserRoundCog,
 } from 'lucide-react';
 import {
   assessmentStatusColor,
@@ -27,13 +25,16 @@ type QuickAction = {
   hideForGovt?: boolean;
 };
 
+/**
+ * SQAAF Update is not here. It is the one action with a deadline and a completion
+ * percentage attached, so it belongs on the cycle banner beside them rather than as
+ * one square among seven, where it read as no more urgent than the FAQ.
+ *
+ * Notifications and Settings are not here either. Both sit in the sidebar, and
+ * Notifications has the bell in the header as well — three routes to the same page,
+ * two of them taking a square from work a school actually has to do.
+ */
 const QUICK_ACTIONS: QuickAction[] = [
-  {
-    href: '/app/school/sqaaf',
-    title: 'SQAAF Update',
-    description: 'Submit or update your SQAAF self-assessment',
-    icon: <ClipboardList className="h-6 w-6 text-[#1B2A6B]" />,
-  },
   {
     href: '/app/school/evidence',
     title: 'Evidence Manager',
@@ -58,18 +59,6 @@ const QUICK_ACTIONS: QuickAction[] = [
     title: 'School Report Card',
     description: 'View your public-facing school report card',
     icon: <Award className="h-6 w-6 text-[#1B2A6B]" />,
-  },
-  {
-    href: '/app/school/notifications',
-    title: 'Notifications',
-    description: 'Cycle updates, review comments and deadlines',
-    icon: <Bell className="h-6 w-6 text-[#1B2A6B]" />,
-  },
-  {
-    href: '/app/school/settings',
-    title: 'Settings',
-    description: 'Profile, language and notification preferences',
-    icon: <Settings className="h-6 w-6 text-[#1B2A6B]" />,
   },
 ];
 
@@ -209,6 +198,55 @@ function ScoreBand({
   );
 }
 
+const PROFILE_STATUS_STYLE: Record<string, string> = {
+  COMPLETE: 'bg-[#E7F5EE] text-[#14603A]',
+  PARTIAL: 'bg-[#FBF1DE] text-[#7A5209]',
+  EMPTY: 'bg-[#FBE9E7] text-[#96271E]',
+};
+
+/**
+ * Whether the school has completed its profile, and a way in.
+ *
+ * The same status the officials' Compliance page shows about this school, by the same
+ * rules — so a school that clears this card clears that list. It sits on the dashboard
+ * rather than only in the sidebar because the status is the point: a school does not
+ * go looking for a page to find out it is behind on something.
+ */
+function ProfileCard({ profile }: { profile: DashboardData['profile'] }) {
+  const complete = profile.status === 'COMPLETE';
+
+  return (
+    <Link
+      href="/app/school/profile"
+      className="flex flex-wrap items-center gap-4 rounded-2xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F3F4F6]">
+        <UserRoundCog className="h-5 w-5 text-[#1B2A6B]" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-bold text-gray-900">School Profile</p>
+          <span
+            className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+              PROFILE_STATUS_STYLE[profile.status]
+            }`}
+          >
+            {profile.label}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          {complete
+            ? 'Your address, phone number, fee disclosure and documents are all on file.'
+            : `${profile.done} of ${profile.total} complete — ${profile.missingLabels.join(', ')} still needed.`}
+        </p>
+      </div>
+      <span className="text-sm font-bold" style={{ color: NAVY }}>
+        {complete ? 'View →' : 'Complete it →'}
+      </span>
+    </Link>
+  );
+}
+
 function ProgressBar({ pct, color = NAVY }: { pct: number; color?: string }) {
   return (
     <div className="h-2 overflow-hidden rounded-full bg-gray-100">
@@ -248,9 +286,26 @@ export function SchoolDashboard({ data }: { data: DashboardData }) {
                   <p className="text-sm text-gray-500">Deadline: {data.cycle.deadline}</p>
                 )}
               </div>
-              <p className="text-2xl font-bold" style={{ color: NAVY }}>
-                {data.cycle.completionPct}%
-              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                <p className="text-2xl font-bold" style={{ color: NAVY }}>
+                  {data.cycle.completionPct}%
+                </p>
+                {/* The action belongs with the deadline and the percentage it moves,
+                    not as one square among seven where it looked no more pressing
+                    than the FAQ. Its wording follows the progress: a school at 0% is
+                    starting, one at 40% is continuing, one at 100% is revising. */}
+                <Link
+                  href="/app/school/sqaaf"
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: NAVY }}
+                >
+                  {data.cycle.completionPct === 0
+                    ? 'Start SQAAF self-assessment'
+                    : data.cycle.completionPct >= 100
+                      ? 'Review your SQAAF answers'
+                      : 'Continue SQAAF self-assessment'}
+                </Link>
+              </div>
             </div>
             <div className="mt-3">
               <ProgressBar pct={data.cycle.completionPct} />
@@ -260,6 +315,8 @@ export function SchoolDashboard({ data }: { data: DashboardData }) {
       </section>
 
       <ScoreBand scores={data.scores} openComplaints={data.openComplaints} />
+
+      <ProfileCard profile={data.profile} />
 
       {/* Section B: Quick Actions */}
       <section>

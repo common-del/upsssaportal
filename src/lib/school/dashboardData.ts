@@ -7,6 +7,7 @@ import {
   type AssessmentStatus,
 } from '@/lib/school/helpers';
 import { ensureMandatoryDocuments, getAssessmentStatus } from '@/lib/actions/schoolPortal';
+import { getSchoolProfileStatus, PROFILE_STATUS_LABEL } from '@/lib/school/profileStatus';
 
 export type PendingTask = { text: string; dotColor: string };
 
@@ -54,6 +55,14 @@ export type DashboardData = {
   scores: ScoreSummary;
   /** Complaints filed about this school that it has not answered. */
   openComplaints: number;
+  /** Profile completeness, by the same rules the officials' Compliance page uses. */
+  profile: {
+    status: string;
+    label: string;
+    done: number;
+    total: number;
+    missingLabels: string[];
+  };
 };
 
 export async function getSchoolDashboardData(
@@ -278,6 +287,8 @@ export async function getSchoolDashboardData(
     pendingTasks.push({ text: 'No pending tasks — you are up to date', dotColor: 'bg-green-500' });
   }
 
+  const profileStatus = await getSchoolProfileStatus(schoolUdise);
+
   return {
     school: {
       nameEn: school.nameEn,
@@ -309,6 +320,14 @@ export async function getSchoolDashboardData(
     unreadCount,
     scores,
     openComplaints,
+    profile: {
+      status: profileStatus?.status ?? 'EMPTY',
+      label: PROFILE_STATUS_LABEL[profileStatus?.status ?? 'EMPTY'],
+      done: profileStatus?.done ?? 0,
+      total: profileStatus?.total ?? 4,
+      missingLabels:
+        profileStatus?.parts.filter((p) => !p.done).map((p) => p.label.toLowerCase()) ?? [],
+    },
   };
 }
 

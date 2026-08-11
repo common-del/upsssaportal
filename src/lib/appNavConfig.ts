@@ -87,13 +87,15 @@ export const DISTRICT_ADMIN_DASHBOARD_NAV_ITEMS: NavItem[] = [
  * Labels lose the word "School": the sidebar sits inside the school's own portal, so
  * repeating it on four entries spends width a 232px column does not have.
  *
- * There is no School Profile entry yet. That page does not exist, and a nav link to
- * a 404 is a worse fault than the one being fixed here. It goes in with the page.
+ * School Profile sits directly under the dashboard: it is the school's own record —
+ * address, phone, photographs — and the thing the officials' Compliance page grades,
+ * so it belongs above the cycle work rather than filed with the reference pages.
  */
 export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
   {
     items: [
       { href: '/app/school', label: 'Dashboard', exact: true },
+      { href: '/app/school/profile', label: 'School Profile' },
       { href: '/app/school/sqaaf', label: 'SQAAF Update' },
       { href: '/app/school/evidence', label: 'Evidence Manager' },
       { href: '/app/school/documents', label: 'Mandatory Documents' },

@@ -172,3 +172,55 @@ export async function markAllNotificationsRead() {
 export async function createDefaultMandatoryDocsForSchool(schoolUdise: string, category: string) {
   await ensureMandatoryDocuments(schoolUdise, category);
 }
+
+/**
+ * Saves the school's public contact details.
+ *
+ * The first write to School.addressEn and School.publicPhone anywhere in the
+ * application. Both fields have existed since the schema was written and only seed
+ * scripts ever set them — by row number, `i % 2` for address and `i % 3` for phone —
+ * while the officials' Compliance page marked schools Pending for leaving them blank.
+ *
+ * Scoped to the signed-in school's own UDISE, never a value from the form. A school
+ * editing its own profile has no business naming which school that is.
+ */
+export async function saveSchoolProfile(input: {
+  addressEn: string;
+  addressHi: string;
+  publicPhone: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await requireSchoolSession();
+  if (!ctx) return { ok: false, error: 'Not signed in as a school.' };
+
+  const addressEn = input.addressEn.trim();
+  const addressHi = input.addressHi.trim();
+  const publicPhone = input.publicPhone.trim();
+
+  // Deliberately loose: Indian public numbers are written as +91 XXXXX XXXXX, with
+  // STD codes, with hyphens, and schools often list a landline and a mobile. Rejecting
+  // anything but ten digits would turn a real number into an error message. Only
+  // obvious nonsense is refused.
+  if (publicPhone && !/^[\d\s+()-]{6,24}$/.test(publicPhone)) {
+    return { ok: false, error: 'That does not look like a phone number.' };
+  }
+  if (addressEn.length > 300 || addressHi.length > 300) {
+    return { ok: false, error: 'Address is too long.' };
+  }
+
+  // Empty means not supplied, so it is stored as null rather than an empty string —
+  // the completeness check reads "has an address", and "" is not one.
+  await prisma.school.update({
+    where: { udise: ctx.schoolUdise },
+    data: {
+      addressEn: addressEn || null,
+      addressHi: addressHi || null,
+      publicPhone: publicPhone || null,
+    },
+  });
+
+  revalidatePath('/app/school/profile');
+  revalidatePath('/app/school');
+  revalidatePath(`/public/schools/${ctx.schoolUdise}`);
+
+  return { ok: true };
+}

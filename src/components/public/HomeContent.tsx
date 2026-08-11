@@ -92,7 +92,16 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
      figure is summed from the enrolment schools enter on their own profile, because the
      register carries no enrolment of its own — see registerStats.ts for why the UDISE
      extract on disk cannot supply it. "Students enrolled: 0" beside 32,579 schools would
-     be read as a claim about children, not as an empty field. */
+     be read as a claim about children, not as an empty field.
+
+     One colour per tile, and every one is already in use elsewhere on the portal rather
+     than newly invented: amber and green are the status colours from the school profile
+     checklist and the compliance page, purple and blue are the Did-you-know icons on this
+     same page, navy is the brand. Red (#96271E) and terracotta (#C24E36) are in the
+     palette too and are deliberately absent — both mean something is wrong, and the
+     grievance strip directly below this card is terracotta, so red on a neutral count
+     like districts covered would read as a warning about districts. That leaves exactly
+     five usable colours for five tiles; a sixth tile would have to share. */
   const tiles: { key: string; icon: typeof Building2; tint: string; value: number; label: string; note?: string }[] =
     counts == null
       ? []
@@ -100,7 +109,7 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
           {
             key: 'schools',
             icon: Building2,
-            tint: 'bg-[#FDF0D6] text-[#B67F09]',
+            tint: 'bg-[#FBF1DE] text-[#7A5209]',
             value: counts.schools,
             label: 'Schools on the register',
           },
@@ -109,7 +118,7 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
                 {
                   key: 'students',
                   icon: GraduationCap,
-                  tint: 'bg-[#E6EAF7] text-[#2E4499]',
+                  tint: 'bg-[#F2E9FB] text-[#7E3AC4]',
                   value: counts.students,
                   label: 'Students enrolled',
                   // The denominator travels with the number, so a partial figure can
@@ -129,7 +138,7 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
           {
             key: 'districts',
             icon: MapPin,
-            tint: 'bg-[#E6EAF7] text-[#2E4499]',
+            tint: 'bg-[#E7EFF8] text-[#2F6FB0]',
             value: districtsShown,
             label: 'Districts covered',
           },
@@ -143,7 +152,7 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
           {
             key: 'verified',
             icon: BadgeCheck,
-            tint: 'bg-[#E2F3EA] text-[#16794B]',
+            tint: 'bg-[#E7F5EE] text-[#14603A]',
             value: counts.verified,
             label: 'Checked by a verifier',
           },

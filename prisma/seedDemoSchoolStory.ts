@@ -41,13 +41,63 @@ async function main() {
   const school = await prisma.school.findUnique({ where: { udise: DEMO_UDISE } });
   if (!school) return console.log('demo story: no demo school');
 
-  const sa = await prisma.selfAssessmentSubmission.findUnique({
+  const params = await prisma.parameter.findMany({
+    where: { frameworkId: framework.id, isActive: true },
+    include: { options: { where: { isActive: true }, orderBy: { order: 'asc' } } },
+  });
+
+  const categoryCode =
+    { Primary: 'PRIMARY', 'Upper Primary': 'UPPER_PRIMARY', Secondary: 'SECONDARY' }[
+      school.category
+    ] ?? 'PRIMARY';
+  const applicableParams = params.filter((p) =>
+    (p.applicability as string[]).includes(categoryCode),
+  );
+
+  // The self-assessment is created here rather than assumed. seedRealFramework seeds
+  // one, but it is not in the build chain, and the login wipe that this commit removes
+  // had already deleted it — so on a fresh deploy there was nothing to build a
+  // verification against and this script bailed out.
+  let sa = await prisma.selfAssessmentSubmission.findUnique({
     where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise: DEMO_UDISE } },
     include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
   });
+
   if (!sa || sa.responses.length === 0) {
-    return console.log('demo story: demo school has no self-assessment yet');
+    const created = await prisma.selfAssessmentSubmission.upsert({
+      where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise: DEMO_UDISE } },
+      create: {
+        cycleId: cycle.id,
+        schoolUdise: DEMO_UDISE,
+        frameworkId: framework.id,
+        status: 'SUBMITTED',
+        submittedAt: new Date((cycle.startsAt?.getTime() ?? Date.now()) + 10 * 86_400_000),
+      },
+      update: { status: 'SUBMITTED' },
+    });
+
+    // A school that rates itself well but not perfectly: the best option on most
+    // indicators, the second on roughly a third, so there is something for a verifier
+    // to agree with and something to mark down.
+    for (const p of applicableParams) {
+      if (p.options.length === 0) continue;
+      const optimistic = hash(p.id) % 3 !== 0;
+      const key = optimistic ? p.options[0]!.key : p.options[Math.min(1, p.options.length - 1)]!.key;
+      await prisma.selfAssessmentResponse.upsert({
+        where: { submissionId_parameterId: { submissionId: created.id, parameterId: p.id } },
+        create: { submissionId: created.id, parameterId: p.id, selectedOptionKey: key },
+        update: {},
+      });
+    }
+
+    sa = await prisma.selfAssessmentSubmission.findUnique({
+      where: { id: created.id },
+      include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
+    });
+    console.log(`demo story: seeded a self-assessment over ${applicableParams.length} indicators`);
   }
+
+  if (!sa) return console.log('demo story: could not create a self-assessment');
 
   const verifier = await prisma.user.findFirst({
     where: { role: 'VERIFIER', active: true },
@@ -61,10 +111,6 @@ async function main() {
     update: { verifierUserId: verifier.id },
   });
 
-  const params = await prisma.parameter.findMany({
-    where: { frameworkId: framework.id, isActive: true },
-    include: { options: { where: { isActive: true }, orderBy: { order: 'asc' } } },
-  });
   const paramById = new Map(params.map((p) => [p.id, p]));
 
   // Options are ordered best-first, so the next index down is the weaker answer. The

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
-import { BackButton } from '@/components/common/BackButton';
 
 const PAGE_SIZE = 20;
 
@@ -65,8 +64,7 @@ export default async function SchoolTicketsPage(props: {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <BackButton fallbackHref="/app/school" label={t('backToDashboard')} className="mb-6 inline-flex items-center gap-1.5 text-sm text-navy-700 hover:text-navy-900" />
+    <div className="space-y-6">
 
       <h1 className="text-2xl font-bold text-navy-900 sm:text-3xl">{t('title')}</h1>
 

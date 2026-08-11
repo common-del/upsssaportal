@@ -250,10 +250,49 @@ function pctClamp(value: number): number {
  * because the columns do not exist yet; these two must not be, because one is a
  * public claim about an inspection and the other is a picture of a real place.
  */
+/** What the school itself entered, from SchoolProfileDetail. Every field optional:
+ *  a school that filled in enrolment but not classrooms should have its enrolment
+ *  used and the rest fall back. */
+export type SchoolEnteredDetail = {
+  board?: string | null;
+  classesFrom?: string | null;
+  classesTo?: string | null;
+  totalStudents?: number | null;
+  totalTeachers?: number | null;
+  nonTeachingStaff?: number | null;
+  subjectTeachers?: number | null;
+  totalClassrooms?: number | null;
+  functionalToilets?: number | null;
+  drinkingWater?: boolean | null;
+  enrolPrimary?: number | null;
+  enrolUpperPrimary?: number | null;
+  enrolSecondary?: number | null;
+  enrolHigherSec?: number | null;
+  enrolBoys?: number | null;
+  enrolGirls?: number | null;
+  enrolSc?: number | null;
+  enrolSt?: number | null;
+  enrolObc?: number | null;
+  enrolGeneral?: number | null;
+  facilities?: string[] | null;
+  safetyItems?: string[] | null;
+};
+
 export function buildSchoolProfileData(
   base: SchoolProfileBase,
-  real: { verified?: boolean; verifiedOn?: string | null; photos?: SchoolPhoto[] } = {},
+  real: {
+    verified?: boolean;
+    verifiedOn?: string | null;
+    photos?: SchoolPhoto[];
+    detail?: SchoolEnteredDetail | null;
+  } = {},
 ): SchoolProfileData {
+  // What the school entered wins over what this function derives. Everything below
+  // that is still hash-derived is a placeholder for a field the school has not been
+  // asked for yet, not a claim about the school.
+  const d = real.detail ?? null;
+  const pick = (entered: number | null | undefined, derived: number) =>
+    entered == null ? derived : entered;
   const dummy = getDummySchoolRecord(base.udise);
   const derived = deriveResultFields(base.udise);
   const h = hashUdise(base.udise);
@@ -311,28 +350,38 @@ export function buildSchoolProfileData(
     verified: real.verified ?? false,
     verifiedOn: real.verifiedOn ?? null,
     recognition: 'Recognized',
-    board: derived.type === 'Private' ? 'CBSE' : 'UP Board',
-    classes: classRange,
+    board: d?.board?.trim() || (derived.type === 'Private' ? 'CBSE' : 'UP Board'),
+    classes:
+      d?.classesFrom?.trim() && d?.classesTo?.trim()
+        ? `${d.classesFrom.trim()} to ${d.classesTo.trim()}`
+        : classRange,
     overview: {
-      totalStudents: students,
-      totalTeachers: teachers,
-      pupilTeacherRatio: `${(students / teachers).toFixed(1)}:1`,
-      totalClassrooms: Math.ceil(students / 40),
-      nonTeachingStaff: 4 + (h % 8),
-      subjectTeachers: Math.floor(teachers * 0.7),
-      functionalToilets: 6 + (h % 10),
-      drinkingWater: h % 5 === 0 ? 'Not Available' : 'Available',
+      totalStudents: pick(d?.totalStudents, students),
+      totalTeachers: pick(d?.totalTeachers, teachers),
+      pupilTeacherRatio: `${(pick(d?.totalStudents, students) / Math.max(1, pick(d?.totalTeachers, teachers))).toFixed(1)}:1`,
+      totalClassrooms: pick(d?.totalClassrooms, Math.ceil(students / 40)),
+      nonTeachingStaff: pick(d?.nonTeachingStaff, 4 + (h % 8)),
+      subjectTeachers: pick(d?.subjectTeachers, Math.floor(teachers * 0.7)),
+      functionalToilets: pick(d?.functionalToilets, 6 + (h % 10)),
+      drinkingWater:
+        d?.drinkingWater == null
+          ? h % 5 === 0
+            ? 'Not Available'
+            : 'Available'
+          : d.drinkingWater
+            ? 'Available'
+            : 'Not Available',
       enrolment: {
-        primary: Math.floor(students * 0.35),
-        upperPrimary: Math.floor(students * 0.25),
-        secondary: Math.floor(students * 0.22),
-        higherSecondary: Math.floor(students * 0.18),
-        boys,
-        girls,
-        sc: Math.floor(students * 0.18),
-        st: Math.floor(students * 0.08),
-        obc: Math.floor(students * 0.32),
-        general: students - Math.floor(students * 0.58),
+        primary: pick(d?.enrolPrimary, Math.floor(students * 0.35)),
+        upperPrimary: pick(d?.enrolUpperPrimary, Math.floor(students * 0.25)),
+        secondary: pick(d?.enrolSecondary, Math.floor(students * 0.22)),
+        higherSecondary: pick(d?.enrolHigherSec, Math.floor(students * 0.18)),
+        boys: pick(d?.enrolBoys, boys),
+        girls: pick(d?.enrolGirls, girls),
+        sc: pick(d?.enrolSc, Math.floor(students * 0.18)),
+        st: pick(d?.enrolSt, Math.floor(students * 0.08)),
+        obc: pick(d?.enrolObc, Math.floor(students * 0.32)),
+        general: pick(d?.enrolGeneral, students - Math.floor(students * 0.58)),
       },
       dropout: {
         primary: 1.2 + (h % 3) * 0.3,
@@ -349,7 +398,7 @@ export function buildSchoolProfileData(
         upperPrimary: 92 + (h % 4),
         secondary: 91 + (h % 5),
       },
-      infrastructureTags: ['Library', 'Science Lab', 'Computer Lab', 'Playground'],
+      infrastructureTags: d?.facilities ?? ['Library', 'Science Lab', 'Computer Lab', 'Playground'],
       safetyChecks: [
         { label: 'Functional Toilets (Separate)', done: true, date: '15 Jan 2025' },
         { label: 'Safe Drinking Water Certification', done: true, date: '02 Mar 2025' },

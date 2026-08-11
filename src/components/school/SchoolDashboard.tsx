@@ -321,7 +321,10 @@ export function SchoolDashboard({ data }: { data: DashboardData }) {
       {/* Section B: Quick Actions */}
       <section>
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* auto-fit rather than a fixed four columns. Fee Disclosure is hidden for
+            government schools, so a fixed grid left three cards filling three
+            quarters of the row with a gap where the fourth would have been. */}
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
           {actions.map((action) => (
             <Link
               key={action.href}

@@ -224,3 +224,91 @@ export async function saveSchoolProfile(input: {
 
   return { ok: true };
 }
+
+export type SchoolProfileDetailInput = {
+  board: string;
+  classesFrom: string;
+  classesTo: string;
+  totalStudents: string;
+  totalTeachers: string;
+  nonTeachingStaff: string;
+  subjectTeachers: string;
+  totalClassrooms: string;
+  functionalToilets: string;
+  drinkingWater: boolean;
+  enrolPrimary: string;
+  enrolUpperPrimary: string;
+  enrolSecondary: string;
+  enrolHigherSec: string;
+  enrolBoys: string;
+  enrolGirls: string;
+  enrolSc: string;
+  enrolSt: string;
+  enrolObc: string;
+  enrolGeneral: string;
+  facilities: string[];
+  safetyItems: string[];
+};
+
+/** Blank stays null. A school that has not entered its dropout rate has not entered
+ *  it — storing 0 would publish "no pupils leave this school". */
+function toInt(v: string): number | null {
+  const s = v.trim();
+  if (s === '') return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) return null;
+  return Math.round(n);
+}
+
+/**
+ * Saves everything the public school profile shows.
+ *
+ * Every one of these figures used to be derived from a hash of the UDISE code, so a
+ * parent read an invented pupil count for a real-looking school and the school had no
+ * way to correct it. This is the form that makes them the school's own.
+ *
+ * Partial saves are the normal case, not an error: a school knows its enrolment on the
+ * day it opens this page and may have to ask someone about its classroom count.
+ */
+export async function saveSchoolProfileDetail(
+  input: SchoolProfileDetailInput,
+): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await requireSchoolSession();
+  if (!ctx) return { ok: false, error: 'Not signed in as a school.' };
+
+  const data = {
+    board: input.board.trim() || null,
+    classesFrom: input.classesFrom.trim() || null,
+    classesTo: input.classesTo.trim() || null,
+    totalStudents: toInt(input.totalStudents),
+    totalTeachers: toInt(input.totalTeachers),
+    nonTeachingStaff: toInt(input.nonTeachingStaff),
+    subjectTeachers: toInt(input.subjectTeachers),
+    totalClassrooms: toInt(input.totalClassrooms),
+    functionalToilets: toInt(input.functionalToilets),
+    drinkingWater: input.drinkingWater,
+    enrolPrimary: toInt(input.enrolPrimary),
+    enrolUpperPrimary: toInt(input.enrolUpperPrimary),
+    enrolSecondary: toInt(input.enrolSecondary),
+    enrolHigherSec: toInt(input.enrolHigherSec),
+    enrolBoys: toInt(input.enrolBoys),
+    enrolGirls: toInt(input.enrolGirls),
+    enrolSc: toInt(input.enrolSc),
+    enrolSt: toInt(input.enrolSt),
+    enrolObc: toInt(input.enrolObc),
+    enrolGeneral: toInt(input.enrolGeneral),
+    facilities: input.facilities,
+    safetyItems: input.safetyItems,
+  };
+
+  await prisma.schoolProfileDetail.upsert({
+    where: { schoolUdise: ctx.schoolUdise },
+    create: { schoolUdise: ctx.schoolUdise, ...data },
+    update: data,
+  });
+
+  revalidatePath('/app/school/profile');
+  revalidatePath(`/public/schools/${ctx.schoolUdise}`);
+
+  return { ok: true };
+}

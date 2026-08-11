@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Check, Circle } from 'lucide-react';
 import { getSchoolProfileStatus, PROFILE_STATUS_LABEL } from '@/lib/school/profileStatus';
 import { SchoolProfileForm } from '@/components/school/SchoolProfileForm';
+import { SchoolDetailForm } from '@/components/school/SchoolDetailForm';
+import { prisma } from '@/lib/db';
 
 const NAVY = '#1B2A6B';
 
@@ -29,6 +31,12 @@ export default async function SchoolProfilePage() {
   const udise = session.user.name!;
   const profile = await getSchoolProfileStatus(udise);
   if (!profile) redirect('/app/school');
+
+  const detail = await prisma.schoolProfileDetail.findUnique({ where: { schoolUdise: udise } });
+
+  // Numbers reach the form as strings so an empty box stays empty. Coercing null to 0
+  // would show every unanswered field as a school claiming none.
+  const num = (n: number | null | undefined) => (n == null ? '' : String(n));
 
   return (
     <div className="space-y-6">
@@ -91,6 +99,33 @@ export default async function SchoolProfilePage() {
       </section>
 
       <SchoolProfileForm udise={udise} profile={profile} />
+
+      <SchoolDetailForm
+        initial={{
+          board: detail?.board ?? '',
+          classesFrom: detail?.classesFrom ?? '',
+          classesTo: detail?.classesTo ?? '',
+          totalStudents: num(detail?.totalStudents),
+          totalTeachers: num(detail?.totalTeachers),
+          nonTeachingStaff: num(detail?.nonTeachingStaff),
+          subjectTeachers: num(detail?.subjectTeachers),
+          totalClassrooms: num(detail?.totalClassrooms),
+          functionalToilets: num(detail?.functionalToilets),
+          drinkingWater: detail?.drinkingWater ?? false,
+          enrolPrimary: num(detail?.enrolPrimary),
+          enrolUpperPrimary: num(detail?.enrolUpperPrimary),
+          enrolSecondary: num(detail?.enrolSecondary),
+          enrolHigherSec: num(detail?.enrolHigherSec),
+          enrolBoys: num(detail?.enrolBoys),
+          enrolGirls: num(detail?.enrolGirls),
+          enrolSc: num(detail?.enrolSc),
+          enrolSt: num(detail?.enrolSt),
+          enrolObc: num(detail?.enrolObc),
+          enrolGeneral: num(detail?.enrolGeneral),
+          facilities: detail?.facilities ?? [],
+          safetyItems: detail?.safetyItems ?? [],
+        }}
+      />
     </div>
   );
 }

@@ -103,6 +103,50 @@ model School {
   feeDisclosure       FeeDisclosure?
   schoolScholarships  SchoolScholarship[]
   mandatoryDocuments  MandatoryDocument[]
+  profileDetail       SchoolProfileDetail?
+}
+
+/// Everything the public school profile shows about a school, as entered by the
+/// school itself.
+///
+/// Until this existed, every figure on that page — pupils, teachers, classrooms,
+/// toilets, enrolment by stage and category, dropout, attendance, which facilities
+/// exist — was derived from a hash of the UDISE code in buildSchoolProfileData. The
+/// numbers were stable, plausible and entirely invented, and no school could correct
+/// them because there was nowhere to enter them.
+///
+/// A separate table rather than thirty columns on School: School is the register
+/// identity, read on every list page in the portal, and this is a form a school fills
+/// in once a year. Every field is nullable — a school that knows its enrolment but not
+/// its dropout rate should be able to save the half it knows.
+model SchoolProfileDetail {
+  schoolUdise         String   @id
+  board               String?
+  classesFrom         String?
+  classesTo           String?
+  totalStudents       Int?
+  totalTeachers       Int?
+  nonTeachingStaff    Int?
+  subjectTeachers     Int?
+  totalClassrooms     Int?
+  functionalToilets   Int?
+  drinkingWater       Boolean?
+  enrolPrimary        Int?
+  enrolUpperPrimary   Int?
+  enrolSecondary      Int?
+  enrolHigherSec      Int?
+  enrolBoys           Int?
+  enrolGirls          Int?
+  enrolSc             Int?
+  enrolSt             Int?
+  enrolObc            Int?
+  enrolGeneral        Int?
+  /// Facilities the school reports holding, e.g. Library, Science Lab.
+  facilities          String[]
+  /// Safety items the school reports holding, e.g. Fire Safety Certificate.
+  safetyItems         String[]
+  updatedAt           DateTime @updatedAt
+  school              School   @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade)
 }
 
 model DisputeCategory {

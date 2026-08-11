@@ -1,7 +1,11 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { SchoolProfileContent } from '@/components/public/SchoolProfileContent';
-import { buildSchoolProfileData, getDummySchoolRecord } from '@/lib/public/schoolProfile';
+import {
+  buildSchoolProfileData,
+  getDummySchoolRecord,
+  type SchoolEnteredDetail,
+} from '@/lib/public/schoolProfile';
 import { UNVERIFIED, verifiedStateFor, type VerifiedState } from '@/lib/public/verifiedStatus';
 
 export default async function SchoolProfilePage(props: {
@@ -15,6 +19,9 @@ export default async function SchoolProfilePage(props: {
   // Unverified until the record says otherwise. A database that cannot be reached is
   // not evidence that an inspection happened.
   let verification: VerifiedState = UNVERIFIED;
+  // What the school entered about itself. Everything the profile still derives from
+  // the UDISE hash is a placeholder for a field nobody has been asked for yet.
+  let detail: SchoolEnteredDetail | null = null;
 
   try {
     const school = await prisma.school.findUnique({
@@ -27,6 +34,7 @@ export default async function SchoolProfilePage(props: {
       district = school.district.nameEn;
       block = school.block.nameEn;
       verification = await verifiedStateFor(udise);
+      detail = await prisma.schoolProfileDetail.findUnique({ where: { schoolUdise: udise } });
     }
   } catch {
     // fall through to dummy lookup
@@ -42,7 +50,7 @@ export default async function SchoolProfilePage(props: {
     block = dummy.block;
   }
 
-  const profile = buildSchoolProfileData({ udise, name, district, block }, verification);
+  const profile = buildSchoolProfileData({ udise, name, district, block }, { ...verification, detail });
 
   return <SchoolProfileContent profile={profile} />;
 }

@@ -26,6 +26,25 @@ export type RegisterCounts = {
   assessed: number;
   /** Verifications submitted in the active cycle. */
   verified: number;
+  /**
+   * Pupils, summed from the enrolment each school entered on its own profile.
+   *
+   * There is no register-wide enrolment figure to read, and the obvious candidate does
+   * not work. `data/up_schools_sample_named.csv` carries a real `total_enrolment`
+   * column summing to 23,23,427 over 9,112 rows, but it is keyed on an anonymised
+   * `pseudocode` (`1000184`) that matches no school row: the register's codes are
+   * generated — `09DDBBSSSSS` from seed-dummy, `9MOCK########` from the performance
+   * seed — plus a handful of real UDISE codes from the pilot import. Joining that
+   * column to a school is therefore impossible until the real UDISE register lands.
+   *
+   * So this counts the one honest source that exists: the enrolment box on the
+   * school's own profile page. It is small until schools fill it in, and that is the
+   * correct behaviour — a headline pupil count with nothing behind it is the kind of
+   * figure this file was written to remove.
+   */
+  students: number;
+  /** How many profiles the pupil figure covers, so the number carries its denominator. */
+  studentProfiles: number;
 };
 
 export type RegisterStats = {
@@ -40,7 +59,7 @@ export async function loadRegisterStats(): Promise<RegisterStats | null> {
   try {
     const cycle = await prisma.cycle.findFirst({ where: { isActive: true }, select: { id: true } });
 
-    const [districts, schoolsByDistrict, assessedRows, verifiedRows] = await Promise.all([
+    const [districts, schoolsByDistrict, assessedRows, verifiedRows, enrolmentRows] = await Promise.all([
       prisma.district.findMany({ select: { code: true, nameEn: true }, orderBy: { nameEn: 'asc' } }),
       prisma.school.groupBy({ by: ['districtCode'], _count: { udise: true } }),
       // Grouped in SQL rather than counted per district in a loop: 75 districts would
@@ -57,6 +76,12 @@ export async function loadRegisterStats(): Promise<RegisterStats | null> {
             select: { school: { select: { districtCode: true } } },
           })
         : Promise.resolve([]),
+      // Only rows where a school actually entered a figure. A null is "not asked yet",
+      // and treating it as zero would report every silent school as having no pupils.
+      prisma.schoolProfileDetail.findMany({
+        where: { totalStudents: { not: null } },
+        select: { totalStudents: true, school: { select: { districtCode: true } } },
+      }),
     ]);
 
     const nameFor = new Map(districts.map((d) => [d.code, d.nameEn]));
@@ -73,8 +98,25 @@ export async function loadRegisterStats(): Promise<RegisterStats | null> {
     const assessedBy = tally(assessedRows);
     const verifiedBy = tally(verifiedRows);
 
+    // Pupils are summed, not counted, so they need their own pass — and the number of
+    // profiles behind each sum is carried alongside it.
+    const studentsBy = new Map<string, number>();
+    const profilesBy = new Map<string, number>();
+    for (const r of enrolmentRows) {
+      const code = r.school?.districtCode;
+      if (!code || r.totalStudents == null) continue;
+      studentsBy.set(code, (studentsBy.get(code) ?? 0) + r.totalStudents);
+      profilesBy.set(code, (profilesBy.get(code) ?? 0) + 1);
+    }
+
     const byDistrict: Record<string, RegisterCounts> = {};
-    const state: RegisterCounts = { schools: 0, assessed: 0, verified: 0 };
+    const state: RegisterCounts = {
+      schools: 0,
+      assessed: 0,
+      verified: 0,
+      students: 0,
+      studentProfiles: 0,
+    };
 
     for (const row of schoolsByDistrict) {
       const name = nameFor.get(row.districtCode);
@@ -83,11 +125,15 @@ export async function loadRegisterStats(): Promise<RegisterStats | null> {
         schools: row._count.udise,
         assessed: assessedBy.get(row.districtCode) ?? 0,
         verified: verifiedBy.get(row.districtCode) ?? 0,
+        students: studentsBy.get(row.districtCode) ?? 0,
+        studentProfiles: profilesBy.get(row.districtCode) ?? 0,
       };
       byDistrict[name] = counts;
       state.schools += counts.schools;
       state.assessed += counts.assessed;
       state.verified += counts.verified;
+      state.students += counts.students;
+      state.studentProfiles += counts.studentProfiles;
     }
 
     // Only districts with schools on the register. A district in the table but absent

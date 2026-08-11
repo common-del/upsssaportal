@@ -12,6 +12,7 @@ import {
   TrendingUp,
   ClipboardList,
   Compass,
+  MapPin,
 } from 'lucide-react';
 import { ExplainerFilm } from '@/components/public/ExplainerFilm';
 import { SearchableSelect } from '@/components/public/SearchableSelect';
@@ -69,9 +70,78 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
       ? null
       : district === ALL_DISTRICTS_LABEL
         ? stats.state
-        : (stats.byDistrict[district] ?? { schools: 0, assessed: 0, verified: 0 });
+        : (stats.byDistrict[district] ?? {
+            schools: 0,
+            assessed: 0,
+            verified: 0,
+            students: 0,
+            studentProfiles: 0,
+          });
 
   const districtOptions = stats?.districts ?? [];
+
+  // Districts the register covers. One, once the selector narrows to one — the tile
+  // describes what is being shown, not what exists behind the filter.
+  const districtsShown =
+    district === ALL_DISTRICTS_LABEL ? (stats?.districts.length ?? 0) : 1;
+
+  /* Five tiles, in the order a reader needs them: how many schools, how many children,
+     how far the register reaches, then how far through assessment it has got.
+
+     The pupil tile is dropped when nothing is behind it rather than shown as zero. Its
+     figure is summed from the enrolment schools enter on their own profile, because the
+     register carries no enrolment of its own — see registerStats.ts for why the UDISE
+     extract on disk cannot supply it. "Students enrolled: 0" beside 32,579 schools would
+     be read as a claim about children, not as an empty field. */
+  const tiles: { key: string; icon: typeof Building2; tint: string; value: number; label: string; note?: string }[] =
+    counts == null
+      ? []
+      : [
+          {
+            key: 'schools',
+            icon: Building2,
+            tint: 'bg-[#FDF0D6] text-[#B67F09]',
+            value: counts.schools,
+            label: 'Schools on the register',
+          },
+          ...(counts.students > 0
+            ? [
+                {
+                  key: 'students',
+                  icon: GraduationCap,
+                  tint: 'bg-[#E6EAF7] text-[#2E4499]',
+                  value: counts.students,
+                  label: 'Students enrolled',
+                  // The denominator travels with the number, so a partial figure can
+                  // never be mistaken for a register-wide one.
+                  note: `from ${formatIN(counts.studentProfiles)} school ${
+                    counts.studentProfiles === 1 ? 'profile' : 'profiles'
+                  }`,
+                },
+              ]
+            : []),
+          {
+            key: 'districts',
+            icon: MapPin,
+            tint: 'bg-[#E6EAF7] text-[#2E4499]',
+            value: districtsShown,
+            label: 'Districts covered',
+          },
+          {
+            key: 'assessed',
+            icon: ClipboardList,
+            tint: 'bg-[#E6EAF7] text-[#2E4499]',
+            value: counts.assessed,
+            label: 'Self-assessments filed',
+          },
+          {
+            key: 'verified',
+            icon: BadgeCheck,
+            tint: 'bg-[#E2F3EA] text-[#16794B]',
+            value: counts.verified,
+            label: 'Checked by a verifier',
+          },
+        ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -197,40 +267,27 @@ export function HomeContent({ stats }: { stats: RegisterStats | null }) {
             />
           </div>
         </div>
-        <div className="mt-4 grid divide-y divide-gray-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="flex items-center gap-3.5 py-4 sm:px-5 sm:py-0">
-            <div className="rounded-lg bg-[#EEF0F8] p-2.5 text-[#1B2A6B]">
-              <Building2 size={20} />
+        {/* Hairlines come from a 1px gap over a grey parent rather than divide-x: with
+            five tiles the row wraps at most widths, and divide-x draws its rules down
+            the wrong edges the moment it does. auto-fit keeps the tiles even whether
+            there are four of them or five. */}
+        <div className="mt-4 grid gap-px overflow-hidden rounded-xl bg-gray-100 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+          {tiles.map((t) => (
+            <div key={t.key} className="flex items-center gap-3 bg-white px-4 py-4">
+              <div className={`shrink-0 rounded-lg p-2.5 ${t.tint}`}>
+                <t.icon size={19} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-bold tabular-nums text-gray-900 sm:text-2xl">
+                  {formatIN(t.value)}
+                </p>
+                <p className="text-xs font-medium leading-snug text-gray-500">{t.label}</p>
+                {t.note && (
+                  <p className="mt-0.5 text-[10px] leading-snug text-gray-400">{t.note}</p>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {counts ? formatIN(counts.schools) : '—'}
-              </p>
-              <p className="text-xs font-medium text-gray-500">Schools on the register</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3.5 py-4 sm:px-5 sm:py-0">
-            <div className="rounded-lg bg-[#EEF0F8] p-2.5 text-[#1B2A6B]">
-              <GraduationCap size={20} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {counts ? formatIN(counts.assessed) : '—'}
-              </p>
-              <p className="text-xs font-medium text-gray-500">Self-assessments filed</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3.5 py-4 sm:px-5 sm:py-0">
-            <div className="rounded-lg bg-[#EEF0F8] p-2.5 text-[#1B2A6B]">
-              <BadgeCheck size={20} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {counts ? formatIN(counts.verified) : '—'}
-              </p>
-              <p className="text-xs font-medium text-gray-500">Checked by a verifier</p>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
       )}

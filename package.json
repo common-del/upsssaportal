@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/backfillSchoolManagement.ts || true; tsx prisma/backfillMockSchoolNames.ts || true; tsx prisma/backfillSchoolAccounts.ts || true; tsx prisma/backfillComplaintCategories.ts || true; tsx prisma/backfillComplainantNames.ts || true; tsx prisma/seedVerificationActivity.ts || true; tsx prisma/seedAppeals.ts || true; tsx prisma/backfillAppealCoherence.ts || true; tsx prisma/seedDemoSchoolStory.ts || true; tsx prisma/backfillGradeBands.ts || true; tsx prisma/backfillResultsFromResponses.ts || true; next build",
+    "build": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; tsx prisma/backfillSchoolManagement.ts || true; tsx prisma/backfillMockSchoolNames.ts || true; tsx prisma/backfillSchoolAccounts.ts || true; tsx prisma/backfillComplaintCategories.ts || true; tsx prisma/backfillComplainantNames.ts || true; tsx prisma/seedVerificationActivity.ts || true; tsx prisma/seedAppeals.ts || true; tsx prisma/backfillAppealCoherence.ts || true; tsx prisma/seedDemoSchoolStory.ts || true; tsx prisma/backfillPilotEnrolment.ts || true; tsx prisma/backfillGradeBands.ts || true; tsx prisma/backfillResultsFromResponses.ts || true; next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",

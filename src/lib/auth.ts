@@ -22,58 +22,6 @@ const demoCredentialsFields = {
   password: { label: 'Password', type: 'password' },
 };
 
-// The "school" demo account always starts its SQAAF from scratch: every login wipes
-// whatever it filled in during the previous demo session (responses, evidence, result)
-// so it's a repeatable "fill it out live" demo rather than a one-time thing.
-async function resetDemoSchoolProgress(schoolUdise: string) {
-  const { prisma } = await import('./db');
-
-  const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
-  if (!cycle) return;
-
-  const submission = await prisma.selfAssessmentSubmission.findUnique({
-    where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise } },
-  });
-  const verificationSubs = await prisma.verificationSubmission.findMany({
-    where: { cycleId: cycle.id, schoolUdise },
-    select: { id: true },
-  });
-  const verificationSubIds = verificationSubs.map((v) => v.id);
-
-  const evidenceLinkFilters = [
-    ...(submission ? [{ saSubmissionId: submission.id }] : []),
-    ...(verificationSubIds.length > 0 ? [{ vSubmissionId: { in: verificationSubIds } }] : []),
-  ];
-  const evidenceAssetIds = evidenceLinkFilters.length > 0
-    ? (
-        await prisma.evidenceLink.findMany({
-          where: { OR: evidenceLinkFilters },
-          select: { assetId: true },
-        })
-      ).map((l) => l.assetId)
-    : [];
-
-  await prisma.$transaction([
-    // Deleting the asset cascades away its EvidenceLink automatically.
-    ...(evidenceAssetIds.length > 0
-      ? [prisma.evidenceAsset.deleteMany({ where: { id: { in: evidenceAssetIds } } })]
-      : []),
-    ...(verificationSubIds.length > 0
-      ? [
-          prisma.verificationResponse.deleteMany({ where: { submissionId: { in: verificationSubIds } } }),
-          prisma.verificationSubmission.deleteMany({ where: { id: { in: verificationSubIds } } }),
-        ]
-      : []),
-    prisma.result.deleteMany({ where: { cycleId: cycle.id, schoolUdise } }),
-    // Cascades away its SelfAssessmentResponse rows automatically.
-    ...(submission ? [prisma.selfAssessmentSubmission.delete({ where: { id: submission.id } })] : []),
-    prisma.school.updateMany({
-      where: { udise: schoolUdise },
-      data: { nameEn: 'Demo School (Fill SQAAF)', nameHi: 'डेमो विद्यालय (एसक्यूएएएफ भरें)' },
-    }),
-  ]);
-}
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -110,7 +58,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { username: 'school', active: true, role: { in: ['SCHOOL_USER', 'SCHOOL'] } },
           });
           if (!user) return null;
-          await resetDemoSchoolProgress(user.username);
           return { id: user.id, name: user.username, role: user.role, districtCode: user.districtCode };
         }
 

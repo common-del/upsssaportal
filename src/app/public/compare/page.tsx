@@ -98,20 +98,25 @@ export default async function ComparePage(props: {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <BackButton
-        fallbackHref="/public"
-        label={tc('back')}
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-[#1B2A6B] hover:underline"
-      />
-
-      {backHref && (
+      {/* One back control, never two. Where the visitor arrived from their Find-a-School
+          matches the URL carries that page, and naming the destination beats a bare
+          "Back"; with no such parameter there is nothing to name, so browser history
+          does the work instead. Both render with the same classes so the page does not
+          shift depending on how it was reached. */}
+      {backHref ? (
         <Link
           href={backHref}
-          className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1B2A6B] hover:underline"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-[#1B2A6B] hover:underline"
         >
-          <ArrowLeft size={15} aria-hidden />
-          Back to your matches
+          <ArrowLeft size={16} aria-hidden />
+          {tc('backToMatches')}
         </Link>
+      ) : (
+        <BackButton
+          fallbackHref="/public"
+          label={tc('back')}
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-[#1B2A6B] hover:underline"
+        />
       )}
 
       <h1 className="text-2xl font-bold text-[#1B2A6B] sm:text-3xl">Compare Schools</h1>

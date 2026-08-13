@@ -955,6 +955,7 @@
   },
   "common": {
     "back": "Back",
+    "backToMatches": "Back to your matches",
     "comingSoon": "Coming in the next step"
   },
   "demoNotice": {

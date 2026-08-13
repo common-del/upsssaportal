@@ -955,6 +955,7 @@
   },
   "common": {
     "back": "वापस",
+    "backToMatches": "अपने परिणामों पर वापस जाएँ",
     "comingSoon": "अगले चरण में आ रहा है"
   },
   "demoNotice": {

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, Plus, Scale, X } from 'lucide-react';
 import { LevelBadge } from '@/components/public/LevelBadge';
-import { deriveResultFields } from '@/lib/public/schoolProfile';
 import { feeLabel } from '@/lib/public/fees';
 import { MAX_COMPARE } from '@/lib/public/stateOverviewData';
 import type { PerformanceLevel } from '@/lib/public/constants';
@@ -27,6 +26,13 @@ export type FindResultRow = {
       this used to come from deriveResultFields, which decided it with a hash of the
       UDISE code. A client component must not be able to invent it again. */
   verified: boolean;
+  /** Management type, and the SQAAF band shown in the Level column. Both were
+      computed here from deriveResultFields(udise) until the filters arrived, which
+      left the client inventing two visible columns — and meant a filter could
+      disagree with the value beside it. The server decides both now, filters on the
+      same values, and passes them down. See the page for what each is derived from. */
+  type: SchoolType;
+  performanceLevel: PerformanceLevel;
 };
 
 function truncateName(name: string, max = 42): string {
@@ -88,7 +94,6 @@ export function FindResultsTable({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {rows.map((row) => {
-                const extra = deriveResultFields(row.udise);
                 const isSelected = selected.includes(row.udise);
                 const blocked = !isSelected && atLimit;
                 return (
@@ -109,12 +114,12 @@ export function FindResultsTable({
                       {row.distanceKm} km
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">{row.udise}</td>
-                    <td className="px-4 py-3">{extra.type as SchoolType}</td>
+                    <td className="px-4 py-3">{row.type}</td>
                     <td className="px-4 py-3">
-                      <LevelBadge level={extra.performanceLevel as PerformanceLevel} />
+                      <LevelBadge level={row.performanceLevel} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700">
-                      {feeLabel(row.udise, extra.type as SchoolType, row.feesMin, row.feesMax)}
+                      {feeLabel(row.udise, row.type, row.feesMin, row.feesMax)}
                     </td>
                     <td className="px-4 py-3">
                       {row.verified ? (

@@ -2,7 +2,10 @@ import { BackButton } from '@/components/common/BackButton';
 import { prisma } from '@/lib/db';
 import { computeAge, ageToGrade, gradeLabel } from '@/lib/age-to-grade';
 import { ResultsSortSelect } from '@/components/public/ResultsSortSelect';
+import { ResultsFilterSelects } from '@/components/public/ResultsFilterSelects';
 import { FindResultsTable, type FindResultRow } from '@/components/public/FindResultsTable';
+import { deriveResultFields } from '@/lib/public/schoolProfile';
+import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 import { SCHOOLS } from '@/lib/public/dummyData';
 import { illustrativeDistanceKm } from '@/lib/public/nearbyDummyData';
 import { verifiedUdises } from '@/lib/public/verifiedStatus';
@@ -64,6 +67,11 @@ async function loadResults(
         nameEn: true,
         feesRangeMin: true,
         feesRangeMax: true,
+        // Real management, so the Type column and its filter read GOVERNMENT /
+        // AIDED / PRIVATE off the register instead of a hash of the UDISE. The
+        // column has been showing the hash: deriveResultFields falls back to it
+        // when management is not passed, and this page never passed it.
+        management: true,
         district: { select: { nameEn: true } },
         block: { select: { nameEn: true } },
       },
@@ -73,16 +81,21 @@ async function loadResults(
 
     if (schools.length > 0) {
       const verified = await verifiedUdises(schools.map((s) => s.udise));
-      return schools.map((s) => ({
-        udise: s.udise,
-        name: s.nameEn,
-        districtName: s.district.nameEn,
-        blockName: s.block.nameEn,
-        distanceKm: illustrativeDistanceKm(s.udise),
-        feesMin: s.feesRangeMin,
-        feesMax: s.feesRangeMax,
-        verified: verified.has(s.udise),
-      }));
+      return schools.map((s) => {
+        const derived = deriveResultFields(s.udise, s.management);
+        return {
+          udise: s.udise,
+          name: s.nameEn,
+          districtName: s.district.nameEn,
+          blockName: s.block.nameEn,
+          distanceKm: illustrativeDistanceKm(s.udise),
+          feesMin: s.feesRangeMin,
+          feesMax: s.feesRangeMax,
+          verified: verified.has(s.udise),
+          type: derived.type,
+          performanceLevel: derived.performanceLevel,
+        };
+      });
     }
   } catch {
     // use server action fallback below
@@ -99,17 +112,23 @@ async function loadResults(
 
   // Reached only when the query above failed, so there is no verification record to
   // read. Unverified is the honest default: an unavailable database is not evidence
-  // that an inspection happened.
-  return schools.map((s) => ({
-    udise: s.udise,
-    name: s.name,
-    districtName: s.districtName,
-    blockName: s.blockName,
-    distanceKm: illustrativeDistanceKm(s.udise),
-    feesMin: s.feesMin,
-    feesMax: s.feesMax,
-    verified: false,
-  }));
+  // that an inspection happened. No management either, so the type falls back to the
+  // hash here — this path only runs when the register is unreachable.
+  return schools.map((s) => {
+    const derived = deriveResultFields(s.udise);
+    return {
+      udise: s.udise,
+      name: s.name,
+      districtName: s.districtName,
+      blockName: s.blockName,
+      distanceKm: illustrativeDistanceKm(s.udise),
+      feesMin: s.feesMin,
+      feesMax: s.feesMax,
+      verified: false,
+      type: derived.type,
+      performanceLevel: derived.performanceLevel,
+    };
+  });
 }
 
 function dummyRowsForDistrict(districtName: string, blockName?: string): FindResultRow[] {
@@ -129,6 +148,10 @@ function dummyRowsForDistrict(districtName: string, blockName?: string): FindRes
       feesMax: null,
       // Demo rows, not register rows. Nothing has been verified.
       verified: false,
+      // These rows come from the curated dummy list, so deriveResultFields returns
+      // that record's own type and level rather than a hash.
+      type: s.type,
+      performanceLevel: s.performanceLevel,
     }));
 }
 
@@ -145,6 +168,10 @@ export default async function FindResultsPage(props: {
   const feesMinParam = parseInt((searchParams.feesMin as string) || '', 10);
   const feesMaxParam = parseInt((searchParams.feesMax as string) || '', 10);
   const sort = ((searchParams.sort as string) || 'name_asc') as SortKey;
+  // Same parameter names and values as the School Directory's filters, so the two
+  // pages stay interchangeable and share their translations.
+  const typeFilter = (searchParams.type as string) || '';
+  const performanceFilter = (searchParams.performance as string) || '';
 
   let computedGrade: number | null = null;
   if (dob) {
@@ -186,6 +213,25 @@ export default async function FindResultsPage(props: {
     rows = [...rows].sort((a, b) => a.distanceKm - b.distanceKm || a.name.localeCompare(b.name));
   }
 
+  /* Both filters run over the rows rather than in SQL, and deliberately.
+     `performanceLevel` is not a column at all — it is derived — so it could not be
+     a WHERE clause. Management could be, but filtering it in SQL would let the two
+     disagree: a school whose management has never been imported still shows a Type,
+     falling back to the hash, and a SQL filter would drop it while the column beside
+     the filter went on claiming it was Government. Filtering what is displayed means
+     the filter and the column can never contradict each other.
+
+     The cost is that PAGE_SIZE applies before filtering, so in an area with more
+     than 50 schools the totals below count only the fetched page. That was already
+     true of this page before the filters; wiring the level to Result.gradeBandCode
+     is what would let both move into the query. */
+  const unfilteredTotal = rows.length;
+  if (typeFilter) rows = rows.filter((r) => r.type === (typeFilter as SchoolType));
+  if (performanceFilter) {
+    rows = rows.filter((r) => r.performanceLevel === (performanceFilter as PerformanceLevel));
+  }
+  const filtered = rows.length !== unfilteredTotal;
+
   const total = rows.length;
   const from = total === 0 ? 0 : 1;
   const to = total;
@@ -210,6 +256,9 @@ export default async function FindResultsPage(props: {
     if (specialNeeds !== 'not_applicable') params.set('specialNeeds', specialNeeds);
     if (feesMin !== undefined) params.set('feesMin', String(feesMin));
     if (feesMax !== undefined) params.set('feesMax', String(feesMax));
+    // Carried through, so changing the sort order does not silently clear the filters.
+    if (typeFilter) params.set('type', typeFilter);
+    if (performanceFilter) params.set('performance', performanceFilter);
     if (s !== 'name_asc') params.set('sort', s);
     const qs = params.toString();
     return `/public/find/results${qs ? `?${qs}` : ''}`;
@@ -260,7 +309,15 @@ export default async function FindResultsPage(props: {
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
           {total > 0 ? `Showing ${from}–${to} of ${total}` : 'Showing 0 of 0'}
+          {filtered && (
+            <span className="text-gray-400"> · filtered from {unfilteredTotal}</span>
+          )}
         </p>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Rendered whatever the result count, unlike the sort control: with no
+              matches the filters are the only way back to a non-empty page, so
+              hiding them would strand a parent on a dead end. */}
+          <ResultsFilterSelects />
         {total > 0 && (
           <ResultsSortSelect
             current={sort}
@@ -272,7 +329,8 @@ export default async function FindResultsPage(props: {
               distance_asc: sortHref('distance_asc'),
             }}
           />
-        )}
+          )}
+        </div>
       </div>
 
       {total > 0 ? (
@@ -284,7 +342,14 @@ export default async function FindResultsPage(props: {
           <FindResultsTable rows={rows} backHref={sortHref(sort)} />
         </div>
       ) : (
-        <p className="mt-8 text-center text-gray-600">No schools found for the selected area.</p>
+        <p className="mt-8 text-center text-gray-600">
+          {/* Says which of the two situations this is. "No schools found for the
+              selected area" in front of an area that has 39 of them, because a filter
+              excluded every one, reads as a broken page. */}
+          {typeFilter || performanceFilter
+            ? 'No schools in this area match those filters. Try clearing one of them.'
+            : 'No schools found for the selected area.'}
+        </p>
       )}
     </div>
   );

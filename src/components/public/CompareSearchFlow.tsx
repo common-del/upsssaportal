@@ -199,7 +199,10 @@ export function CompareSearchFlow({
       {selected.length > 1 ? (
         <section>
           <h2 className="text-base font-bold text-gray-900">Side by side</h2>
-          <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {/* Four across on a wide screen, two-by-two below it. Deliberately not
+              four at lg: the container caps at max-w-6xl, so four cards there would
+              be about 230px each and the domain rows start to crowd. */}
+          <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {selected.map((s) => (
               <CompareReportCard key={s.udise} school={s} />
             ))}

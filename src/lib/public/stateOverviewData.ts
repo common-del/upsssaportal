@@ -172,8 +172,12 @@ export function compareSchoolsForBlock(district: string, block: string): Compare
 
 /** Kept here, not in the client component: importing a value from a 'use client'
  * module into a server component yields a client-reference stub, not the number,
- * which silently broke slice() on the server. */
-export const MAX_COMPARE = 3;
+ * which silently broke slice() on the server.
+ *
+ * Raising this needs the Side-by-side grid in CompareSearchFlow raised with it, or
+ * the extra card wraps onto a row of its own. Every label and cap reads from here,
+ * so nothing else is hardcoded. */
+export const MAX_COMPARE = 4;
 
 // ─── Comparison search: one flat pool, built once, server side only ───
 

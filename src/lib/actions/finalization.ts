@@ -1,5 +1,7 @@
 'use server';
 
+import { requireSssa, requireSchool, requireOversight, requireSchoolOrOversight } from '@/lib/authz';
+
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
@@ -13,6 +15,10 @@ const CATEGORY_TO_CODE: Record<string, string> = {
 // ─── Appeal Eligibility ───
 
 export async function getAppealEligibility(cycleId: string, schoolUdise: string) {
+  const actor = await requireSchoolOrOversight();
+  if (!actor) return { eligible: false as const, reason: 'not_authorised' as const };
+  if (actor.schoolUdise && actor.schoolUdise !== schoolUdise) return { eligible: false as const, reason: 'not_authorised' as const };
+
   const vSub = await prisma.verificationSubmission.findFirst({
     where: { cycleId, schoolUdise, status: 'SUBMITTED' },
     select: { submittedAt: true },
@@ -40,6 +46,10 @@ export async function getAppealEligibility(cycleId: string, schoolUdise: string)
 // ─── Get Differing Parameters ───
 
 export async function getDifferingParameters(cycleId: string, schoolUdise: string, frameworkId: string) {
+  const actor = await requireSchoolOrOversight();
+  if (!actor) return { diffs: [], totalApplicable: 0 };
+  if (actor.schoolUdise && actor.schoolUdise !== schoolUdise) return { diffs: [], totalApplicable: 0 };
+
   const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { category: true } });
   const catCode = CATEGORY_TO_CODE[school?.category ?? 'Primary'] ?? 'PRIMARY';
 
@@ -99,6 +109,10 @@ export async function saveAppealDraft(
   frameworkId: string,
   items: { parameterId: string; schoolJustification: string }[],
 ) {
+  const actor = await requireSchool();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+  if (actor.schoolUdise !== schoolUdise) return { success: false, error: 'Not authorised.' };
+
   const elig = await getAppealEligibility(cycleId, schoolUdise);
   if (!elig.eligible) return { success: false, error: 'Not eligible for appeal.' };
   if (elig.existingAppeal?.status === 'SUBMITTED' || elig.existingAppeal?.status === 'DECIDED') {
@@ -136,6 +150,10 @@ export async function saveAppealDraft(
 // ─── School: Submit Appeal ───
 
 export async function submitAppeal(schoolUdise: string, cycleId: string) {
+  const actor = await requireSchool();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+  if (actor.schoolUdise !== schoolUdise) return { success: false, error: 'Not authorised.' };
+
   const elig = await getAppealEligibility(cycleId, schoolUdise);
   if (!elig.eligible || elig.expired) return { success: false, error: 'Appeal window closed.' };
   if (elig.existingAppeal?.status !== 'DRAFT' && !elig.existingAppeal) {
@@ -182,6 +200,8 @@ export async function decideAppeal(
   appealId: string,
   decisions: { appealItemId: string; decision: 'ACCEPT_SCHOOL' | 'KEEP_VERIFIER' }[],
 ) {
+  if (!(await requireSssa())) return { success: false, error: 'Not authorised.' };
+
   const appeal = await prisma.appeal.findUnique({
     where: { id: appealId },
     include: { items: true },
@@ -209,6 +229,8 @@ export async function decideAppeal(
 // ─── Compute Final Score for One School ───
 
 export async function computeAndStoreResult(cycleId: string, schoolUdise: string, frameworkId: string) {
+  if (!(await requireSssa())) return null;
+
   const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { category: true } });
   const catCode = CATEGORY_TO_CODE[school?.category ?? 'Primary'] ?? 'PRIMARY';
 
@@ -317,6 +339,8 @@ export async function computeAndStoreResult(cycleId: string, schoolUdise: string
 // ─── SSSA: Finalize All Schools ───
 
 export async function finalizeAllResults(cycleId: string) {
+  if (!(await requireSssa())) return { success: false, error: 'Not authorised.' };
+
   const framework = await prisma.framework.findUnique({ where: { cycleId }, select: { id: true, status: true } });
   if (!framework || framework.status !== 'PUBLISHED') return { success: false, error: 'No published framework.' };
 
@@ -339,6 +363,8 @@ export async function finalizeAllResults(cycleId: string) {
 // ─── SSSA: Publish Results ───
 
 export async function publishResults(cycleId: string) {
+  if (!(await requireSssa())) return { success: false, error: 'Not authorised.' };
+
   const cycle = await prisma.cycle.findUnique({ where: { id: cycleId } });
   if (!cycle) return { success: false, error: 'Cycle not found.' };
 
@@ -365,6 +391,8 @@ export async function publishResults(cycleId: string) {
 // ─── Get Finalization Summary for SSSA ───
 
 export async function getFinalizationSummary(cycleId: string, frameworkId: string) {
+  if (!(await requireOversight())) return [];
+
   const { getBatchSelfAssessmentScores, getBatchVerificationScores } = await import('@/lib/scoring');
 
   const [schools, results, appeals, vSubmissions, saSubmissions] = await Promise.all([

@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { requireSchoolOrOversight } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import type { ScholarshipScheme } from '@prisma/client';
 import {
@@ -19,6 +20,14 @@ async function requireSchoolSession() {
 }
 
 export async function ensureMandatoryDocuments(schoolUdise: string, category: string) {
+  // Took a UDISE from the caller and wrote against it with no session check, so one school
+  // could seed document rows for another. Every caller already passes its own UDISE, so
+  // scoping to the session changes no behaviour and closes the hole. Oversight roles may
+  // still pass any school, which is what the officials' compliance view needs.
+  const actor = await requireSchoolOrOversight();
+  if (!actor) return;
+  if (actor.schoolUdise && actor.schoolUdise !== schoolUdise) return;
+
   const types = mandatoryDocTypesForSchool(category);
   for (const documentType of types) {
     await prisma.mandatoryDocument.upsert({
@@ -30,6 +39,13 @@ export async function ensureMandatoryDocuments(schoolUdise: string, category: st
 }
 
 export async function getAssessmentStatus(schoolUdise: string): Promise<AssessmentStatus> {
+  // Same fix as ensureMandatoryDocuments above: this leaked another school's progress
+  // through the state name alone. NOT_STARTED is the refusal because it is the value the
+  // function already returns when there is nothing to report.
+  const actor = await requireSchoolOrOversight();
+  if (!actor) return 'NOT_STARTED';
+  if (actor.schoolUdise && actor.schoolUdise !== schoolUdise) return 'NOT_STARTED';
+
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return 'NOT_STARTED';
 
@@ -169,9 +185,6 @@ export async function markAllNotificationsRead() {
 }
 
 
-export async function createDefaultMandatoryDocsForSchool(schoolUdise: string, category: string) {
-  await ensureMandatoryDocuments(schoolUdise, category);
-}
 
 /**
  * Saves the school's public contact details.

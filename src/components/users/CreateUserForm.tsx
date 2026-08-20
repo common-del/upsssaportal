@@ -36,7 +36,6 @@ export default function CreateUserForm({
     setError('');
     startTransition(async () => {
       const res = await createUser(
-        { userId: actorId, role: actorRole, districtCode: actorDistrictCode },
         { username, password, name: name || undefined, role, districtCode: districtCode || undefined, verifierCapacity: parseInt(capacity, 10) || 50, districtCodes: selectedDistricts },
       );
       if (res.success) router.push(backPath);

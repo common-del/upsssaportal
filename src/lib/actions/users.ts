@@ -5,8 +5,27 @@ import type { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { ROLES } from '@/lib/roles';
+import { requireRole } from '@/lib/authz';
 
 type ActorInfo = { userId: string; role: string; districtCode?: string | null };
+
+/**
+ * The acting administrator, read from the session.
+ *
+ * Every action here used to take this as its first parameter, and the pages handed it to
+ * client components as a prop — actorRole="SSSA_ADMIN" — which then passed it back in. The
+ * answer to "are you an administrator?" therefore made a round trip through the browser,
+ * where anyone could change it. createUser and resetPassword are in this file, so that was
+ * account creation at any role plus a password reset for any account.
+ *
+ * The role checks below are unchanged. Only the source of the claim is different, and that
+ * is the whole fix: isSssaAdmin(actor) means something now.
+ */
+async function actingAdmin(): Promise<ActorInfo | null> {
+  const a = await requireRole('SSSA_ADMIN', 'DISTRICT_OFFICIAL');
+  if (!a) return null;
+  return { userId: a.userId, role: a.role, districtCode: a.districtCode };
+}
 
 /// Was a local list of four. Now the shared set, so adding a verification role does not
 /// mean remembering to widen a second copy in this file. See src/lib/roles.ts.
@@ -23,9 +42,11 @@ function isSssaAdmin(actor: ActorInfo) { return actor.role === 'SSSA_ADMIN'; }
 function isDistrictOfficial(actor: ActorInfo) { return actor.role === 'DISTRICT_OFFICIAL'; }
 
 export async function listUsers(
-  actor: ActorInfo,
   filters: { role?: string; districtCode?: string; active?: string; q?: string; page?: number },
 ) {
+  const actor = await actingAdmin();
+  if (!actor) return { users: [], total: 0 };
+
   const PAGE_SIZE = 20;
   const page = Math.max(1, filters.page ?? 1);
 
@@ -77,12 +98,14 @@ export async function listUsers(
 }
 
 export async function createUser(
-  actor: ActorInfo,
   payload: {
     username: string; password: string; name?: string; role: string;
     districtCode?: string; verifierCapacity?: number; districtCodes?: string[];
   },
 ): Promise<{ success: boolean; error?: string; userId?: string }> {
+  const actor = await actingAdmin();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+
   if (!isSssaAdmin(actor) && !isDistrictOfficial(actor)) return { success: false, error: 'Access denied.' };
 
   if (isDistrictOfficial(actor)) {
@@ -137,10 +160,12 @@ export async function createUser(
 }
 
 export async function updateUser(
-  actor: ActorInfo,
   userId: string,
   payload: { name?: string; role?: string; districtCode?: string | null; verifierCapacity?: number; active?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
+  const actor = await actingAdmin();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { success: false, error: 'User not found.' };
 
@@ -186,8 +211,11 @@ export async function updateUser(
 }
 
 export async function setUserEnabled(
-  actor: ActorInfo, userId: string, enabled: boolean,
+  userId: string, enabled: boolean,
 ): Promise<{ success: boolean; error?: string }> {
+  const actor = await actingAdmin();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { success: false, error: 'User not found.' };
 
@@ -210,8 +238,11 @@ export async function setUserEnabled(
 }
 
 export async function resetPassword(
-  actor: ActorInfo, userId: string, newPassword: string,
+  userId: string, newPassword: string,
 ): Promise<{ success: boolean; error?: string }> {
+  const actor = await actingAdmin();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+
   if (!newPassword || newPassword.length < 6) return { success: false, error: 'Password must be at least 6 characters.' };
 
   const target = await prisma.user.findUnique({ where: { id: userId } });
@@ -235,8 +266,11 @@ export async function resetPassword(
 }
 
 export async function setVerifierDistricts(
-  actor: ActorInfo, userId: string, districtCodes: string[],
+  userId: string, districtCodes: string[],
 ): Promise<{ success: boolean; error?: string }> {
+  const actor = await actingAdmin();
+  if (!actor) return { success: false, error: 'Not authorised.' };
+
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target || target.role !== 'VERIFIER') return { success: false, error: 'User not found or not a verifier.' };
 
@@ -270,9 +304,11 @@ type BulkRow = { username: string; password: string; name?: string; role: string
 type BulkError = { row: number; field: string; message: string };
 
 export async function bulkValidateAndCreate(
-  actor: ActorInfo,
   rows: BulkRow[],
 ): Promise<{ success: boolean; created: number; errors: BulkError[] }> {
+  const actor = await actingAdmin();
+  if (!actor) return { success: false, created: 0, errors: [{ row: 0, field: '', message: 'Not authorised.' }] };
+
   if (!isSssaAdmin(actor)) return { success: false, created: 0, errors: [{ row: 0, field: '', message: 'Access denied.' }] };
 
   const errors: BulkError[] = [];
@@ -336,6 +372,8 @@ export async function bulkValidateAndCreate(
 }
 
 export async function getUserAuditLogs(userId: string) {
+  if (!(await actingAdmin())) return [];
+
   return prisma.auditLog.findMany({
     where: { entityId: userId, entityType: 'User' },
     orderBy: { createdAt: 'desc' },

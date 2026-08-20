@@ -1,5 +1,7 @@
 'use server';
 
+import { requireSssa } from '@/lib/authz';
+
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import path from 'path';
@@ -10,6 +12,8 @@ import { validateFramework } from '@/lib/validators/framework';
    Cycle management
    ──────────────────────────────────────────────────────────── */
 export async function createCycle(name: string): Promise<{ success: boolean; message: string; clonedFrom?: string }> {
+  if (!(await requireSssa())) return { success: false, message: 'Not authorised.' };
+
   const trimmed = name.trim();
   if (!trimmed) return { success: false, message: 'Cycle name is required.' };
 
@@ -188,6 +192,8 @@ async function cloneFrameworkIntoCycle(
 }
 
 export async function toggleActiveCycle(cycleId: string) {
+  if (!(await requireSssa())) return;
+
   const cycle = await prisma.cycle.findUnique({ where: { id: cycleId } });
   if (!cycle) return;
 
@@ -202,6 +208,8 @@ export async function toggleActiveCycle(cycleId: string) {
 }
 
 export async function deleteCycle(cycleId: string) {
+  if (!(await requireSssa())) return;
+
   const cycle = await prisma.cycle.findUnique({
     where: { id: cycleId },
     include: { frameworks: { select: { id: true } }, _count: { select: { ratings: true } } },
@@ -217,6 +225,8 @@ export async function deleteCycle(cycleId: string) {
 }
 
 export async function unpublishFramework(frameworkId: string) {
+  if (!(await requireSssa())) return;
+
   const fw = await prisma.framework.findUnique({ where: { id: frameworkId } });
   if (!fw || fw.status !== 'PUBLISHED') return;
   await prisma.framework.update({
@@ -267,6 +277,8 @@ function splitBilingual(text: string): { hi: string; en: string } {
    Import SQAAF from Excel
    ──────────────────────────────────────────────────────────── */
 export async function importSqaafFromExcel(targetCycleId?: string): Promise<{ success: boolean; message: string }> {
+  if (!(await requireSssa())) return { success: false, message: 'Not authorised.' };
+
   try {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const XLSX = require('xlsx') as typeof import('xlsx');
@@ -465,6 +477,8 @@ export async function importSqaafFromExcel(targetCycleId?: string): Promise<{ su
    Get framework with full tree
    ──────────────────────────────────────────────────────────── */
 export async function getFrameworkFull(frameworkId: string) {
+  if (!(await requireSssa())) return null;
+
   return prisma.framework.findUnique({
     where: { id: frameworkId },
     include: {
@@ -496,6 +510,8 @@ export async function getFrameworkFull(frameworkId: string) {
    Update domain weight
    ──────────────────────────────────────────────────────────── */
 export async function updateDomainWeight(domainId: string, weightPercent: number) {
+  if (!(await requireSssa())) return;
+
   const domain = await prisma.sqaafDomain.findUnique({ where: { id: domainId }, include: { framework: true } });
   if (!domain || domain.framework.status === 'PUBLISHED') return;
   await prisma.sqaafDomain.update({ where: { id: domainId }, data: { weightPercent } });
@@ -506,6 +522,8 @@ export async function updateDomainWeight(domainId: string, weightPercent: number
    Update framework level labels
    ──────────────────────────────────────────────────────────── */
 export async function updateFrameworkLevel(levelId: string, labelEn: string, labelHi: string) {
+  if (!(await requireSssa())) return;
+
   const level = await prisma.frameworkLevel.findUnique({ where: { id: levelId }, include: { framework: true } });
   if (!level || level.framework.status === 'PUBLISHED') return;
   await prisma.frameworkLevel.update({ where: { id: levelId }, data: { labelEn, labelHi } });
@@ -519,6 +537,8 @@ export async function updateGradeBand(
   bandId: string,
   data: { labelEn: string; labelHi: string; minPercent: number; maxPercent: number },
 ) {
+  if (!(await requireSssa())) return;
+
   const band = await prisma.gradeBand.findUnique({ where: { id: bandId }, include: { framework: true } });
   if (!band || band.framework.status === 'PUBLISHED') return;
   await prisma.gradeBand.update({ where: { id: bandId }, data });
@@ -529,6 +549,8 @@ export async function updateGradeBand(
    Toggle parameter active/inactive
    ──────────────────────────────────────────────────────────── */
 export async function toggleParameter(parameterId: string) {
+  if (!(await requireSssa())) return;
+
   const param = await prisma.parameter.findUnique({ where: { id: parameterId }, include: { framework: true } });
   if (!param || param.framework.status === 'PUBLISHED') return;
   await prisma.parameter.update({ where: { id: parameterId }, data: { isActive: !param.isActive } });
@@ -539,6 +561,8 @@ export async function toggleParameter(parameterId: string) {
    Delete parameter (DRAFT only)
    ──────────────────────────────────────────────────────────── */
 export async function deleteParameter(parameterId: string) {
+  if (!(await requireSssa())) return;
+
   const param = await prisma.parameter.findUnique({ where: { id: parameterId }, include: { framework: true } });
   if (!param || param.framework.status === 'PUBLISHED') return;
   await prisma.parameter.delete({ where: { id: parameterId } });
@@ -558,6 +582,8 @@ export async function updateParameter(
     dataSources?: string[];
   },
 ) {
+  if (!(await requireSssa())) return;
+
   const param = await prisma.parameter.findUnique({ where: { id: parameterId }, include: { framework: true } });
   if (!param || param.framework.status === 'PUBLISHED') return;
   await prisma.parameter.update({ where: { id: parameterId }, data });
@@ -571,6 +597,8 @@ export async function updateOptionLabels(
   optionId: string,
   data: { labelEn: string; labelHi: string },
 ) {
+  if (!(await requireSssa())) return;
+
   const opt = await prisma.parameterOption.findUnique({
     where: { id: optionId },
     include: { parameter: { include: { framework: true } } },
@@ -584,6 +612,8 @@ export async function updateOptionLabels(
    Update rubric score for a parameter option
    ──────────────────────────────────────────────────────────── */
 export async function updateRubricScore(mappingId: string, score: number) {
+  if (!(await requireSssa())) return;
+
   const mapping = await prisma.rubricMapping.findUnique({
     where: { id: mappingId },
     include: { framework: true },
@@ -597,6 +627,8 @@ export async function updateRubricScore(mappingId: string, score: number) {
    Reorder parameter within subdomain
    ──────────────────────────────────────────────────────────── */
 export async function reorderParameters(subDomainId: string, orderedIds: string[]) {
+  if (!(await requireSssa())) return;
+
   const sub = await prisma.subDomain.findUnique({ where: { id: subDomainId }, include: { framework: true } });
   if (!sub || sub.framework.status === 'PUBLISHED') return;
 
@@ -613,6 +645,8 @@ export async function reorderParameters(subDomainId: string, orderedIds: string[
    Publish framework (atomic lock)
    ──────────────────────────────────────────────────────────── */
 export async function publishFramework(frameworkId: string, userId: string) {
+  if (!(await requireSssa())) return { success: false, errors: [{ code: 'FORBIDDEN', message: 'Not authorised.' }] };
+
   const fw = await getFrameworkFull(frameworkId);
   if (!fw) return { success: false, errors: [{ code: 'NOT_FOUND', message: 'Framework not found.' }] };
 

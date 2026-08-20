@@ -15,8 +15,7 @@ export default async function DistrictUsersPage({ searchParams }: { searchParams
   const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
   const districtCode = session.user.districtCode ?? '';
 
-  const actor = { userId: session.user.id!, role: 'DISTRICT_OFFICIAL', districtCode };
-  const { users, total, pageSize } = await listUsers(actor, { active: sp.active, q: sp.q, page });
+  const { users, total, pageSize } = await listUsers({ active: sp.active, q: sp.q, page });
 
   const serialized = users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() }));
 

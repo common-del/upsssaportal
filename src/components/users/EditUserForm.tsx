@@ -38,8 +38,7 @@ export default function EditUserForm({
   const handleSave = () => {
     setError(''); setSuccess('');
     startTransition(async () => {
-      const actor = { userId: actorId, role: actorRole, districtCode: actorDistrictCode };
-      const res = await updateUser(actor, user.id, {
+      const res = await updateUser(user.id, {
         name: name || undefined,
         ...(isSssa ? { role, districtCode: districtCode || null } : {}),
         verifierCapacity: parseInt(capacity, 10) || 50,
@@ -48,7 +47,7 @@ export default function EditUserForm({
       if (!res.success) { setError(res.error ?? t('saveError')); return; }
 
       if (isSssa && (role === 'VERIFIER' || user.role === 'VERIFIER')) {
-        const dRes = await setVerifierDistricts(actor, user.id, selectedDistricts);
+        const dRes = await setVerifierDistricts(user.id, selectedDistricts);
         if (!dRes.success) { setError(dRes.error ?? t('saveError')); return; }
       }
       setSuccess(t('saved'));

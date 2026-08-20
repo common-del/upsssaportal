@@ -45,6 +45,10 @@ export default async function VerifierAssessmentPage({
   const submission = await getOrCreateVerificationSubmission(
     assignment.id, cycleId, udise, framework.id, userId,
   );
+  // Null means the caller is not a verifier: getOrCreateVerificationSubmission authorises
+  // before it writes. Rendered as the same empty state as a missing framework rather than
+  // crashing on submission.responses below.
+  if (!submission) return <EmptyState t={t} msg={t('noFramework')} />;
 
   const responseMap: Record<string, { selectedOptionKey: string; notes: string | null }> = {};
   for (const r of submission.responses) {

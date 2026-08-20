@@ -51,7 +51,7 @@ export default function BulkUploadForm({ actorId, backPath }: { actorId: string;
         username: r.username ?? '', password: r.password ?? '', name: r.name,
         role: r.role ?? '', districtCode: r.districtCode, verifierCapacity: r.verifierCapacity, districtCodes: r.districtCodes,
       }));
-      const res = await bulkValidateAndCreate({ userId: actorId, role: 'SSSA_ADMIN' }, rows);
+      const res = await bulkValidateAndCreate(rows);
       if (res.success) { setResult({ success: true, created: res.created }); setPreview([]); }
       else setErrors(res.errors);
     });

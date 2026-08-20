@@ -29,6 +29,19 @@ export default async function EvidenceManagerPage({
   }
 
   const submission = await getOrCreateSubmission(initial.cycleId, schoolUdise, initial.framework.id);
+  // Null now means the session is not a school account, not merely that no cycle is
+  // open: getOrCreateSubmission authorises before it writes. Treated the same as a
+  // missing framework, because a school that cannot be identified has nothing to fill in.
+  if (!submission) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Evidence Manager</h1>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
+          No active assessment cycle. Evidence management will be available when a cycle is active.
+        </div>
+      </div>
+    );
+  }
   const answeredParameterIds = submission.responses.map((r) => r.parameterId);
   const data = answeredParameterIds.length > 0
     ? (await getActiveFrameworkForSchool(schoolUdise, answeredParameterIds)) ?? initial

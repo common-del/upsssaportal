@@ -1,5 +1,7 @@
 'use server';
 
+import { requireSssa, requireVerifier } from '@/lib/authz';
+
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
@@ -20,6 +22,8 @@ export async function assignVerifiersForCycle({
   deadlineAt?: string;
   ignoreDistrictMapping?: boolean;
 }): Promise<{ assigned: number; skipped: number; error?: string }> {
+  if (!(await requireSssa())) return { assigned: 0, skipped: 0, error: 'Not authorised.' };
+
   const cycle = await prisma.cycle.findUnique({ where: { id: cycleId } });
   if (!cycle) return { assigned: 0, skipped: 0, error: 'Cycle not found.' };
 
@@ -117,6 +121,8 @@ export async function assignSchoolsToVerifier(
   verifierUserId: string,
   schoolUdises: string[],
 ): Promise<{ assigned: number; error?: string }> {
+  if (!(await requireSssa())) return { assigned: 0, error: 'Not authorised.' };
+
   if (schoolUdises.length === 0) return { assigned: 0 };
 
   const verifier = await prisma.user.findFirst({
@@ -148,6 +154,8 @@ export async function assignSchoolsToVerifier(
 }
 
 export async function reassignVerifier(assignmentId: string, newVerifierUserId: string) {
+  if (!(await requireSssa())) return;
+
   await prisma.verifierAssignment.update({
     where: { id: assignmentId },
     data: { verifierUserId: newVerifierUserId },
@@ -157,6 +165,13 @@ export async function reassignVerifier(assignmentId: string, newVerifierUserId: 
 }
 
 export async function getVerifierAssignments(verifierUserId: string) {
+  const actor = await requireVerifier();
+  if (!actor) return { assignments: [], cycleName: null };
+  const canReadOthers = actor.role === 'SUPERVISOR';
+  if (!canReadOthers && verifierUserId !== actor.userId) {
+    return { assignments: [], cycleName: null };
+  }
+
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return { assignments: [], cycleName: null };
 
@@ -173,6 +188,8 @@ export async function getVerifierAssignments(verifierUserId: string) {
 }
 
 export async function getActiveFrameworkForVerification(schoolUdise: string) {
+  if (!(await requireVerifier())) return null;
+
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return null;
 
@@ -240,6 +257,8 @@ export async function getOrCreateVerificationSubmission(
   frameworkId: string,
   verifierUserId: string,
 ) {
+  if (!(await requireVerifier())) return null;
+
   const existing = await prisma.verificationSubmission.findUnique({
     where: { assignmentId },
     include: { responses: true },
@@ -257,6 +276,8 @@ export async function saveVerificationResponses(
   verifierUserId: string,
   responses: { parameterId: string; selectedOptionKey: string; notes?: string }[],
 ): Promise<{ success: boolean; message?: string }> {
+  if (!(await requireVerifier())) return { success: false, message: 'Not authorised.' };
+
   const submission = await prisma.verificationSubmission.findUnique({ where: { id: submissionId } });
   if (!submission) return { success: false, message: 'Submission not found.' };
   if (submission.verifierUserId !== verifierUserId) return { success: false, message: 'Access denied.' };
@@ -283,6 +304,8 @@ export async function submitVerification(
   submissionId: string,
   verifierUserId: string,
 ): Promise<{ success: boolean; errors?: { parameterCode: string; message: string }[]; message?: string }> {
+  if (!(await requireVerifier())) return { success: false, errors: [{ parameterCode: '', message: 'Not authorised.' }] };
+
   const submission = await prisma.verificationSubmission.findUnique({
     where: { id: submissionId },
     include: { framework: { include: { parameters: { where: { isActive: true }, select: { id: true, code: true, applicability: true, evidenceRequired: true } } } } },

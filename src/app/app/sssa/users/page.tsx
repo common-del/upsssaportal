@@ -16,8 +16,9 @@ export default async function SssaUsersPage({ searchParams }: { searchParams: Pr
   const tab = sp.tab === 'verifiers' ? 'verifiers' : 'everyone';
 
   const session = await auth();
-  const actor = { userId: session!.user.id!, role: 'SSSA_ADMIN' };
-  const { users, total, pageSize } = await listUsers(actor, {
+  // No actor argument: listUsers reads the session itself. The literal role that used to
+  // be assembled here was the claim the action trusted.
+  const { users, total, pageSize } = await listUsers({
     role: sp.role, districtCode: sp.districtCode, active: sp.active, q: sp.q, page,
   });
 

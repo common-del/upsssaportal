@@ -1,5 +1,15 @@
 'use server';
 
+/**
+ * Deliberately unauthenticated. searchSchools backs the public Find a School flow, which
+ * a parent uses before there is any question of an account. It reads only register fields
+ * that the public school profile already publishes.
+ *
+ * Kept as a note because a reviewer scanning for actions with no session check will find
+ * this one: it is not an oversight. It does want rate limiting, which the codebase has
+ * nowhere yet.
+ */
+
 import { prisma } from '@/lib/db';
 import { SCHOOLS } from '@/lib/public/dummyData';
 import type { Prisma } from '@prisma/client';

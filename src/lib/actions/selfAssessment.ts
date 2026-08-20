@@ -1,5 +1,7 @@
 'use server';
 
+import { requireSchool, requireOversight, requireSchoolOrOversight } from '@/lib/authz';
+
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
@@ -13,6 +15,8 @@ export async function getActiveFrameworkForSchool(
   schoolUdise: string,
   answeredParameterIds: string[] = [],
 ) {
+  if (!(await requireSchoolOrOversight())) return null;
+
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return null;
 
@@ -89,6 +93,8 @@ export async function getOrCreateSubmission(
   schoolUdise: string,
   frameworkId: string,
 ) {
+  if (!(await requireSchool())) return null;
+
   const existing = await prisma.selfAssessmentSubmission.findUnique({
     where: { cycleId_schoolUdise: { cycleId, schoolUdise } },
     include: { responses: true },
@@ -106,6 +112,8 @@ export async function saveResponses(
   schoolUdise: string,
   responses: { parameterId: string; selectedOptionKey: string; notes?: string }[],
 ): Promise<{ success: boolean; message?: string }> {
+  if (!(await requireSchool())) return { success: false, message: 'Not authorised.' };
+
   const submission = await prisma.selfAssessmentSubmission.findUnique({
     where: { id: submissionId },
   });
@@ -150,6 +158,8 @@ export async function submitSubmission(
   submissionId: string,
   schoolUdise: string,
 ): Promise<{ success: boolean; errors?: { parameterCode: string; message: string }[]; message?: string }> {
+  if (!(await requireSchool())) return { success: false, errors: [{ parameterCode: '', message: 'Not authorised.' }] };
+
   const submission = await prisma.selfAssessmentSubmission.findUnique({
     where: { id: submissionId },
     include: {
@@ -215,6 +225,8 @@ export async function submitSubmission(
 }
 
 export async function getMonitoringStats() {
+  if (!(await requireOversight())) return null;
+
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return { totalSchools: 0, started: 0, submitted: 0, cycleName: null };
 

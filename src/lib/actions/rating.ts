@@ -1,5 +1,18 @@
 'use server';
 
+/**
+ * Deliberately unauthenticated, and it must stay that way.
+ *
+ * A parent rating a school has no account and never will. submitRating is called from the
+ * public site, and the three read actions feed public school profiles and directory pages.
+ * Adding a session check here would not close a hole, it would remove the feature.
+ *
+ * The controls that do apply are therefore of a different kind, and two of the three are
+ * still missing: input validation is present (see the zod schema below), but there is no
+ * rate limiting anywhere in the codebase and no duplicate-submission guard beyond the
+ * mobile number. Both belong here rather than in an auth check.
+ */
+
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 

@@ -42,7 +42,7 @@ export default function UserListClient({
   const handleToggle = (userId: string, enable: boolean) => {
     if (!confirm(enable ? t('confirmEnable') : t('confirmDisable'))) return;
     startTransition(async () => {
-      await setUserEnabled({ userId: actorId, role: actorRole, districtCode: actorDistrictCode }, userId, enable);
+      await setUserEnabled(userId, enable);
       router.refresh();
     });
   };
@@ -51,7 +51,7 @@ export default function UserListClient({
     const pw = prompt(t('newPasswordPrompt'));
     if (!pw) return;
     startTransition(async () => {
-      const res = await resetPassword({ userId: actorId, role: actorRole, districtCode: actorDistrictCode }, userId, pw);
+      const res = await resetPassword(userId, pw);
       if (!res.success) alert(res.error);
       else alert(t('passwordResetDone'));
     });

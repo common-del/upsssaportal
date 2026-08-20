@@ -1,5 +1,7 @@
 'use server';
 
+import { requireRole, requireSchoolOrOversight } from '@/lib/authz';
+
 import { prisma } from '@/lib/db';
 import { del } from '@vercel/blob';
 import { revalidatePath } from 'next/cache';
@@ -30,6 +32,8 @@ export async function createEvidence(
     appealItemId?: string;
   },
 ): Promise<{ success: boolean; error?: string; file?: EvidenceFile }> {
+  if (!(await requireRole('SCHOOL', 'VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER', 'SSSA_ADMIN'))) return { success: false, error: 'Not authorised.' };
+
   // Validate file constraints
   const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
   if (!allowed.includes(fileType)) return { success: false, error: 'Invalid file type.' };
@@ -73,6 +77,8 @@ export async function deleteEvidence(
   userId: string,
   assetId: string,
 ): Promise<{ success: boolean; error?: string }> {
+  if (!(await requireRole('SCHOOL', 'VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER', 'SSSA_ADMIN'))) return { success: false, error: 'Not authorised.' };
+
   const asset = await prisma.evidenceAsset.findUnique({
     where: { id: assetId },
     include: { links: true },
@@ -96,6 +102,8 @@ export async function getEvidenceForSAParam(
   saSubmissionId: string,
   parameterId: string,
 ): Promise<EvidenceFile[]> {
+  if (!(await requireSchoolOrOversight())) return [];
+
   const links = await prisma.evidenceLink.findMany({
     where: { kind: 'SELF_RESPONSE', saSubmissionId, parameterId },
     include: { asset: true },
@@ -116,6 +124,8 @@ export async function getEvidenceForVParam(
   vSubmissionId: string,
   parameterId: string,
 ): Promise<EvidenceFile[]> {
+  if (!(await requireSchoolOrOversight())) return [];
+
   const links = await prisma.evidenceLink.findMany({
     where: { kind: 'VERIFICATION_RESPONSE', vSubmissionId, parameterId },
     include: { asset: true },
@@ -135,6 +145,8 @@ export async function getEvidenceForVParam(
 export async function getEvidenceForAppealItem(
   appealItemId: string,
 ): Promise<EvidenceFile[]> {
+  if (!(await requireSchoolOrOversight())) return [];
+
   const links = await prisma.evidenceLink.findMany({
     where: { kind: 'APPEAL_ITEM', appealItemId },
     include: { asset: true },
@@ -155,6 +167,8 @@ export async function getEvidenceCountsForSubmission(
   kind: 'SELF_RESPONSE' | 'VERIFICATION_RESPONSE',
   submissionId: string,
 ): Promise<Record<string, number>> {
+  if (!(await requireSchoolOrOversight())) return {};
+
   const field = kind === 'SELF_RESPONSE' ? 'saSubmissionId' : 'vSubmissionId';
   const links = await prisma.evidenceLink.findMany({
     where: { kind, [field]: submissionId },
@@ -170,6 +184,8 @@ export async function getEvidenceCountsForSubmission(
 export async function getEvidenceCountsForAppeal(
   appealId: string,
 ): Promise<Record<string, number>> {
+  if (!(await requireSchoolOrOversight())) return {};
+
   const links = await prisma.evidenceLink.findMany({
     where: { kind: 'APPEAL_ITEM', appealItem: { appealId } },
     select: { appealItemId: true },

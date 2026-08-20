@@ -1,6 +1,7 @@
 'use server';
 
 import { requireSchool, requireOversight, requireSchoolOrOversight } from '@/lib/authz';
+import { markSubmitted } from '@/lib/verification/intake';
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
@@ -219,8 +220,17 @@ export async function submitSubmission(
     data: { status: 'SUBMITTED', submittedAt: new Date() },
   });
 
+  // Advance the verification pipeline in the same action that accepts the submission, so the
+  // run and the submission cannot disagree about whether this school has answered. Failure is
+  // not propagated: a school that has legitimately submitted must not be told it has not
+  // because the pipeline has no run for it yet, which is the normal case in a three-year
+  // cycle where only a third of the register is in verification each year.
+  const actor = await requireSchool();
+  if (actor) await markSubmitted(actor.schoolUdise, actor.userId);
+
   revalidatePath('/app/school/self-assessment');
   revalidatePath('/app/school');
+  revalidatePath('/app/school/improvement-plan');
   return { success: true };
 }
 

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
+const here = import.meta.dirname;
+
 /**
  * The portal had no automated tests at all, which the security review recorded as a
  * finding: nothing verified that a school could not read another school's report, or that
@@ -17,6 +19,6 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, 'src') },
+    alias: { '@': path.resolve(here, 'src') },
   },
 });

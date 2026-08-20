@@ -103,6 +103,7 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
       { href: '/app/school/verifier-feedback', label: 'Verifier Feedback' },
       { href: '/app/school/appeals', label: 'Appeals' },
       { href: '/app/school/tickets', label: 'Complaints' },
+      { href: '/app/school/improvement-plan', label: 'Improvement Plan' },
       { href: '/app/school/report-card', label: 'Report Card' },
     ],
   },

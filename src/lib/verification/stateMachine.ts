@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import type { CycleState } from '@prisma/client';
+import { computeVerifiedResult } from '@/lib/verification/publishResult';
 
 /**
  * The verification flow as a declared table, not as conditionals spread across the actions
@@ -117,6 +118,18 @@ export async function transitionRun(
         ALLOWED_TRANSITIONS[from].join(', ') || 'none, this state is terminal'
       }.`,
     };
+  }
+
+  // Publication recomputes the public Result from the verified record, and it can refuse:
+  // a run with nothing scorable, or a ruling that maps to no option, blocks the transition
+  // rather than publishing a blank. Computed before the state writes so no path exists on
+  // which a run is PUBLISHED but its score is not. A crash between the two leaves a
+  // recomputed Result on an unpublished run, which the retry simply overwrites.
+  if (to === 'PUBLISHED') {
+    const computed = await computeVerifiedResult(runId);
+    if (!computed.ok) {
+      return { ok: false, from, to, reason: computed.reason };
+    }
   }
 
   await prisma.$transaction([

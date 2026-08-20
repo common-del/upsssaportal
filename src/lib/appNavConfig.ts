@@ -41,6 +41,9 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // listed appealed schools in two places at once.
       { href: '/app/sssa/verifiers', label: 'Verification' },
       { href: '/app/sssa/cohort', label: 'Field Cohort' },
+      // Step 8: the pipeline's status by state, division and district, and the publication
+      // lever for the census queue.
+      { href: '/app/sssa/reporting', label: 'Reporting' },
       { href: '/app/sssa/disputes', label: 'Complaints' },
       { href: '/app/sssa/framework', label: 'Framework' },
       { href: '/app/sssa/users', label: 'Users' },
@@ -48,6 +51,9 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
   },
   {
     items: [
+      // Step 8: the section 6 table with its audit trail, and rubric versioning. In the
+      // utility group with Settings because it is touched rarely and deliberately.
+      { href: '/app/sssa/configuration', label: 'Configuration' },
       { href: '/app/sssa/notifications', label: 'Notifications' },
       // Built, working, and reachable from nowhere until now. It sits in the
       // utility group rather than above with the workflow pages: an audit trail is

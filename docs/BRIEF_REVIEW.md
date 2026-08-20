@@ -43,44 +43,67 @@ are not cosmetic:
   rest are restricted. A primary school does not answer the same paper as a secondary
   school, so "every applicable indicator" is a per-school computation, not a constant.
 
-## 2. Desk screening every indicator of every school is the programme's real cost
+## 2. Desk screening is staffable, but only because a cycle spans three years
 
-This is the most important finding in this review and it is an operational problem, not
-a software one.
+**Corrected 20 August 2026.** An earlier version of this section put the desk-screening
+load at about 1.27 crore judgements a year and 177 to 236 full-time screeners. That read
+the volume as annual. SSSA has confirmed one verification cycle spans **three years**, so
+the figure was wrong by a factor of three. The corrected numbers are below.
 
 The ToR requires the Online Verifier to "review uploaded documentary and photographic
 evidence against each SQAAF indicator" for every assigned school, and the flowchart shows
 "screeners screen the evidence provided by the school" then "compute risk score for every
 school", with no sampling step. The brief faithfully implements this at Section 2, step 4.
 
-At the stated volume that is:
+Over a three-year cycle that is:
 
-- 2,65,278 schools
+- 2,65,278 schools, so about **88,426 entering verification each year**
 - roughly 80 applicable indicators each
 - at the brief's assumed 60% MANUAL split, about **48 human judgements per school**
-- **about 1.27 crore manual indicator judgements per year**
+- **about 42.4 lakh manual indicator judgements a year**
 
-At 90 seconds per judgement, which is optimistic for opening a document and deciding
-whether it justifies a claimed level, that is roughly 318,000 hours, or about **177
-full-time screeners working every productive hour of the year**. At two minutes it is
-about 236.
+| Seconds per judgement | Hours per year | Full-time screeners at 1,800 h |
+|---|---|---|
+| 60 | 70,700 | **39** |
+| 90 | 1,06,100 | **59** |
+| 120 | 1,41,500 | **79** |
 
-The ToR sources Online Verifiers from "VSK data analysts". A Vidya Samiksha Kendra does
-not hold a bench of 180 to 240 analysts.
+Between 40 and 80 analysts is a real cost but a plausible one for a Vidya Samiksha Kendra
+cell, which the earlier figure was not. This is no longer a finding that threatens the
+programme design. It is a staffing line that has to be budgeted, and it is sensitive to
+the MANUAL share: every indicator moved from MANUAL to AUTO takes about 1.2 screeners off
+the number.
 
-Three ways out, and the choice is SSSA's, not the build's:
+Two things follow for the build:
 
-1. **Narrow the scope.** Screen the MISMATCH rows for every school, and a sample of the
-   MANUAL indicators, rather than all of them. Risk scoring then runs on partial coverage
-   for the manual half, which is exactly the concern the brief already raises about the
-   20% threshold.
-2. **Fund the headcount** and accept the cost.
-3. **Reduce the manual share** by mapping more indicators to external sources, which
-   depends on what UDISE+, Prerna and Manav Sampada actually expose.
+- The desk-screening workspace still takes its indicator set **from a query**, not from
+  "all of them", governed by config. Defaulting to every indicator honours the ToR, and
+  narrowing later stays a config change rather than a rewrite.
+- The MANUAL share is the cost driver, so `checkMethod` on each of the 89 indicators is a
+  budget decision as much as a technical one. It should be reviewed by someone who knows
+  what UDISE+, Prerna and Manav Sampada actually hold, not set to hit a 40/60 ratio.
 
-Until this is decided, the desk-screening workspace should be built so the set of
-indicators presented to a verifier comes from a query, never from "all of them". That
-keeps option 1 open without a rewrite.
+### The ambiguity that survives, and is now the open question
+
+The 33% field cohort has two readings, and only one makes `revisitIntervalYears: 3`
+coherent.
+
+| Reading | Visits per year | A school is visited |
+|---|---|---|
+| 33% of the **annual verification intake** (88,426) | 29,181 | once every nine years |
+| 33% of **all schools** (2,65,278) | 87,542 | once every three years |
+
+The second matches the flowchart's "verified score published, next visit within 3 years"
+and matches the brief's own "about 87,500". But it also means the field cohort is very
+nearly the whole annual intake, which leaves the risk triage deciding little: almost every
+school screened would be visited anyway.
+
+The first preserves the triage but contradicts the three-year revisit promise.
+
+This is not resolvable from the documents, so `fieldCohortBasis` is a config key with the
+same shape as `riskThreshold.basis`, defaulting to `ALL_SCHOOLS` because that is what the
+flowchart's revisit promise requires. **It needs an answer from SSSA before cohort build
+goes live**, because it changes the field verifier headcount by roughly 3x.
 
 ## 3. Video walkthrough and anonymity cannot both hold
 
@@ -171,6 +194,28 @@ Recorded so these are not re-litigated later.
 
 ## 6. Arithmetic checked
 
-- 33% of 2,65,278 is 87,542, so the brief's "about 87,500" is right.
+- 33% of 2,65,278 is 87,542, so the brief's "about 87,500" is right, on the
+  `ALL_SCHOOLS` reading of the cohort basis discussed in Section 2.
 - The flowchart's start node reads "all 2,65,278 lakh schools". The word "lakh" there is
   a slip in the source; the figure is 2,65,278 schools, not 2,65,278 lakh.
+- The brief's Section 0 says schools submit a self-assessment "each year" while SSSA has
+  confirmed a cycle spans three years. Both can hold: schools may self-assess annually
+  while the verification pipeline works through a third of them a year. The build assumes
+  that, since it is the only reading under which the flowchart's annual self-assessment
+  and the three-year cycle are both true. **If instead only a third of schools
+  self-assess each year, say so** and the intake query changes.
+
+## 7. Decisions taken, 20 August 2026
+
+Recorded so the build's assumptions are auditable.
+
+| Question | Decision |
+|---|---|
+| Where the verification portal lives | Extend this repository, inside the existing verifier interface behind the current login |
+| Indicator set and levels | The real framework: 5 domains, 11 sub-domains, 89 indicators, 3 levels, per-stage applicability |
+| Desk screening scope | Query-scoped and config-governed, defaulting to every applicable indicator |
+| Anonymity | Verifier anonymous to the school throughout; school anonymous to the verifier during desk screening only. The video walkthrough is a disclosed step with a per-session access record and a conflict-of-interest check when it is scheduled |
+| Cycle length | Three years |
+
+Still open: `fieldCohortBasis` (Section 2), the real inter-domain weights (Section 1), and
+the `checkMethod` assignment across the 89 indicators (Section 2).

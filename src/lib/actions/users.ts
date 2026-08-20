@@ -4,10 +4,13 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
+import { ROLES } from '@/lib/roles';
 
 type ActorInfo = { userId: string; role: string; districtCode?: string | null };
 
-const VALID_ROLES = ['SSSA_ADMIN', 'DISTRICT_OFFICIAL', 'VERIFIER', 'SCHOOL'] as const;
+/// Was a local list of four. Now the shared set, so adding a verification role does not
+/// mean remembering to widen a second copy in this file. See src/lib/roles.ts.
+const VALID_ROLES = ROLES;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function auditLog(actor: ActorInfo, action: string, entityType: string, entityId?: string, metadata?: Record<string, any>) {

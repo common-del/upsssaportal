@@ -9,35 +9,44 @@ datasource db {
 }
 
 model User {
-  id                  String                   @id @default(cuid())
-  username            String                   @unique
-  passwordHash        String
-  name                String?
-  role                String
+  id                     String                   @id @default(cuid())
+  username               String                   @unique
+  passwordHash           String
+  name                   String?
+  role                   String
   /// Contact details for officials and verifiers. Nullable because every existing
   /// account predates them — a null means "never captured", not "has no phone",
   /// and the profile says so rather than rendering an empty field as fact.
-  mobile              String?
-  email               String?
+  mobile                 String?
+  email                  String?
   /// Path to an uploaded portrait. Nullable and set by an administrator, not by
   /// the verifier: this exists so a head teacher can confirm the person arriving
   /// at their school is the one assigned to it, which only works if the subject
   /// cannot change it. Falls back to initials wherever it is absent.
-  photoUrl            String?
-  districtCode        String?
-  verifierCapacity    Int?
-  active              Boolean                  @default(true)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  preferredLocale       String?
-  appealDecisions     Appeal[]                 @relation("AppealDecider")
-  auditLogs           AuditLog[]               @relation("AuditLogActor")
-  uploadedEvidence    EvidenceAsset[]          @relation("UploadedEvidence")
-  verifications       VerificationSubmission[]
-  verifierAssignments VerifierAssignment[]
-  verifierDistricts   VerifierDistrict[]       @relation("VerifierDistricts")
-  notifications       Notification[]
+  photoUrl               String?
+  districtCode           String?
+  verifierCapacity       Int?
+  active                 Boolean                  @default(true)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  preferredLocale        String?
+  appealDecisions        Appeal[]                 @relation("AppealDecider")
+  auditLogs              AuditLog[]               @relation("AuditLogActor")
+  uploadedEvidence       EvidenceAsset[]          @relation("UploadedEvidence")
+  verifications          VerificationSubmission[]
+  verifierAssignments    VerifierAssignment[]
+  verifierDistricts      VerifierDistrict[]       @relation("VerifierDistricts")
+  notifications          Notification[]
   notificationPreference NotificationPreference?
+  // SQAAF verification pipeline back-relations.
+  verifierProfile        VerifierProfile?         @relation("VerifierProfileUser")
+  configChanges          ProgrammeConfigChange[]  @relation("ConfigChangeActor")
+  cycleTransitions       CycleTransition[]        @relation("TransitionActor")
+  authoredRubrics        RiskRubric[]             @relation("RubricAuthor")
+  discrepancyDecisions   Discrepancy[]            @relation("DiscrepancyDecider")
+  responseDecisions      SchoolResponse[]         @relation("ResponseDecider")
+  integrityReported      IntegrityReport[]        @relation("IntegrityReporter")
+  integrityAbout         IntegrityReport[]        @relation("IntegritySubject")
 }
 
 model Mandal {
@@ -104,6 +113,7 @@ model School {
   schoolScholarships  SchoolScholarship[]
   mandatoryDocuments  MandatoryDocument[]
   profileDetail       SchoolProfileDetail?
+  cycleRuns           AssessmentCycleRun[]
 }
 
 /// Everything the public school profile shows about a school, as entered by the
@@ -120,33 +130,33 @@ model School {
 /// in once a year. Every field is nullable — a school that knows its enrolment but not
 /// its dropout rate should be able to save the half it knows.
 model SchoolProfileDetail {
-  schoolUdise         String   @id
-  board               String?
-  classesFrom         String?
-  classesTo           String?
-  totalStudents       Int?
-  totalTeachers       Int?
-  nonTeachingStaff    Int?
-  subjectTeachers     Int?
-  totalClassrooms     Int?
-  functionalToilets   Int?
-  drinkingWater       Boolean?
-  enrolPrimary        Int?
-  enrolUpperPrimary   Int?
-  enrolSecondary      Int?
-  enrolHigherSec      Int?
-  enrolBoys           Int?
-  enrolGirls          Int?
-  enrolSc             Int?
-  enrolSt             Int?
-  enrolObc            Int?
-  enrolGeneral        Int?
+  schoolUdise       String   @id
+  board             String?
+  classesFrom       String?
+  classesTo         String?
+  totalStudents     Int?
+  totalTeachers     Int?
+  nonTeachingStaff  Int?
+  subjectTeachers   Int?
+  totalClassrooms   Int?
+  functionalToilets Int?
+  drinkingWater     Boolean?
+  enrolPrimary      Int?
+  enrolUpperPrimary Int?
+  enrolSecondary    Int?
+  enrolHigherSec    Int?
+  enrolBoys         Int?
+  enrolGirls        Int?
+  enrolSc           Int?
+  enrolSt           Int?
+  enrolObc          Int?
+  enrolGeneral      Int?
   /// Facilities the school reports holding, e.g. Library, Science Lab.
-  facilities          String[]
+  facilities        String[]
   /// Safety items the school reports holding, e.g. Fire Safety Certificate.
-  safetyItems         String[]
-  updatedAt           DateTime @updatedAt
-  school              School   @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade)
+  safetyItems       String[]
+  updatedAt         DateTime @updatedAt
+  school            School   @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade)
 }
 
 model DisputeCategory {
@@ -161,40 +171,40 @@ model DisputeCategory {
 }
 
 model Ticket {
-  id              String           @id @default(cuid())
-  schoolUdise     String
-  categoryCode    String
-  districtCode    String           @default("")
-  description     String
-  submitterName   String?
-  submitterRole   String?
-  submitterMobile String
-  evidenceUrl     String?
-  status          String           @default("ASSIGNED_TO_SCHOOL")
-  handlerLevel    String           @default("SCHOOL")
-  schoolArgument  String?
+  id               String           @id @default(cuid())
+  schoolUdise      String
+  categoryCode     String
+  districtCode     String           @default("")
+  description      String
+  submitterName    String?
+  submitterRole    String?
+  submitterMobile  String
+  evidenceUrl      String?
+  status           String           @default("ASSIGNED_TO_SCHOOL")
+  handlerLevel     String           @default("SCHOOL")
+  schoolArgument   String?
   verifierResponse String?
-  nextDueAt       DateTime?
-  lastEscalatedAt DateTime?
-  resolvedAt      DateTime?
-  rejectedAt      DateTime?
-  closedReason    String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  category        DisputeCategory  @relation(fields: [categoryCode], references: [code])
-  school          School           @relation(fields: [schoolUdise], references: [udise])
-  timeline        TicketTimeline[]
-  disputeHistory  DisputeHistory[]
+  nextDueAt        DateTime?
+  lastEscalatedAt  DateTime?
+  resolvedAt       DateTime?
+  rejectedAt       DateTime?
+  closedReason     String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  category         DisputeCategory  @relation(fields: [categoryCode], references: [code])
+  school           School           @relation(fields: [schoolUdise], references: [udise])
+  timeline         TicketTimeline[]
+  disputeHistory   DisputeHistory[]
 }
 
 model DisputeHistory {
-  id         String   @id @default(cuid())
-  ticketId   String
+  id          String   @id @default(cuid())
+  ticketId    String
   actorUserId String?
-  actionType String
-  notes      String?
-  createdAt  DateTime @default(now())
-  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actionType  String
+  notes       String?
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 model TicketTimeline {
@@ -225,6 +235,7 @@ model Cycle {
   selfAssessments     SelfAssessmentSubmission[]
   verifications       VerificationSubmission[]
   verifierAssignments VerifierAssignment[]
+  cycleRuns           AssessmentCycleRun[]
 }
 
 model Framework {
@@ -283,28 +294,47 @@ model SubDomain {
 }
 
 model Parameter {
-  id                String                   @id @default(cuid())
-  frameworkId       String
-  subDomainId       String
-  code              String
-  titleEn           String
-  titleHi           String
-  order             Int
-  applicability     Json
-  inputType         String                   @default("SINGLE_SELECT")
-  evidenceRequired  Boolean                  @default(false)
-  evidenceChecklistEn Json                   @default("[]")
-  evidenceChecklistHi Json                   @default("[]")
-  dataSources       Json                     @default("[\"Manual\"]")
-  isActive          Boolean                  @default(true)
-  appealItems       AppealItem[]
-  evidenceLinks     EvidenceLink[]           @relation("ParamEvidence")
-  framework         Framework                @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
-  subDomain         SubDomain                @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
-  options           ParameterOption[]
-  rubricMappings    RubricMapping[]
-  saResponses       SelfAssessmentResponse[]
-  verifierResponses VerificationResponse[]
+  id                      String                   @id @default(cuid())
+  frameworkId             String
+  subDomainId             String
+  code                    String
+  titleEn                 String
+  titleHi                 String
+  order                   Int
+  applicability           Json
+  inputType               String                   @default("SINGLE_SELECT")
+  evidenceRequired        Boolean                  @default(false)
+  evidenceChecklistEn     Json                     @default("[]")
+  evidenceChecklistHi     Json                     @default("[]")
+  dataSources             Json                     @default("[\"Manual\"]")
+  /// Which of the two verification tracks this indicator takes.
+  ///
+  /// AUTO means a government system holds the answer and the portal cross-matches it.
+  /// MANUAL means an Online Verifier has to open the school's evidence and judge whether
+  /// it justifies the claimed level. This is a budget line as much as a technical field:
+  /// every indicator moved from MANUAL to AUTO takes roughly 1.2 full-time screeners off
+  /// the desk-screening headcount at state volume. Defaults to MANUAL because claiming
+  /// an external source covers an indicator when it does not is the more damaging error.
+  checkMethod             CheckMethod              @default(MANUAL)
+  /// Null for every MANUAL indicator. Set together with externalFieldKey or neither.
+  externalSource          ExternalSource?
+  /// The field to read in that source, e.g. a UDISE+ column name. Kept as a string
+  /// rather than an enum because the source schemas are not yet confirmed.
+  externalFieldKey        String?
+  isActive                Boolean                  @default(true)
+  appealItems             AppealItem[]
+  evidenceLinks           EvidenceLink[]           @relation("ParamEvidence")
+  framework               Framework                @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  subDomain               SubDomain                @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
+  options                 ParameterOption[]
+  rubricMappings          RubricMapping[]
+  saResponses             SelfAssessmentResponse[]
+  verifierResponses       VerificationResponse[]
+  autoChecks              AutoCheckResult[]
+  deskDecisions           DeskScreeningDecision[]
+  walkthroughObservations WalkthroughObservation[]
+  fieldFindings           FieldFinding[]
+  discrepancies           Discrepancy[]
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -596,6 +626,122 @@ enum NotificationType {
   DISPUTE_FILED
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SQAAF verification pipeline. See docs/BUILD_BRIEF.md for the specification and
+// docs/BRIEF_REVIEW.md for where it diverges from the source documents.
+//
+// Everything below is additive: the existing SelfAssessmentSubmission,
+// VerificationSubmission and Appeal models keep working. AssessmentCycleRun is the
+// verification pipeline's own record, one per school per cycle, and it references
+// the existing self-assessment rather than replacing it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum CheckMethod {
+  AUTO
+  MANUAL
+}
+
+enum ExternalSource {
+  UDISE_PLUS
+  PRERNA
+  MANAV_SAMPADA
+}
+
+/// The twelve states of the verification flow, in order. AUDIT is not in this list
+/// because auditing runs in parallel on already-published cycles rather than being a
+/// state a school passes through.
+enum CycleState {
+  SELF_ASSESSMENT_OPEN
+  SUBMITTED
+  NOT_SUBMITTED
+  NON_SUBMITTER
+  AUTO_CHECK
+  DESK_SCREENING
+  VIDEO_WALKTHROUGH
+  CENSUS_QUEUE
+  FIELD_COHORT
+  FIELD_VISIT
+  DISCREPANCY_REVIEW
+  SCHOOL_RESPONSE_WINDOW
+  PUBLISHED
+}
+
+enum AutoCheckOutcome {
+  MATCH
+  MISMATCH
+  /// The indicator is AUTO but the source held no usable value for this school.
+  /// Distinct from MANUAL: nobody decided it should be human-judged, the data was
+  /// simply absent, and a verifier still has to look at it.
+  NOT_CHECKABLE
+}
+
+enum DeskDecision {
+  EVIDENCE_SUPPORTS_LEVEL
+  EVIDENCE_INSUFFICIENT
+  EVIDENCE_CONTRADICTS_LEVEL
+  EVIDENCE_MISSING
+}
+
+enum VerifierCell {
+  ONLINE
+  FIELD
+}
+
+/// Online Verifiers are VSK data analysts, already state staff. On-Ground Verifiers and
+/// Supervisors come from an empanelled pool. The distinction is load-bearing: a serving
+/// analyst cannot be de-empanelled from a pool they were never in, so the de-empanelment
+/// rules apply only to EMPANELLED.
+enum WorkforceSource {
+  VSK_STAFF
+  EMPANELLED
+}
+
+enum CertificationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  CERTIFIED
+  LAPSED
+  SUSPENDED
+}
+
+enum WalkthroughMode {
+  /// Verifier watches a live geofenced stream, camera and microphone off, prompts pushed
+  /// as text.
+  LIVE
+  /// Fallback after two failed connectivity checks: the school records short clips inside
+  /// the app, timestamped and location-stamped, reviewed afterwards.
+  GUIDED_CAPTURE
+}
+
+enum WalkthroughOutcome {
+  RESOLVED
+  UNRESOLVED
+}
+
+/// Where the field cohort percentage is measured. Unresolved in the source documents and
+/// it changes field verifier headcount by roughly 3x, so it is a stored choice rather
+/// than an assumption. See docs/BRIEF_REVIEW.md section 2.
+enum CohortBasis {
+  ANNUAL_INTAKE
+  ALL_SCHOOLS
+}
+
+enum RiskThresholdBasis {
+  TOTAL_SCORE
+  MATCHED_INDICATORS_ONLY
+  PER_DOMAIN_WORST
+}
+
+enum SpotCheckMode {
+  FIXED_COUNT
+  PERCENTAGE
+}
+
+enum AuditSampleBasis {
+  PER_DISTRICT
+  STATEWIDE
+}
+
 model FeeDisclosure {
   id                  String   @id @default(cuid())
   schoolUdise         String   @unique
@@ -632,19 +778,19 @@ model MandatoryDocument {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  title     String
-  body      String
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now())
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  body        String
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
   /// Which school this is about, when it is about one. Nullable because most
   /// notifications are not: a cycle opening or a deadline concerns the whole
   /// register. Set on a verifier reminder so a row can say when it was last
   /// chased without matching on the text of the message.
   schoolUdise String?
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([type, schoolUdise])
 }
@@ -657,4 +803,503 @@ model NotificationPreference {
   disputeAlerts  Boolean @default(true)
   cycleReminders Boolean @default(true)
   user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Programme configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One row, holding every number the source documents leave contested or unresolved.
+///
+/// The brief is explicit that none of these may be a constant, and the reason is visible
+/// in the defaults: the terms of reference and the flowchart disagree about the spot-check
+/// instrument and about the audit sample size, and neither says what the 20% deviation
+/// threshold is a percentage of. Hard-coding either side of a disagreement buries it.
+model ProgrammeConfig {
+  id String @id @default("current")
+
+  /// Share of schools receiving a physical visit. cohortBasis decides what it is a share
+  /// of, which the documents do not settle: see docs/BRIEF_REVIEW.md section 2.
+  fieldCohortPercentage Int         @default(33)
+  cohortBasis           CohortBasis @default(ALL_SCHOOLS)
+  revisitIntervalYears  Int         @default(3)
+  /// One verification cycle spans this many years. Confirmed by SSSA as 3, which is what
+  /// makes the desk-screening load staffable.
+  cycleSpanYears        Int         @default(3)
+
+  /// Terms of reference: "10 randomly selected students". Role card and flowchart: "10%
+  /// of students". Different instruments, so the mode is stored rather than chosen here.
+  spotCheckMode       SpotCheckMode @default(FIXED_COUNT)
+  spotCheckFixedCount Int           @default(10)
+  spotCheckPercentage Int           @default(10)
+  /// Floor for very small schools when PERCENTAGE mode is used.
+  spotCheckMinimum    Int           @default(5)
+
+  /// Flowchart: 1% per district. Terms of reference: 3% to 5%. Defaulted to the terms of
+  /// reference because it is the more recent and more specific document.
+  auditSamplePercentage Int              @default(3)
+  auditSampleBasis      AuditSampleBasis @default(PER_DISTRICT)
+
+  /// Terms of reference: removal above 20% contradicted findings, or 3 assignments in a
+  /// rolling 12 months, whichever comes first. The minimum-cases floor is not in the
+  /// source: without it, one contradiction in the first five audited cases triggers
+  /// removal, which would end careers on a sample of five.
+  deEmpanelContradictionRate   Int @default(20)
+  deEmpanelMinimumAuditedCases Int @default(10)
+  deEmpanelAbsoluteCount       Int @default(3)
+
+  submissionExtensionDays        Int     @default(15)
+  videoWalkthroughTurnaroundDays Int     @default(7)
+  /// Local hour on the notified date at which a field verifier's school is revealed.
+  dayOfRevealHour                Int     @default(7)
+  schoolResponseWindowDays       Int     @default(7)
+  /// The response window is an addition, not a requirement of either source document.
+  /// Flagged so it can be turned off, but defaulted on: a score corrected downward with
+  /// no right of reply is the most likely point of legal challenge in a public disclosure
+  /// system.
+  schoolResponseWindowEnabled    Boolean @default(true)
+
+  /// Desk screening presents this many indicators. Null means every applicable one, which
+  /// is what the terms of reference require. A number narrows it to the mismatches plus a
+  /// sample, which is the lever if screening capacity runs short.
+  deskScreeningManualSampleSize Int?
+
+  updatedAt DateTime                @updatedAt
+  changes   ProgrammeConfigChange[]
+}
+
+/// Every edit to the configuration, with who made it. A programme whose thresholds decide
+/// published accreditation cannot have those thresholds change without a record.
+model ProgrammeConfigChange {
+  id          String          @id @default(cuid())
+  configId    String
+  field       String
+  oldValue    String?
+  newValue    String
+  actorUserId String
+  reason      String?
+  createdAt   DateTime        @default(now())
+  config      ProgrammeConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  actor       User            @relation("ConfigChangeActor", fields: [actorUserId], references: [id])
+
+  @@index([configId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Verifier workforce
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// What the User record cannot carry: which cell a verifier belongs to, where they came
+/// from, and whether they are allowed to be assigned anything yet.
+model VerifierProfile {
+  id                     String              @id @default(cuid())
+  userId                 String              @unique
+  cell                   VerifierCell
+  workforceSource        WorkforceSource
+  /// Empanelment is activated only after certification is cleared, per the terms of
+  /// reference. This is the gate, not the training module, which is out of scope for
+  /// version 1. Assignment must check it.
+  certification          CertificationStatus @default(NOT_STARTED)
+  certifiedAt            DateTime?
+  certificationExpiresAt DateTime?
+  /// Set when a de-empanelment case is confirmed. Blocks assignment without deleting the
+  /// history the audit trail needs.
+  deEmpanelledAt         DateTime?
+  deEmpanelledReason     String?
+  /// Pseudonym shown to schools during a walkthrough, so the verifier stays anonymous
+  /// while remaining accountable internally.
+  pseudonym              String              @unique
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  user          User                    @relation("VerifierProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  supervisorId  String?
+  supervisor    VerifierProfile?        @relation("SupervisorOf", fields: [supervisorId], references: [id])
+  supervises    VerifierProfile[]       @relation("SupervisorOf")
+  exclusions    VerifierExclusion[]
+  deskDecisions DeskScreeningDecision[]
+  walkthroughs  WalkthroughSession[]
+  fieldVisits   FieldVisit[]
+  auditCases    AuditCase[]             @relation("AuditorProfile")
+
+  @@index([cell, certification])
+}
+
+/// Standing conflict of interest, checked when the roster is built rather than declared at
+/// reveal. The terms of reference bar a verifier from any school or cluster in a district
+/// where they hold a position, which is an eligibility rule, not a disclosure.
+model VerifierExclusion {
+  id           String          @id @default(cuid())
+  profileId    String
+  /// Exactly one of these is set.
+  districtCode String?
+  blockCode    String?
+  schoolUdise  String?
+  reason       String
+  createdAt    DateTime        @default(now())
+  profile      VerifierProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([districtCode])
+  @@index([schoolUdise])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The pipeline: one run per school per cycle
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AssessmentCycleRun {
+  id                 String     @id @default(cuid())
+  cycleId            String
+  schoolUdise        String
+  state              CycleState @default(SELF_ASSESSMENT_OPEN)
+  /// Which year of the three-year cycle this school was drawn into. Lets the intake
+  /// rotate without a separate table.
+  intakeYear         Int
+  enteredStateAt     DateTime   @default(now())
+  submittedAt        DateTime?
+  /// Set when the extension has been granted and has also run out.
+  extensionExpiresAt DateTime?
+  publishedAt        DateTime?
+  /// Fast-tracked into the field cohort by an unresolved walkthrough, or by never having
+  /// submitted. Ordering in the cohort queue reads this first.
+  fastTracked        Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  cycle         Cycle                   @relation(fields: [cycleId], references: [id])
+  school        School                  @relation(fields: [schoolUdise], references: [udise])
+  transitions   CycleTransition[]
+  autoChecks    AutoCheckResult[]
+  deskDecisions DeskScreeningDecision[]
+  riskScores    RiskScore[]
+  walkthroughs  WalkthroughSession[]
+  fieldVisits   FieldVisit[]
+  discrepancies Discrepancy[]
+  responses     SchoolResponse[]
+  auditCases    AuditCase[]
+
+  @@unique([cycleId, schoolUdise])
+  @@index([state, intakeYear])
+  @@index([cycleId, state])
+}
+
+/// Every state change, appended. The state machine is one of the four things the brief
+/// says must be tested before the build moves past cohort build, and a log is what makes
+/// a failed transition diagnosable after the fact.
+model CycleTransition {
+  id           String             @id @default(cuid())
+  runId        String
+  fromState    CycleState?
+  toState      CycleState
+  actorUserId  String?
+  /// Set when the transition was made by a scheduled job rather than a person.
+  systemReason String?
+  createdAt    DateTime           @default(now())
+  run          AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  actor        User?              @relation("TransitionActor", fields: [actorUserId], references: [id])
+
+  @@index([runId, createdAt])
+}
+
+model AutoCheckResult {
+  id                String           @id @default(cuid())
+  runId             String
+  parameterId       String
+  outcome           AutoCheckOutcome
+  source            ExternalSource?
+  /// What the school claimed and what the source said, kept verbatim so a mismatch can be
+  /// shown to a verifier without re-querying an external system that may have moved on.
+  selfReportedValue String?
+  externalValue     String?
+  /// When the external value was read, since a bulk reconciliation may be days old.
+  sourceReadAt      DateTime?
+  createdAt         DateTime         @default(now())
+
+  run       AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  parameter Parameter          @relation(fields: [parameterId], references: [id])
+
+  @@unique([runId, parameterId])
+  @@index([runId, outcome])
+}
+
+model DeskScreeningDecision {
+  id          String       @id @default(cuid())
+  runId       String
+  parameterId String
+  profileId   String
+  decision    DeskDecision
+  /// Mandatory for every decision other than EVIDENCE_SUPPORTS_LEVEL. Enforced in the
+  /// action rather than the schema, because a database default cannot express "required
+  /// unless".
+  rationale   String?
+  /// Escalation freezes the case and routes it to the supervisor. Kept on the decision
+  /// rather than the run so the specific indicator that could not be judged is visible.
+  escalated   Boolean      @default(false)
+  escalatedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  run       AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  parameter Parameter          @relation(fields: [parameterId], references: [id])
+  profile   VerifierProfile    @relation(fields: [profileId], references: [id])
+
+  @@unique([runId, parameterId])
+  @@index([profileId, createdAt])
+  @@index([runId, escalated])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Risk scoring
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Versioned, and editable only by SSSA PMU. The terms of reference are explicit that
+/// verifiers apply the rubric without modifying weights, thresholds or decision rules.
+model RiskRubric {
+  id                            String             @id @default(cuid())
+  version                       Int                @unique
+  label                         String
+  /// Weight applied to each desk decision and to an automated mismatch, as JSON so the
+  /// rubric can gain inputs without a migration.
+  weights                       Json
+  thresholdBasis                RiskThresholdBasis @default(MATCHED_INDICATORS_ONLY)
+  thresholdValue                Int                @default(20)
+  /// Below this many AUTO indicators actually checked, a percentage over matched
+  /// indicators is measuring too little to be meaningful, and the run falls back to
+  /// TOTAL_SCORE.
+  minimumAutoIndicatorsForBasis Int                @default(5)
+  isActive                      Boolean            @default(false)
+  createdByUserId               String
+  createdAt                     DateTime           @default(now())
+  activatedAt                   DateTime?
+
+  createdBy User        @relation("RubricAuthor", fields: [createdByUserId], references: [id])
+  scores    RiskScore[]
+}
+
+model RiskScore {
+  id                 String   @id @default(cuid())
+  runId              String
+  rubricId           String
+  /// Stored, not recomputed on read. A rubric change must not silently move a score that
+  /// has already driven a decision.
+  score              Float
+  band               String
+  aboveThreshold     Boolean
+  /// How many indicators each input contributed, so a score computed on thin coverage can
+  /// be told apart from one computed on full coverage.
+  autoCheckedCount   Int
+  manualDecidedCount Int
+  applicableCount    Int
+  computedAt         DateTime @default(now())
+
+  run    AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  rubric RiskRubric         @relation(fields: [rubricId], references: [id])
+
+  @@index([runId, computedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Video walkthrough
+// ─────────────────────────────────────────────────────────────────────────────
+
+model WalkthroughSession {
+  id                   String              @id @default(cuid())
+  runId                String
+  profileId            String
+  mode                 WalkthroughMode     @default(LIVE)
+  scheduledFor         DateTime?
+  startedAt            DateTime?
+  endedAt              DateTime?
+  outcome              WalkthroughOutcome?
+  /// Consecutive failed connectivity checks. Two drops the session to GUIDED_CAPTURE.
+  connectivityFailures Int                 @default(0)
+  /// Distance in metres from the school's registered coordinates at the last check, and
+  /// whether it stayed inside the fence throughout.
+  lastGeofenceMetres   Int?
+  geofenceHeld         Boolean?
+  /// The school's identity is disclosed to the verifier for this session, because a live
+  /// walkthrough shows the building whatever the code says. Recorded rather than pretended
+  /// away: see docs/BRIEF_REVIEW.md section 3.
+  identityDisclosedAt  DateTime?
+  conflictDeclaredAt   DateTime?
+  recusedAt            DateTime?
+  createdAt            DateTime            @default(now())
+
+  run          AssessmentCycleRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  profile      VerifierProfile          @relation(fields: [profileId], references: [id])
+  observations WalkthroughObservation[]
+
+  @@index([runId])
+  @@index([profileId, scheduledFor])
+}
+
+model WalkthroughObservation {
+  id          String             @id @default(cuid())
+  sessionId   String
+  parameterId String
+  note        String
+  createdAt   DateTime           @default(now())
+  session     WalkthroughSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parameter   Parameter          @relation(fields: [parameterId], references: [id])
+
+  @@unique([sessionId, parameterId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Field visit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FieldVisit {
+  id                 String    @id @default(cuid())
+  runId              String
+  profileId          String
+  districtCode       String
+  /// Window the verifier is told in advance. The school is not.
+  travelWindowStart  DateTime
+  travelWindowEnd    DateTime
+  notifiedDate       DateTime
+  /// Server-side time gate. Until this passes, no response may carry the school's
+  /// identity, so the client cannot hold it early.
+  revealAt           DateTime
+  revealedAt         DateTime?
+  conflictDeclaredAt DateTime?
+  recusedAt          DateTime?
+  arrivedAt          DateTime?
+  signedOffAt        DateTime?
+  /// Geotag of the sign-off, so a report filed from elsewhere is visible.
+  signOffLat         Float?
+  signOffLng         Float?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  run        AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  profile    VerifierProfile    @relation(fields: [profileId], references: [id])
+  findings   FieldFinding[]
+  spotChecks StudentSpotCheck[]
+
+  @@index([profileId, revealAt])
+  @@index([districtCode, notifiedDate])
+}
+
+model FieldFinding {
+  id            String    @id @default(cuid())
+  visitId       String
+  parameterId   String
+  /// The level the verifier found, against the level the school claimed.
+  observedLevel Int
+  note          String?
+  photoBlobUrl  String?
+  photoLat      Float?
+  photoLng      Float?
+  capturedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  visit     FieldVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  parameter Parameter  @relation(fields: [parameterId], references: [id])
+
+  @@unique([visitId, parameterId])
+}
+
+model StudentSpotCheck {
+  id            String     @id @default(cuid())
+  visitId       String
+  /// Roll position drawn, not a name. The portal has no business storing a child's
+  /// identity to record that a reading task was administered.
+  rollPosition  Int
+  classLevel    Int
+  readingScore  Int?
+  writingScore  Int?
+  numeracyScore Int?
+  note          String?
+  createdAt     DateTime   @default(now())
+  visit         FieldVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@unique([visitId, rollPosition, classLevel])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Discrepancy, school response, audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Discrepancy {
+  id                String    @id @default(cuid())
+  runId             String
+  parameterId       String
+  claimedLevel      Int
+  proposedLevel     Int
+  basis             String
+  raisedByProfileId String?
+  raisedAt          DateTime  @default(now())
+  /// Set once the supervisor has ruled, after any school response.
+  upheldAt          DateTime?
+  revisedLevel      Int?
+  decidedByUserId   String?
+
+  run       AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  parameter Parameter          @relation(fields: [parameterId], references: [id])
+  decidedBy User?              @relation("DiscrepancyDecider", fields: [decidedByUserId], references: [id])
+
+  @@unique([runId, parameterId])
+  @@index([runId])
+}
+
+model SchoolResponse {
+  id              String    @id @default(cuid())
+  runId           String
+  body            String
+  submittedAt     DateTime  @default(now())
+  windowClosesAt  DateTime
+  /// What the supervisor did with it.
+  outcome         String?
+  outcomeNote     String?
+  decidedByUserId String?
+  decidedAt       DateTime?
+
+  run       AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  decidedBy User?              @relation("ResponseDecider", fields: [decidedByUserId], references: [id])
+
+  @@index([runId])
+}
+
+model AuditCase {
+  id                 String    @id @default(cuid())
+  runId              String
+  auditorProfileId   String
+  /// Drawn at random from field-visited schools. The flowchart branches the audit off the
+  /// field verifier's findings, so the auditor re-does a physical check rather than a desk
+  /// review.
+  sampledAt          DateTime  @default(now())
+  /// The primary verifier's findings stay hidden until this is set, which is what makes
+  /// the re-verification blind.
+  submittedAt        DateTime?
+  contradictionCount Int       @default(0)
+  findingCount       Int       @default(0)
+  reconciledAt       DateTime?
+  reconciliationNote String?
+
+  run     AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  auditor VerifierProfile    @relation("AuditorProfile", fields: [auditorProfileId], references: [id])
+
+  @@unique([runId, auditorProfileId])
+  @@index([auditorProfileId, submittedAt])
+}
+
+/// Reports of inducement or pressure. Routed to the Audit Cell as well as the Supervisor,
+/// because the terms of reference require both and because the Supervisor may be the
+/// subject of the report.
+model IntegrityReport {
+  id                  String    @id @default(cuid())
+  reportedByUserId    String
+  aboutUserId         String?
+  schoolUdise         String?
+  body                String
+  /// Set when the Audit Cell has seen it. Deliberately not settable by a Supervisor.
+  auditAcknowledgedAt DateTime?
+  createdAt           DateTime  @default(now())
+
+  reportedBy User  @relation("IntegrityReporter", fields: [reportedByUserId], references: [id])
+  about      User? @relation("IntegritySubject", fields: [aboutUserId], references: [id])
+
+  @@index([createdAt])
 }

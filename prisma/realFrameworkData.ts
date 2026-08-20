@@ -88,9 +88,17 @@ function mkDomain(
   return { code, titleEn, titleHi, order, weightPercent, subDomains };
 }
 
-// NOTE on weightPercent: the source pages provided do not specify inter-dimension (आयाम) weights,
-// so all 5 domains are given an equal placeholder weight of 20%. This must be revisited once the
-// real SQAAF weighting scheme is known.
+// weightPercent comes from the SCERT domain weightage table, supplied 20 August 2026:
+// Infrastructure and Safety 20, Administration/HR/Leadership 15, Teaching and Learning 20,
+// Assessment and Learning Outcomes 30, Inclusivity and Community Participation 15. They sum to
+// 100, which a test asserts, because a weighted score computed over weights that do not sum to
+// 100 is not a percentage of anything.
+//
+// These replace an equal 20% placeholder that every domain carried. The consequence is worth
+// recording: Assessment and Learning Outcomes is the heaviest domain at 30%, the public
+// homepage has been saying so in its "Did you know" panel all along, and the score calculation
+// was meanwhile treating it as average. Every score computed before this commit under-weighted
+// learning outcomes and over-weighted the two 15% domains.
 export const REAL_FRAMEWORK_DATA: DomainSeed[] = [
   mkDomain('D1', 'Infrastructure and Safety', 'अवसंरचना एवं सुरक्षा', 1, 20, [
     mkSub('D1_1.1', 'Physical Infrastructure', 'भौतिक ढांचा', 1, [
@@ -463,7 +471,7 @@ export const REAL_FRAMEWORK_DATA: DomainSeed[] = [
     ]),
   ]),
 
-  mkDomain('D2', 'Administration, Human Resource and Leadership', 'प्रशासन, मानव संसाधन और नेतृत्व', 2, 20, [
+  mkDomain('D2', 'Administration, Human Resource and Leadership', 'प्रशासन, मानव संसाधन और नेतृत्व', 2, 15, [
     mkSub('D2_2.1', 'Adequacy of Staff', 'स्टाफ की पर्याप्तता', 1, [
       mkParam(
         '2.1.1',
@@ -999,7 +1007,7 @@ export const REAL_FRAMEWORK_DATA: DomainSeed[] = [
     ]),
   ]),
 
-  mkDomain('D4', 'Assessment and Learning Outcomes', 'आकलन एवं सीखने के परिणाम', 4, 20, [
+  mkDomain('D4', 'Assessment and Learning Outcomes', 'आकलन एवं सीखने के परिणाम', 4, 30, [
     mkSub('D4_4.1', 'Assessment Processes', 'आकलन प्रक्रियाएँ', 1, [
       mkParam(
         '4.1.1',
@@ -1149,7 +1157,7 @@ export const REAL_FRAMEWORK_DATA: DomainSeed[] = [
     ]),
   ]),
 
-  mkDomain('D5', 'Inclusivity and Community Participation', 'समावेशिता एवं सामुदायिक भागीदारी', 5, 20, [
+  mkDomain('D5', 'Inclusivity and Community Participation', 'समावेशिता एवं सामुदायिक भागीदारी', 5, 15, [
     mkSub('D5_5.1', 'Inclusion and Special Support', 'समावेशन एवं विशेष समर्थन', 1, [
       mkParam(
         '5.1.1',

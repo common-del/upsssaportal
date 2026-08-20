@@ -28,7 +28,7 @@ transcribed from SCERT Uttar Pradesh, "SQAAF Checklist", 8 June 2026 version, pa
 | Indicators | not stated | **89** |
 | Levels per indicator | **1 to 4** | **1 to 3**, scored 1, 2, 3 |
 | Applicability | not modelled | per school stage: PRIMARY, UPPER_PRIMARY, SECONDARY |
-| Domain weights | `weight: number` per indicator | `weightPercent` per domain, currently an equal 20% placeholder because the source pages do not give inter-domain weights |
+| Domain weights | `weight: number` per indicator | `weightPercent` per domain, now the real SCERT table: 20, 15, 20, 30, 15 |
 
 The five real domains: Infrastructure and Safety; Administration, Human Resource and
 Leadership; Teaching and Learning; Assessment and Learning Outcomes; Inclusivity and
@@ -217,5 +217,47 @@ Recorded so the build's assumptions are auditable.
 | Anonymity | Verifier anonymous to the school throughout; school anonymous to the verifier during desk screening only. The video walkthrough is a disclosed step with a per-session access record and a conflict-of-interest check when it is scheduled |
 | Cycle length | Three years |
 
-Still open: `fieldCohortBasis` (Section 2), the real inter-domain weights (Section 1), and
-the `checkMethod` assignment across the 89 indicators (Section 2).
+Still open: `fieldCohortBasis` (Section 2), the level-threshold norms for countable AUTO
+indicators (Section 8), and review of the `checkMethod` assignment across the 89 indicators
+(Section 2).
+
+## 8. Domain weights, resolved 20 August 2026
+
+SSSA supplied the SCERT weightage table. It replaces an equal 20% placeholder that every
+domain carried.
+
+| # | Domain | Weight |
+|---|---|---|
+| 1 | Infrastructure and Safety | 20% |
+| 2 | Administration, HR and Leadership | 15% |
+| 3 | Teaching and Learning | 20% |
+| 4 | Assessment and Learning Outcomes | **30%** |
+| 5 | Inclusivity and Community Participation | 15% |
+
+They sum to 100, which a test now asserts. A weighted score computed over weights that do
+not sum to 100 is not a percentage of anything, and the failure is silent: every school
+still gets a number, it is just not the number the framework describes, and the grade bands
+then cut that wrong number at 55 and 80.
+
+The same table confirms three things the build had already assumed: roughly 80 parameters
+apply to a school, each scores 1 to 3 by level, and the bands are Uday up to 55%, Unnat 55%
+to 80%, Utkarsh above 80%. The existing `GradeBand` rows already hold 55 and 80, so nothing
+changes there.
+
+**A defect this exposes.** The public homepage's "Did you know" panel has been telling
+parents that Assessment and Learning Outcomes carries 30% of a school's score, more than any
+other domain, while the framework data weighted it at 20% like everything else. The claim
+was right and the calculation was wrong. Every score computed before this correction
+under-weighted learning outcomes and over-weighted the two 15% domains.
+
+Scores are not recomputed by the backfill, deliberately. Rewriting published figures as a
+side effect of a deploy is worse than leaving them visibly stale; recomputation belongs to
+`finalizeAllResults`, which SSSA runs knowingly. What the correction does is make the next
+computation right.
+
+**One consequence for step 4.** The heaviest domain is also the most human. Of the eleven
+indicators in Assessment and Learning Outcomes, three are AUTO through Prerna and eight are
+MANUAL, so 30% of every school's score rests mostly on desk judgement rather than on
+cross-matched records. That is an argument for weighting a desk verifier's
+`EVIDENCE_CONTRADICTS_LEVEL` at least as heavily as an automated mismatch in the risk
+rubric, which is how the seeded rubric already has it.

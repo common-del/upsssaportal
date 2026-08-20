@@ -921,6 +921,7 @@ model VerifierProfile {
   walkthroughs  WalkthroughSession[]
   fieldVisits   FieldVisit[]
   auditCases    AuditCase[]             @relation("AuditorProfile")
+  deskCases     AssessmentCycleRun[]    @relation("DeskAssignee")
 
   @@index([cell, certification])
 }
@@ -949,24 +950,33 @@ model VerifierExclusion {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model AssessmentCycleRun {
-  id                 String     @id @default(cuid())
-  cycleId            String
-  schoolUdise        String
-  state              CycleState @default(SELF_ASSESSMENT_OPEN)
+  id                    String     @id @default(cuid())
+  cycleId               String
+  schoolUdise           String
+  state                 CycleState @default(SELF_ASSESSMENT_OPEN)
   /// Which year of the three-year cycle this school was drawn into. Lets the intake
   /// rotate without a separate table.
-  intakeYear         Int
-  enteredStateAt     DateTime   @default(now())
-  submittedAt        DateTime?
+  intakeYear            Int
+  enteredStateAt        DateTime   @default(now())
+  submittedAt           DateTime?
   /// Set when the extension has been granted and has also run out.
-  extensionExpiresAt DateTime?
-  publishedAt        DateTime?
+  extensionExpiresAt    DateTime?
+  publishedAt           DateTime?
   /// Fast-tracked into the field cohort by an unresolved walkthrough, or by never having
   /// submitted. Ordering in the cohort queue reads this first.
-  fastTracked        Boolean    @default(false)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  fastTracked           Boolean    @default(false)
+  /// The Online Verifier this case is allocated to for desk screening.
+  ///
+  /// Required by the access rule rather than by the workflow: the brief says an Online Verifier
+  /// sees "only the schools in its current assigned batch", and without an assignee the queue
+  /// can only show the whole pool, which is a different promise. Nullable because a run exists
+  /// from intake, long before a Supervisor allocates it, and batch allocation is the
+  /// Supervisor's screen in a later step.
+  deskAssigneeProfileId String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 
+  deskAssignee  VerifierProfile?        @relation("DeskAssignee", fields: [deskAssigneeProfileId], references: [id])
   cycle         Cycle                   @relation(fields: [cycleId], references: [id])
   school        School                  @relation(fields: [schoolUdise], references: [udise])
   transitions   CycleTransition[]
@@ -982,6 +992,7 @@ model AssessmentCycleRun {
   @@unique([cycleId, schoolUdise])
   @@index([state, intakeYear])
   @@index([cycleId, state])
+  @@index([deskAssigneeProfileId, state])
 }
 
 /// Every state change, appended. The state machine is one of the four things the brief

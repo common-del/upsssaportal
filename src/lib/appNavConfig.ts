@@ -119,6 +119,7 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
 
 export const VERIFIER_NAV_ITEMS: NavItem[] = [
   { href: '/app/verifier', label: 'My Assignments', exact: true },
+  { href: '/app/verifier/desk', label: 'Desk Screening' },
   { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
   { href: '/app/verifier/faq', label: 'FAQ' },
   { href: '/app/verifier/settings', label: 'Settings' },
@@ -140,16 +141,37 @@ export function notificationsHrefForBrand(brandHref: string): string {
 
 export type RoleLabel = 'OFFICIAL' | 'DISTRICT' | 'SCHOOL' | 'VERIFIER';
 
+/**
+ * The four verification roles route to the verifier portal, not to the officials' one.
+ *
+ * Without them listed here they fell through to OFFICIAL and /app/sssa, so an Online Verifier
+ * signing in would land on the SSSA dashboard and be bounced straight back out by middleware,
+ * which role-gates that prefix. A login that ends in a redirect loop is indistinguishable from
+ * a broken account.
+ *
+ * SUPERVISOR and AUDIT_CELL are grouped here too for now. Both oversee verification work and
+ * both need screens that do not exist yet; sending them to the verifier portal is the closest
+ * true answer until their own areas are built, and it is better than a dashboard they cannot
+ * open.
+ */
+const VERIFICATION_ROLES = new Set([
+  'VERIFIER',
+  'ONLINE_VERIFIER',
+  'ONGROUND_VERIFIER',
+  'SUPERVISOR',
+  'AUDIT_CELL',
+]);
+
 export function roleLabelForRole(role: string): RoleLabel {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return 'SCHOOL';
-  if (role === 'VERIFIER') return 'VERIFIER';
+  if (VERIFICATION_ROLES.has(role)) return 'VERIFIER';
   if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return 'DISTRICT';
   return 'OFFICIAL';
 }
 
 export function brandHrefForRole(role: string): string {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return '/app/school';
-  if (role === 'VERIFIER') return '/app/verifier';
+  if (VERIFICATION_ROLES.has(role)) return '/app/verifier';
   if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return '/app/district';
   return '/app/sssa';
 }

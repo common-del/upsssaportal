@@ -40,6 +40,7 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // verification ends, so a separate sidebar item split one process in half and
       // listed appealed schools in two places at once.
       { href: '/app/sssa/verifiers', label: 'Verification' },
+      { href: '/app/sssa/cohort', label: 'Field Cohort' },
       { href: '/app/sssa/disputes', label: 'Complaints' },
       { href: '/app/sssa/framework', label: 'Framework' },
       { href: '/app/sssa/users', label: 'Users' },
@@ -120,6 +121,7 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
 export const VERIFIER_NAV_ITEMS: NavItem[] = [
   { href: '/app/verifier', label: 'My Assignments', exact: true },
   { href: '/app/verifier/desk', label: 'Desk Screening' },
+  { href: '/app/verifier/assignments', label: 'Field Assignments' },
   { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
   { href: '/app/verifier/faq', label: 'FAQ' },
   { href: '/app/verifier/settings', label: 'Settings' },

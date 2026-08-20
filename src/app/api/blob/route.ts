@@ -11,7 +11,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const role = session.user.role;
-  if (!['SCHOOL', 'VERIFIER', 'SSSA_ADMIN'].includes(role)) {
+  // The four verification roles were missing, so an On-Ground Verifier could not upload the
+  // geotagged photographs the field protocol requires: the endpoint refused them by omission.
+  if (
+    ![
+      'SCHOOL',
+      'VERIFIER',
+      'ONLINE_VERIFIER',
+      'ONGROUND_VERIFIER',
+      'SUPERVISOR',
+      'AUDIT_CELL',
+      'SSSA_ADMIN',
+    ].includes(role)
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -22,6 +34,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: ALLOWED_TYPES,
         maximumSizeInBytes: MAX_SIZE,
+        // Was absent, which defaults to false: the blob landed at the original filename, so
+        // evidence URLs were guessable and the second school to upload "toilet.jpg" got a hard
+        // error because allowOverwrite also defaults to false. Both were findings 02 and 03 of
+        // the security review.
+        addRandomSuffix: true,
       }),
       onUploadCompleted: async () => {
         // Record creation handled by the client via server action after upload

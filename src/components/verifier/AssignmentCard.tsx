@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { declareConflict } from '@/lib/actions/cohort';
@@ -164,9 +165,18 @@ function RevealedCard({ assignment }: { assignment: Assignment & { state: 'REVEA
             You stood down from this visit. It is waiting to be reassigned.
           </p>
         ) : (
-          <p className="rounded-lg bg-[#E7F5EE] px-3 py-2 text-sm font-semibold text-[#14603A]">
-            No conflict declared. You may begin the visit.
-          </p>
+          <div className="space-y-3">
+            <p className="rounded-lg bg-[#E7F5EE] px-3 py-2 text-sm font-semibold text-[#14603A]">
+              No conflict declared. You may begin the visit.
+            </p>
+            <Link
+              href={`/app/verifier/visit/${assignment.visitId}`}
+              className="block min-h-12 rounded-lg px-4 py-3 text-center text-base font-bold text-white"
+              style={{ backgroundColor: GOLD }}
+            >
+              Open the visit workspace
+            </Link>
+          </div>
         )}
       </div>
     </div>

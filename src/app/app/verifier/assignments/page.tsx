@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { requireVerifier } from '@/lib/authz';
 import { getMyAssignments } from '@/lib/actions/cohort';
 import { AssignmentCard } from '@/components/verifier/AssignmentCard';
+import { IntegrityReportForm } from '@/components/verifier/IntegrityReportForm';
 
 const NAVY_DEEP = '#073763';
 const INK_MUTED = '#5F7190';
@@ -59,6 +60,8 @@ export default async function AssignmentsPage() {
           </div>
         </>
       )}
+
+      <IntegrityReportForm />
     </div>
   );
 }

@@ -2,15 +2,10 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { NotificationsClient } from '@/components/school/NotificationsClient';
-import { brandHrefForRole } from '@/lib/appNavConfig';
 
-const VERIFIER_PORTAL_ROLES = new Set(['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER']);
-
-export default async function VerifierNotificationsPage() {
+export default async function SupervisorNotificationsPage() {
   const session = await auth();
   if (!session) redirect('/login?tab=verifier');
-  const role = session.user.role as string;
-  if (!VERIFIER_PORTAL_ROLES.has(role)) redirect(brandHrefForRole(role));
 
   const notifications = await prisma.notification.findMany({
     where: { userId: session.user.id! },

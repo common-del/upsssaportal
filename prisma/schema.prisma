@@ -47,6 +47,8 @@ model User {
   responseDecisions      SchoolResponse[]         @relation("ResponseDecider")
   integrityReported      IntegrityReport[]        @relation("IntegrityReporter")
   integrityAbout         IntegrityReport[]        @relation("IntegritySubject")
+  qualityChecksMade      QualityCheck[]           @relation("QualityChecker")
+  deEmpanelments         VerifierProfile[]        @relation("DeEmpaneller")
 }
 
 model Mandal {
@@ -335,6 +337,7 @@ model Parameter {
   walkthroughObservations WalkthroughObservation[]
   fieldFindings           FieldFinding[]
   discrepancies           Discrepancy[]
+  auditFindings           AuditFinding[]
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -906,13 +909,17 @@ model VerifierProfile {
   /// history the audit trail needs.
   deEmpanelledAt         DateTime?
   deEmpanelledReason     String?
+  /// Who confirmed it. A removal that ends a livelihood must name its decider.
+  deEmpanelledByUserId   String?
   /// Pseudonym shown to schools during a walkthrough, so the verifier stays anonymous
   /// while remaining accountable internally.
   pseudonym              String              @unique
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
-  user          User                    @relation("VerifierProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  user             User                    @relation("VerifierProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  deEmpanelledBy   User?                   @relation("DeEmpaneller", fields: [deEmpanelledByUserId], references: [id])
+  qualityChecks    QualityCheck[]          @relation("QualitySubject")
   supervisorId  String?
   supervisor    VerifierProfile?        @relation("SupervisorOf", fields: [supervisorId], references: [id])
   supervises    VerifierProfile[]       @relation("SupervisorOf")
@@ -987,7 +994,8 @@ model AssessmentCycleRun {
   fieldVisits   FieldVisit[]
   discrepancies Discrepancy[]
   responses     SchoolResponse[]
-  auditCases    AuditCase[]
+  auditCase     AuditCase?
+  qualityChecks QualityCheck[]
 
   @@unique([cycleId, schoolUdise])
   @@index([state, intakeYear])
@@ -1275,8 +1283,10 @@ model SchoolResponse {
 
 model AuditCase {
   id                 String    @id @default(cuid())
-  runId              String
-  auditorProfileId   String
+  runId              String    @unique
+  /// Null until an Audit Cell member claims the case. The sample is drawn unassigned so
+  /// the draw cannot be steered towards a friendly auditor.
+  auditorProfileId   String?
   /// Drawn at random from field-visited schools. The flowchart branches the audit off the
   /// field verifier's findings, so the auditor re-does a physical check rather than a desk
   /// review.
@@ -1286,14 +1296,62 @@ model AuditCase {
   submittedAt        DateTime?
   contradictionCount Int       @default(0)
   findingCount       Int       @default(0)
+  /// The human judgement at reconciliation: does this audit contradict the primary
+  /// verifier's report? The counts above inform it but do not decide it, because "proven
+  /// contradiction" in the terms of reference is a finding a person signs, not a ratio.
+  contradicted       Boolean?
   reconciledAt       DateTime?
   reconciliationNote String?
 
-  run     AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  auditor VerifierProfile    @relation("AuditorProfile", fields: [auditorProfileId], references: [id])
+  run      AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  auditor  VerifierProfile?   @relation("AuditorProfile", fields: [auditorProfileId], references: [id])
+  findings AuditFinding[]
 
-  @@unique([runId, auditorProfileId])
   @@index([auditorProfileId, submittedAt])
+}
+
+/// What the auditor observed on their re-visit, one row per indicator re-checked. Kept
+/// separate from FieldFinding so the primary record is never touched by the audit and the
+/// two can be compared afterwards.
+model AuditFinding {
+  id            String    @id @default(cuid())
+  auditCaseId   String
+  parameterId   String
+  observedLevel Int
+  note          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  auditCase AuditCase @relation(fields: [auditCaseId], references: [id], onDelete: Cascade)
+  parameter Parameter @relation(fields: [parameterId], references: [id])
+
+  @@unique([auditCaseId, parameterId])
+}
+
+enum QualityVerdict {
+  SATISFACTORY
+  COACHING_NEEDED
+  FLAGGED
+}
+
+/// A supervisor's record of reviewing one completed case from the weekly quality sample.
+/// One row per run per subject verifier, so a re-review overwrites rather than stacking.
+model QualityCheck {
+  id               String          @id @default(cuid())
+  runId            String
+  subjectProfileId String
+  verdict          QualityVerdict
+  note             String?
+  byUserId         String
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  run     AssessmentCycleRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  subject VerifierProfile    @relation("QualitySubject", fields: [subjectProfileId], references: [id], onDelete: Cascade)
+  by      User               @relation("QualityChecker", fields: [byUserId], references: [id])
+
+  @@unique([runId, subjectProfileId])
+  @@index([subjectProfileId, createdAt])
 }
 
 /// Reports of inducement or pressure. Routed to the Audit Cell as well as the Supervisor,

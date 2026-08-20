@@ -25,6 +25,20 @@ export default auth((req) => {
     }
   }
 
+  // The two oversight areas from build step 7. The layouts re-check with a friendlier
+  // redirect to the caller's own area; this is the coarse gate in front of them.
+  if (pathname.startsWith('/app/supervisor')) {
+    if (role !== 'SUPERVISOR' && role !== 'SSSA_ADMIN') {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+  }
+
+  if (pathname.startsWith('/app/audit')) {
+    if (role !== 'AUDIT_CELL' && role !== 'SSSA_ADMIN') {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+  }
+
   if (pathname.startsWith('/app/dashboard')) {
     if (role !== 'SSSA_ADMIN' && role !== 'admin' && role !== 'DISTRICT_ADMIN') {
       return NextResponse.redirect(new URL('/', req.url));

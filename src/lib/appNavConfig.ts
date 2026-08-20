@@ -102,6 +102,10 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
       { href: '/app/school/documents', label: 'Mandatory Documents' },
       { href: '/app/school/fee-disclosure', label: 'Fee Disclosure', hideForGovt: true },
       { href: '/app/school/verifier-feedback', label: 'Verifier Feedback' },
+      // The section 8 response window: corrections proposed by a physical verification, with
+      // the school's one written reply before publication. Distinct from Appeals, which
+      // contests an already-published verification.
+      { href: '/app/school/response-window', label: 'Verification Response' },
       { href: '/app/school/appeals', label: 'Appeals' },
       { href: '/app/school/tickets', label: 'Complaints' },
       { href: '/app/school/improvement-plan', label: 'Improvement Plan' },
@@ -127,9 +131,30 @@ export const VERIFIER_NAV_ITEMS: NavItem[] = [
   { href: '/app/verifier/settings', label: 'Settings' },
 ];
 
+/**
+ * The supervisor's round, in the order the brief lists the screens: who is doing the work,
+ * what is stuck (escalations), what to sample, who is at risk of removal, whether the
+ * algorithm is moving, and the discrepancy rulings that gate publication.
+ */
+export const SUPERVISOR_NAV_ITEMS: NavItem[] = [
+  { href: '/app/supervisor', label: 'Roster', exact: true },
+  { href: '/app/supervisor/escalations', label: 'Escalations' },
+  { href: '/app/supervisor/quality', label: 'Quality Sample' },
+  { href: '/app/supervisor/discrepancies', label: 'Discrepancies' },
+  { href: '/app/supervisor/de-empanelment', label: 'De-empanelment' },
+  { href: '/app/supervisor/drift', label: 'Risk Drift' },
+];
+
+export const AUDIT_NAV_ITEMS: NavItem[] = [
+  { href: '/app/audit', label: 'Audit Queue', exact: true },
+  { href: '/app/audit/integrity', label: 'Integrity Reports' },
+];
+
 export const NOTIFICATIONS_HREF = {
   school: '/app/school/notifications',
   verifier: '/app/verifier/notifications',
+  supervisor: '/app/supervisor/notifications',
+  audit: '/app/audit/notifications',
   district: '/app/district/notifications',
   sssa: '/app/sssa/notifications',
 } as const;
@@ -137,35 +162,31 @@ export const NOTIFICATIONS_HREF = {
 export function notificationsHrefForBrand(brandHref: string): string {
   if (brandHref.startsWith('/app/school')) return NOTIFICATIONS_HREF.school;
   if (brandHref.startsWith('/app/verifier')) return NOTIFICATIONS_HREF.verifier;
+  if (brandHref.startsWith('/app/supervisor')) return NOTIFICATIONS_HREF.supervisor;
+  if (brandHref.startsWith('/app/audit')) return NOTIFICATIONS_HREF.audit;
   if (brandHref.startsWith('/app/district')) return NOTIFICATIONS_HREF.district;
   return NOTIFICATIONS_HREF.sssa;
 }
 
-export type RoleLabel = 'OFFICIAL' | 'DISTRICT' | 'SCHOOL' | 'VERIFIER';
+export type RoleLabel = 'OFFICIAL' | 'DISTRICT' | 'SCHOOL' | 'VERIFIER' | 'SUPERVISOR' | 'AUDIT';
 
 /**
- * The four verification roles route to the verifier portal, not to the officials' one.
+ * The three verifier roles route to the verifier portal, not to the officials' one.
  *
  * Without them listed here they fell through to OFFICIAL and /app/sssa, so an Online Verifier
  * signing in would land on the SSSA dashboard and be bounced straight back out by middleware,
  * which role-gates that prefix. A login that ends in a redirect loop is indistinguishable from
  * a broken account.
  *
- * SUPERVISOR and AUDIT_CELL are grouped here too for now. Both oversee verification work and
- * both need screens that do not exist yet; sending them to the verifier portal is the closest
- * true answer until their own areas are built, and it is better than a dashboard they cannot
- * open.
+ * SUPERVISOR and AUDIT_CELL were parked here until their own areas existed. They now route to
+ * /app/supervisor and /app/audit.
  */
-const VERIFICATION_ROLES = new Set([
-  'VERIFIER',
-  'ONLINE_VERIFIER',
-  'ONGROUND_VERIFIER',
-  'SUPERVISOR',
-  'AUDIT_CELL',
-]);
+const VERIFICATION_ROLES = new Set(['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER']);
 
 export function roleLabelForRole(role: string): RoleLabel {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return 'SCHOOL';
+  if (role === 'SUPERVISOR') return 'SUPERVISOR';
+  if (role === 'AUDIT_CELL') return 'AUDIT';
   if (VERIFICATION_ROLES.has(role)) return 'VERIFIER';
   if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return 'DISTRICT';
   return 'OFFICIAL';
@@ -173,6 +194,8 @@ export function roleLabelForRole(role: string): RoleLabel {
 
 export function brandHrefForRole(role: string): string {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return '/app/school';
+  if (role === 'SUPERVISOR') return '/app/supervisor';
+  if (role === 'AUDIT_CELL') return '/app/audit';
   if (VERIFICATION_ROLES.has(role)) return '/app/verifier';
   if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return '/app/district';
   return '/app/sssa';

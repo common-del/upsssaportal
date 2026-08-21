@@ -129,14 +129,29 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
   },
 ];
 
-export const VERIFIER_NAV_ITEMS: NavItem[] = [
-  { href: '/app/verifier', label: 'My Assignments', exact: true },
-  { href: '/app/verifier/desk', label: 'Desk Screening' },
-  { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
-  { href: '/app/verifier/assignments', label: 'Field Assignments' },
-  { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
-  { href: '/app/verifier/faq', label: 'FAQ' },
-  { href: '/app/verifier/settings', label: 'Settings' },
+/**
+ * The verifier portal's sidebar, in the same two-group shape as the school's: the working
+ * destinations, then the reference pages you touch rarely. These three portals ran on the
+ * top-bar shell until now, which made them look like a different product from the school
+ * portal they sit beside, and wrapped their pills onto a second row on a laptop.
+ */
+export const VERIFIER_SIDEBAR_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { href: '/app/verifier', label: 'My Assignments', exact: true },
+      { href: '/app/verifier/desk', label: 'Desk Screening' },
+      { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
+      { href: '/app/verifier/assignments', label: 'Field Assignments' },
+    ],
+  },
+  {
+    items: [
+      { href: '/app/verifier/notifications', label: 'Notifications' },
+      { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
+      { href: '/app/verifier/faq', label: 'FAQ' },
+      { href: '/app/verifier/settings', label: 'Settings' },
+    ],
+  },
 ];
 
 /**
@@ -144,18 +159,32 @@ export const VERIFIER_NAV_ITEMS: NavItem[] = [
  * what is stuck (escalations), what to sample, who is at risk of removal, whether the
  * algorithm is moving, and the discrepancy rulings that gate publication.
  */
-export const SUPERVISOR_NAV_ITEMS: NavItem[] = [
-  { href: '/app/supervisor', label: 'Roster', exact: true },
-  { href: '/app/supervisor/escalations', label: 'Escalations' },
-  { href: '/app/supervisor/quality', label: 'Quality Sample' },
-  { href: '/app/supervisor/discrepancies', label: 'Discrepancies' },
-  { href: '/app/supervisor/de-empanelment', label: 'De-empanelment' },
-  { href: '/app/supervisor/drift', label: 'Risk Drift' },
+export const SUPERVISOR_SIDEBAR_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { href: '/app/supervisor', label: 'Roster', exact: true },
+      { href: '/app/supervisor/escalations', label: 'Escalations' },
+      { href: '/app/supervisor/quality', label: 'Quality Sample' },
+      { href: '/app/supervisor/discrepancies', label: 'Discrepancies' },
+      { href: '/app/supervisor/de-empanelment', label: 'De-empanelment' },
+      { href: '/app/supervisor/drift', label: 'Risk Drift' },
+    ],
+  },
+  {
+    items: [{ href: '/app/supervisor/notifications', label: 'Notifications' }],
+  },
 ];
 
-export const AUDIT_NAV_ITEMS: NavItem[] = [
-  { href: '/app/audit', label: 'Audit Queue', exact: true },
-  { href: '/app/audit/integrity', label: 'Integrity Reports' },
+export const AUDIT_SIDEBAR_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { href: '/app/audit', label: 'Audit Queue', exact: true },
+      { href: '/app/audit/integrity', label: 'Integrity Reports' },
+    ],
+  },
+  {
+    items: [{ href: '/app/audit/notifications', label: 'Notifications' }],
+  },
 ];
 
 export const NOTIFICATIONS_HREF = {

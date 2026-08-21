@@ -1,10 +1,10 @@
 'use client';
 
-import { AppShell } from '@/components/layout/AppShell';
-import { AUDIT_NAV_ITEMS, SUPERVISOR_NAV_ITEMS } from '@/lib/appNavConfig';
+import { SidebarShell } from '@/components/layout/SidebarShell';
+import { AUDIT_SIDEBAR_SECTIONS, SUPERVISOR_SIDEBAR_SECTIONS } from '@/lib/appNavConfig';
 
 /**
- * The shells for the two oversight areas built in step 7. Same chrome as the verifier
+ * The shells for the two oversight areas. On the same pinned sidebar as every other
  * portal, because a supervisor moves between their area and escalated desk cases and the
  * furniture should not change under them.
  */
@@ -19,17 +19,16 @@ export function SupervisorAppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppShell
-      navItems={SUPERVISOR_NAV_ITEMS}
+    <SidebarShell
+      sections={SUPERVISOR_SIDEBAR_SECTIONS}
       roleLabel="SUPERVISOR"
       userName={userName}
       brandHref="/app/supervisor"
       notificationsHref="/app/supervisor/notifications"
       unreadCount={unreadCount}
-      fallbackHref="/app/supervisor"
     >
       {children}
-    </AppShell>
+    </SidebarShell>
   );
 }
 
@@ -43,16 +42,15 @@ export function AuditAppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppShell
-      navItems={AUDIT_NAV_ITEMS}
+    <SidebarShell
+      sections={AUDIT_SIDEBAR_SECTIONS}
       roleLabel="AUDIT"
       userName={userName}
       brandHref="/app/audit"
       notificationsHref="/app/audit/notifications"
       unreadCount={unreadCount}
-      fallbackHref="/app/audit"
     >
       {children}
-    </AppShell>
+    </SidebarShell>
   );
 }

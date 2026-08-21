@@ -100,6 +100,14 @@ model School {
   publicPhone         String?
   feesRangeMin        Int?
   feesRangeMax        Int?
+  /// Registered coordinates, the anchor the walkthrough geofence measures against.
+  /// Captured once from a device standing at the school and immutable from the school's
+  /// side thereafter, because a fence anchored to a pin the school can move is not a
+  /// fence. Null means never captured: the fence then reports itself unenforceable
+  /// rather than silently passing.
+  geoLat              Float?
+  geoLng              Float?
+  geoCapturedAt       DateTime?
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
   appeals             Appeal[]
@@ -338,6 +346,7 @@ model Parameter {
   fieldFindings           FieldFinding[]
   discrepancies           Discrepancy[]
   auditFindings           AuditFinding[]
+  walkthroughClips        WalkthroughClip[]
 
   @@unique([frameworkId, code])
   @@unique([subDomainId, order])
@@ -1143,14 +1152,57 @@ model WalkthroughSession {
   identityDisclosedAt  DateTime?
   conflictDeclaredAt   DateTime?
   recusedAt            DateTime?
+  /// Set when two consecutive failed connectivity checks drop the session to
+  /// GUIDED_CAPTURE: the school's time box for recording its clips.
+  guidedCaptureDeadline DateTime?
+  /// The verifier's stated grounds for the outcome, mandatory for UNRESOLVED because that
+  /// verdict sends a field team.
+  outcomeNote          String?
   createdAt            DateTime            @default(now())
 
   run          AssessmentCycleRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
   profile      VerifierProfile          @relation(fields: [profileId], references: [id])
   observations WalkthroughObservation[]
+  prompts      WalkthroughPrompt[]
+  clips        WalkthroughClip[]
 
   @@index([runId])
   @@index([profileId, scheduledFor])
+}
+
+/// One instruction pushed to the school as on-screen text. Text rather than speech is what
+/// keeps the verifier anonymous on a live call: the school reads a pseudonymous ID and a
+/// queue of prompts, and never hears a voice.
+model WalkthroughPrompt {
+  id             String             @id @default(cuid())
+  sessionId      String
+  body           String
+  sentAt         DateTime           @default(now())
+  /// Set when the school's screen has shown it, so the verifier knows it landed.
+  acknowledgedAt DateTime?
+  session        WalkthroughSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sentAt])
+}
+
+/// A short clip recorded inside the app during a guided capture task. Location and capture
+/// time are stamped, and freshCapture records whether the file's own timestamp was recent
+/// at upload, which is the strongest pre-recording check a browser allows.
+model WalkthroughClip {
+  id                String             @id @default(cuid())
+  sessionId         String
+  /// The disputed indicator this clip answers, when it answers one.
+  parameterId       String?
+  taskLabel         String
+  blobUrl           String
+  lat               Float?
+  lng               Float?
+  capturedAt        DateTime           @default(now())
+  freshCapture      Boolean            @default(true)
+  session           WalkthroughSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parameter         Parameter?         @relation(fields: [parameterId], references: [id])
+
+  @@index([sessionId, capturedAt])
 }
 
 model WalkthroughObservation {

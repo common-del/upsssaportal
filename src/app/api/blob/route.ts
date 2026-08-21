@@ -5,6 +5,13 @@ import { auth } from '@/lib/auth';
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Guided-capture walkthrough clips are the one video the portal accepts: short, recorded
+// in the app, uploaded straight from the camera. Scoped by path prefix so the size
+// allowance for video never applies to documents and images.
+const CLIP_PREFIX = 'walkthrough/';
+const CLIP_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/3gpp'];
+const CLIP_MAX_SIZE = 100 * 1024 * 1024; // 100MB, roughly a minute of 1080p or several of 480p
+
 export async function POST(request: Request): Promise<NextResponse> {
   const body = (await request.json()) as HandleUploadBody;
   const session = await auth();
@@ -31,15 +38,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ALLOWED_TYPES,
-        maximumSizeInBytes: MAX_SIZE,
-        // Was absent, which defaults to false: the blob landed at the original filename, so
-        // evidence URLs were guessable and the second school to upload "toilet.jpg" got a hard
-        // error because allowOverwrite also defaults to false. Both were findings 02 and 03 of
-        // the security review.
-        addRandomSuffix: true,
-      }),
+      onBeforeGenerateToken: async (pathname) => {
+        const isClip = pathname.startsWith(CLIP_PREFIX);
+        return {
+          allowedContentTypes: isClip ? CLIP_TYPES : ALLOWED_TYPES,
+          maximumSizeInBytes: isClip ? CLIP_MAX_SIZE : MAX_SIZE,
+          // Was absent, which defaults to false: the blob landed at the original filename, so
+          // evidence URLs were guessable and the second school to upload "toilet.jpg" got a hard
+          // error because allowOverwrite also defaults to false. Both were findings 02 and 03 of
+          // the security review.
+          addRandomSuffix: true,
+        };
+      },
       onUploadCompleted: async () => {
         // Record creation handled by the client via server action after upload
       },

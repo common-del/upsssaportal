@@ -108,6 +108,7 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
       { href: '/app/school/documents', label: 'Mandatory Documents' },
       { href: '/app/school/fee-disclosure', label: 'Fee Disclosure', hideForGovt: true },
       { href: '/app/school/verifier-feedback', label: 'Verifier Feedback' },
+      { href: '/app/school/walkthrough', label: 'Video Walkthrough' },
       // The section 8 response window: corrections proposed by a physical verification, with
       // the school's one written reply before publication. Distinct from Appeals, which
       // contests an already-published verification.
@@ -131,6 +132,7 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
 export const VERIFIER_NAV_ITEMS: NavItem[] = [
   { href: '/app/verifier', label: 'My Assignments', exact: true },
   { href: '/app/verifier/desk', label: 'Desk Screening' },
+  { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
   { href: '/app/verifier/assignments', label: 'Field Assignments' },
   { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
   { href: '/app/verifier/faq', label: 'FAQ' },

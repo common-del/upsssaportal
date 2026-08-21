@@ -138,7 +138,9 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
 export const VERIFIER_SIDEBAR_SECTIONS: NavSection[] = [
   {
     items: [
-      { href: '/app/verifier', label: 'My Assignments', exact: true },
+      // "Overview", not "My Assignments": the front door summarises whichever queues this
+      // verifier's cell works from, and an online verifier has no assignments in the old sense.
+      { href: '/app/verifier', label: 'Overview', exact: true },
       { href: '/app/verifier/desk', label: 'Desk Screening' },
       { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
       { href: '/app/verifier/assignments', label: 'Field Assignments' },

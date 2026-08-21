@@ -65,7 +65,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: 'SSSA System',
       credentials: demoCredentialsFields,
       async authorize(credentials) {
-        return authorizeWithPassword(credentials, ['SSSA_ADMIN', 'admin']);
+        // The Official tab's own hint says "For SSSA and district officials", but this
+        // list refused the district roles, so district1 could not sign in anywhere: the
+        // only tab that claimed them posted to a provider that turned them away.
+        return authorizeWithPassword(credentials, [
+          'SSSA_ADMIN',
+          'admin',
+          'DISTRICT_OFFICIAL',
+          'DISTRICT_ADMIN',
+        ]);
       },
     }),
     Credentials({

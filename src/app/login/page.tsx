@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { AlertCircle, LogIn } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { DEMO_CREDENTIAL_PROVIDER_IDS } from '@/lib/demoCredentials';
+import { DEMO_CREDENTIAL_PROVIDER_IDS, DEMO_CREDENTIAL_SETS } from '@/lib/demoCredentials';
 
 const ROLE_REDIRECT: Record<string, string> = {
   SCHOOL: '/app/school',
@@ -63,6 +63,9 @@ function LoginFormContent() {
   );
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Controlled, so the demo credential rows below the form can fill them.
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (isLoginTab(tabParam)) setTab(tabParam);
@@ -70,10 +73,20 @@ function LoginFormContent() {
   }, [tabParam]);
 
   const active = TABS.find((t) => t.id === tab)!;
+  const demoSets = DEMO_CREDENTIAL_SETS[tab];
 
   function selectTab(id: LoginTab) {
     setTab(id);
-    // A refusal from the previous tab says nothing about this one.
+    // A refusal from the previous tab says nothing about this one, and neither do its
+    // half-typed details.
+    setFailed(false);
+    setUsername('');
+    setPassword('');
+  }
+
+  function fillDemoSet(set: { username: string; password: string }) {
+    setUsername(set.username);
+    setPassword(set.password);
     setFailed(false);
   }
 
@@ -82,10 +95,9 @@ function LoginFormContent() {
     setLoading(true);
     setFailed(false);
 
-    const fd = new FormData(e.currentTarget);
     const result = await signIn(active.provider, {
-      username: fd.get('username') ?? '',
-      password: fd.get('password') ?? '',
+      username,
+      password,
       redirect: false,
     });
 
@@ -148,6 +160,8 @@ function LoginFormContent() {
               id="username"
               name="username"
               type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               placeholder={tab === 'school' ? 'UDISE code' : 'Enter your User ID'}
               autoComplete="username"
               className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]"
@@ -162,6 +176,8 @@ function LoginFormContent() {
               id="password"
               name="password"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
               className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1B2A6B] focus:outline-none focus:ring-1 focus:ring-[#1B2A6B]"
@@ -192,6 +208,43 @@ function LoginFormContent() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+
+        {/* The demonstration gate. Working passwords on a public page, deliberately, so a
+            demo audience can walk every role without a handout. Removing this block and the
+            DEMO_CREDENTIAL_SETS export is the whole rollback; see the note on that export. */}
+        <div className="mt-8 border-t border-gray-200 pt-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+            Demo credentials
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            This is a demonstration build. Any set below signs in on the {active.label} tab.
+          </p>
+          <ul className="mt-3 divide-y divide-gray-100">
+            {demoSets.map((set) => (
+              <li key={set.username} className="flex items-center gap-3 py-2.5">
+                <span
+                  aria-hidden
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: set.dot }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900">{set.label}</p>
+                  <p className="truncate font-mono text-xs text-gray-500">
+                    {set.username} · {set.password}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500">{set.detail}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fillDemoSet(set)}
+                  className="shrink-0 rounded-lg border border-gray-300 px-3.5 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:border-[#1B2A6B] hover:text-[#1B2A6B]"
+                >
+                  Use
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

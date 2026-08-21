@@ -64,11 +64,18 @@ export const DEMO_CREDENTIAL_SETS: Record<'official' | 'school' | 'verifier', De
   ],
   school: [
     {
-      label: 'Demo School',
-      detail: 'Self assessment, evidence, improvement plan, response window.',
+      label: 'Demo School, full story',
+      detail: 'Filled self assessment, verifier feedback, an appeal, complaints, report card.',
+      username: 'school',
+      password: 'school-demo',
+      dot: '#0E7A46',
+    },
+    {
+      label: 'Register School, blank',
+      detail: 'A bare account for walking the self assessment from the start. Every registered school signs in with its UDISE code and school123.',
       username: '11111111111',
       password: 'school123',
-      dot: '#0E7A46',
+      dot: '#1B2A6B',
     },
   ],
   verifier: [
@@ -87,9 +94,16 @@ export const DEMO_CREDENTIAL_SETS: Record<'official' | 'school' | 'verifier', De
       dot: '#BF9000',
     },
     {
-      label: 'Supervisor',
+      label: 'Supervisor, online cell',
       detail: 'Roster, escalations, quality sample, de-empanelment, discrepancies.',
       username: 'supervisor1',
+      password: 'super123',
+      dot: '#073763',
+    },
+    {
+      label: 'Supervisor, field cell',
+      detail: 'The same screens as the online supervisor, over the field verifiers.',
+      username: 'supervisor2',
       password: 'super123',
       dot: '#073763',
     },
@@ -99,6 +113,13 @@ export const DEMO_CREDENTIAL_SETS: Record<'official' | 'school' | 'verifier', De
       username: 'audit1',
       password: 'audit123',
       dot: '#96271E',
+    },
+    {
+      label: 'Verifier, original account',
+      detail: 'The first seeded verifier, on the older assignment screens.',
+      username: 'verifier1',
+      password: 'verifier123',
+      dot: '#5F7190',
     },
   ],
 };

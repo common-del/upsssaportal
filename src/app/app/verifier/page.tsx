@@ -4,11 +4,18 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { CheckCircle2, Clock, Circle } from 'lucide-react';
 import { getVerifierAssignments } from '@/lib/actions/verification';
+import { brandHrefForRole } from '@/lib/appNavConfig';
+
+/** The three verifier roles. This page bounced everyone else to the homepage, which made a
+ *  successful online1/field1 login look like no login at all: the layout admitted them and
+ *  this line threw them out. */
+const VERIFIER_PORTAL_ROLES = new Set(['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER']);
 
 export default async function VerifierHomePage() {
   const session = await auth();
   if (!session) redirect('/login?tab=verifier');
-  if (session.user.role !== 'VERIFIER') redirect('/');
+  const role = session.user.role as string;
+  if (!VERIFIER_PORTAL_ROLES.has(role)) redirect(brandHrefForRole(role));
 
   const t = await getTranslations('verifierDashboard');
   const userId = session.user.id!;

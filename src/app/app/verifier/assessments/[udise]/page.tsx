@@ -17,7 +17,10 @@ export default async function VerifierAssessmentPage({
 }) {
   const session = await auth();
   if (!session) redirect('/login?tab=verifier');
-  if (session.user.role !== 'VERIFIER') redirect('/');
+  // Legacy assignment flow, still gated to the legacy role: the new verifier roles have no
+  // VerifierAssignment rows, and the query below would 404 them anyway. They are sent to
+  // their own portal home rather than to the public homepage, which read as a failed login.
+  if (session.user.role !== 'VERIFIER') redirect('/app/verifier');
 
   const { udise } = await params;
   const t = await getTranslations('verifierAssessment');

@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   declareWalkthroughConflict,
-  pushPrompt,
   resolveWalkthrough,
   saveObservation,
   scheduleWalkthrough,
@@ -23,30 +22,23 @@ const GOLD_WASH = '#FDF8EC';
 /**
  * The walkthrough console, navy because it belongs to the online track.
  *
- * The video pane is a labelled placeholder: the live transport is the one externally
- * dependent piece of the whole build, which is why the brief put this step last. Everything
- * around the pane is live against the server: the geofence and connectivity state the
- * school's pings update, the prompt queue, the observations, and the verdict that routes
- * the case.
+ * The call is spoken, both ways, per SSSA's decision of 24 August 2026 (BRIEF_REVIEW
+ * section 9): the verifier directs the walkthrough by voice and stays anonymous by
+ * pseudonym and a dark camera, not by silence. The video and audio pane is a labelled
+ * placeholder: the live transport is the one externally dependent piece of the whole
+ * build, which is why the brief put this step last. Everything around the pane is live
+ * against the server: the geofence and connectivity state the school's pings update, the
+ * observations, and the verdict that routes the case.
  */
-
-const QUICK_PROMPTS = [
-  'Please show the main entrance and the school name board.',
-  'Walk to the classroom in question and pan slowly around it.',
-  'Show the toilets, inside and out.',
-  'Show the kitchen and the mid day meal store.',
-  'Show the library shelf and open the issue register.',
-  'Hold the register page steady for ten seconds.',
-];
 
 export function WalkthroughConsole({ data }: { data: ConsoleData }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState('');
 
-  // Prompt acknowledgements and guided-capture clips arrive from the school side, so the
-  // console refetches while the session runs. Ten seconds is fast enough to feel live and
-  // slow enough to cost nothing.
+  // Geofence readings, connectivity state and guided-capture clips arrive from the school
+  // side, so the console refetches while the session runs. Ten seconds is fast enough to
+  // feel live and slow enough to cost nothing.
   const live = !data.needsDeclaration && data.startedAt !== null && data.endedAt === null;
   useEffect(() => {
     if (!live) return;
@@ -145,7 +137,6 @@ function Console({ data }: { data: ConsoleData }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [scheduleAt, setScheduleAt] = useState('');
-  const [promptText, setPromptText] = useState('');
   const [notes, setNotes] = useState<Record<string, string>>(() =>
     Object.fromEntries(data.indicators.map((i) => [i.parameterId, i.observationNote ?? ''])),
   );
@@ -162,12 +153,6 @@ function Console({ data }: { data: ConsoleData }) {
       if (!res.success) setError(res.error ?? 'That did not work.');
       else router.refresh();
     });
-  }
-
-  function sendPrompt(body: string) {
-    if (!body.trim()) return;
-    run(() => pushPrompt(data.runId, body));
-    setPromptText('');
   }
 
   return (
@@ -238,7 +223,7 @@ function Console({ data }: { data: ConsoleData }) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
-        {/* Left: video pane + status + prompts */}
+        {/* Left: the call pane and its status */}
         <div className="space-y-4">
           <div className="overflow-hidden rounded-xl border-2 border-gray-200 bg-white">
             <div
@@ -250,13 +235,13 @@ function Console({ data }: { data: ConsoleData }) {
                   {data.mode === 'GUIDED_CAPTURE'
                     ? 'This case moved to guided capture. Review the clips on the right.'
                     : started && !ended
-                      ? 'Live video pane'
-                      : 'Video appears here when the session starts'}
+                      ? 'Live call: the school\'s video, and voice both ways'
+                      : 'The school\'s video and the voice call appear here when the session starts'}
                 </p>
                 <p className="mt-2 text-xs" style={{ color: '#8FA0BC' }}>
                   The live transport is not connected in this environment. The console around
-                  this pane is fully wired: geofence, connectivity, prompts, observations and
-                  the verdict all run against the server.
+                  this pane is fully wired: geofence, connectivity, observations and the
+                  verdict all run against the server.
                 </p>
               </div>
             </div>
@@ -287,69 +272,11 @@ function Console({ data }: { data: ConsoleData }) {
                 outline
               />
               <span className="text-xs" style={{ color: INK_MUTED }}>
-                {data.audioEnabled
-                  ? 'Your microphone is live to the school; your camera stays off and cannot be enabled. The school hears a voice but sees only your pseudonym, so prompts remain the written record.'
-                  : 'Your camera and microphone are off and cannot be enabled. Instructions go as text prompts only.'}
+                You and the school speak on the call. Your camera stays off and cannot be
+                enabled: the school hears your voice and sees only your pseudonym. Put what
+                you saw in the observations, because they are the written record.
               </span>
             </div>
-          </div>
-
-          {/* Prompt queue */}
-          <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
-            <h2 className="text-base font-bold" style={{ color: NAVY_DEEP }}>
-              Text prompts to the school
-            </h2>
-            {started && !ended && (
-              <>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {QUICK_PROMPTS.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => sendPrompt(q)}
-                      className="rounded-full border px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-gray-400 disabled:opacity-50"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    type="text"
-                    value={promptText}
-                    onChange={(e) => setPromptText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendPrompt(promptText)}
-                    placeholder="Type an instruction and press Enter"
-                    className="flex-1 rounded-lg border-2 border-gray-300 px-3 py-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    disabled={pending || !promptText.trim()}
-                    onClick={() => sendPrompt(promptText)}
-                    className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-                    style={{ backgroundColor: NAVY }}
-                  >
-                    Send
-                  </button>
-                </div>
-              </>
-            )}
-            <ul className="mt-3 space-y-1.5">
-              {data.prompts.length === 0 && (
-                <li className="text-sm" style={{ color: INK_MUTED }}>
-                  Nothing sent yet.
-                </li>
-              )}
-              {data.prompts.map((p) => (
-                <li key={p.id} className="flex items-start justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm">
-                  <span className="text-gray-800">{p.body}</span>
-                  <span className="shrink-0 text-xs font-bold" style={{ color: p.acknowledgedAt ? GREEN : INK_MUTED }}>
-                    {p.acknowledgedAt ? 'Seen' : 'Sent'}
-                  </span>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
 

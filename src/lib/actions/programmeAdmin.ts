@@ -44,7 +44,6 @@ const EDITABLE_FIELDS: Record<
   deEmpanelAbsoluteCount: { kind: 'int', min: 1, max: 20 },
   submissionExtensionDays: { kind: 'int', min: 0, max: 90 },
   videoWalkthroughTurnaroundDays: { kind: 'int', min: 1, max: 60 },
-  walkthroughAudioEnabled: { kind: 'bool' },
   dayOfRevealHour: { kind: 'int', min: 5, max: 12 },
   schoolResponseWindowDays: { kind: 'int', min: 1, max: 60 },
   schoolResponseWindowEnabled: { kind: 'bool' },

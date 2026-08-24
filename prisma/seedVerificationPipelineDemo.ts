@@ -357,13 +357,6 @@ async function main() {
       geofenceHeld: true,
     },
   });
-  await prisma.walkthroughPrompt.createMany({
-    data: [
-      { sessionId: live.id, body: 'Please show the main entrance and the school name board.', sentAt: new Date(Date.now() - 35 * 60_000), acknowledgedAt: new Date(Date.now() - 34 * 60_000) },
-      { sessionId: live.id, body: 'Walk to the library shelf and open the issue register.', sentAt: new Date(Date.now() - 20 * 60_000), acknowledgedAt: new Date(Date.now() - 19 * 60_000) },
-      { sessionId: live.id, body: 'Show the toilets, inside and out.', sentAt: new Date(Date.now() - 5 * 60_000) },
-    ],
-  });
   const liveDisputed = await prisma.deskScreeningDecision.findMany({
     where: { runId: walkthroughRuns[2]!.runId, decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' } },
     select: { parameterId: true },

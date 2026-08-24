@@ -18,10 +18,12 @@ import type { WalkthroughOutcome } from '@prisma/client';
  * census queue or forces a field visit.
  *
  * Anonymity here is one-way and the code says which way. The school never learns the
- * verifier: prompts are pushed as text under a pseudonym, and nothing in the school-side
- * payload carries a name. The verifier does learn the school, at a recorded moment, after
- * a conflict declaration, because a live camera shows the building whatever a masked code
- * says; BRIEF_REVIEW section 3 records why this is disclosed rather than pretended away.
+ * verifier: they hear a voice and see a pseudonym, and nothing in the school-side payload
+ * carries a name. (The ToR's text-only protocol went further and muted the verifier; SSSA
+ * reversed that for usability on 24 August 2026, BRIEF_REVIEW section 9.) The verifier
+ * does learn the school, at a recorded moment, after a conflict declaration, because a
+ * live camera shows the building whatever a masked code says; BRIEF_REVIEW section 3
+ * records why this is disclosed rather than pretended away.
  *
  * The live video transport itself is not wired in this environment. Everything around the
  * pane is real: the session lifecycle, the geofence arithmetic, the connectivity rule that
@@ -43,12 +45,9 @@ async function myOnlineProfile() {
 async function walkthroughConfig() {
   const config = await prisma.programmeConfig.findUnique({
     where: { id: 'current' },
-    select: { videoWalkthroughTurnaroundDays: true, walkthroughAudioEnabled: true },
+    select: { videoWalkthroughTurnaroundDays: true },
   });
-  return {
-    turnaroundDays: config?.videoWalkthroughTurnaroundDays ?? 7,
-    audioEnabled: config?.walkthroughAudioEnabled ?? true,
-  };
+  return { turnaroundDays: config?.videoWalkthroughTurnaroundDays ?? 7 };
 }
 
 /** Every indicator the desk screening left in dispute: manual decisions that did not accept
@@ -191,8 +190,6 @@ export type WalkthroughConsole = {
       schoolUdise: string;
       districtName: string;
       mode: 'LIVE' | 'GUIDED_CAPTURE';
-      /** Two-way voice on the call, per configuration. The verifier's camera is off either way. */
-      audioEnabled: boolean;
       scheduledFor: string | null;
       startedAt: string | null;
       endedAt: string | null;
@@ -205,7 +202,6 @@ export type WalkthroughConsole = {
       guidedCaptureDeadline: string | null;
       dueBy: string;
       indicators: DisputedIndicator[];
-      prompts: { id: string; body: string; sentAt: string; acknowledgedAt: string | null }[];
       clips: {
         id: string;
         taskLabel: string;
@@ -221,7 +217,7 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
   const mine = await mySession(runId);
   if (!mine) return null;
   const { session, me } = mine;
-  const { turnaroundDays, audioEnabled } = await walkthroughConfig();
+  const { turnaroundDays } = await walkthroughConfig();
 
   const run = await prisma.assessmentCycleRun.findUnique({
     where: { id: runId },
@@ -248,7 +244,7 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
   }
 
   const disputed = await disputedParameterIds(runId);
-  const [parameters, submission, observations, prompts, clips] = await Promise.all([
+  const [parameters, submission, observations, clips] = await Promise.all([
     prisma.parameter.findMany({
       where: { id: { in: disputed } },
       include: { options: { orderBy: { order: 'asc' } } },
@@ -258,7 +254,6 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
       select: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
     }),
     prisma.walkthroughObservation.findMany({ where: { sessionId: session.id } }),
-    prisma.walkthroughPrompt.findMany({ where: { sessionId: session.id }, orderBy: { sentAt: 'asc' } }),
     prisma.walkthroughClip.findMany({ where: { sessionId: session.id }, orderBy: { capturedAt: 'asc' } }),
   ]);
 
@@ -308,7 +303,6 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
     schoolUdise: run.school.udise,
     districtName: run.school.district.nameEn,
     mode: session.mode,
-    audioEnabled,
     scheduledFor: session.scheduledFor?.toISOString() ?? null,
     startedAt: session.startedAt?.toISOString() ?? null,
     endedAt: session.endedAt?.toISOString() ?? null,
@@ -321,12 +315,6 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
     guidedCaptureDeadline: session.guidedCaptureDeadline?.toISOString() ?? null,
     dueBy: new Date(run.enteredStateAt.getTime() + turnaroundDays * 86_400_000).toISOString(),
     indicators,
-    prompts: prompts.map((p) => ({
-      id: p.id,
-      body: p.body,
-      sentAt: p.sentAt.toISOString(),
-      acknowledgedAt: p.acknowledgedAt?.toISOString() ?? null,
-    })),
     clips: clips.map((c) => ({
       id: c.id,
       taskLabel: c.taskLabel,
@@ -409,19 +397,6 @@ export async function startWalkthrough(runId: string): Promise<{ success: boolea
   return { success: true };
 }
 
-export async function pushPrompt(runId: string, body: string): Promise<{ success: boolean; error?: string }> {
-  const mine = await mySession(runId);
-  if (!mine) return { success: false, error: 'Case not available.' };
-  if (!mine.session.startedAt || mine.session.endedAt) {
-    return { success: false, error: 'Prompts go to a running session.' };
-  }
-  const trimmed = body.trim();
-  if (!trimmed) return { success: false, error: 'Write the instruction.' };
-  await prisma.walkthroughPrompt.create({ data: { sessionId: mine.session.id, body: trimmed } });
-  revalidatePath(`/app/verifier/walkthrough/${runId}`);
-  return { success: true };
-}
-
 export async function saveObservation(
   runId: string,
   parameterId: string,
@@ -498,13 +473,10 @@ export type SchoolWalkthroughView = {
   /** The verifier as the school sees them: a pseudonym, never a name or a face. */
   verifierId: string;
   mode: 'LIVE' | 'GUIDED_CAPTURE';
-  /** Whether the call carries the verifier's voice, per configuration. */
-  audioEnabled: boolean;
   scheduledFor: string | null;
   startedAt: string | null;
   guidedCaptureDeadline: string | null;
   geofenceAnchored: boolean;
-  prompts: { id: string; body: string; sentAt: string; acknowledgedAt: string | null }[];
   /** Guided capture tasks: one per disputed indicator, plus what has been recorded. */
   tasks: { parameterId: string; label: string; done: boolean }[];
   clips: { taskLabel: string; capturedAt: string }[];
@@ -524,17 +496,13 @@ export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | 
     orderBy: { createdAt: 'desc' },
     include: {
       profile: { select: { pseudonym: true } },
-      prompts: { orderBy: { sentAt: 'asc' } },
       clips: { orderBy: { capturedAt: 'asc' }, select: { parameterId: true, taskLabel: true, capturedAt: true } },
       run: { select: { id: true, school: { select: { geoLat: true, geoLng: true } } } },
     },
   });
   if (!session) return null;
 
-  const [disputed, { audioEnabled }] = await Promise.all([
-    disputedParameterIds(session.run.id),
-    walkthroughConfig(),
-  ]);
+  const disputed = await disputedParameterIds(session.run.id);
   const parameters = disputed.length
     ? await prisma.parameter.findMany({
         where: { id: { in: disputed } },
@@ -548,17 +516,10 @@ export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | 
     sessionId: session.id,
     verifierId: session.profile.pseudonym,
     mode: session.mode,
-    audioEnabled,
     scheduledFor: session.scheduledFor?.toISOString() ?? null,
     startedAt: session.startedAt?.toISOString() ?? null,
     guidedCaptureDeadline: session.guidedCaptureDeadline?.toISOString() ?? null,
     geofenceAnchored: session.run.school.geoLat !== null && session.run.school.geoLng !== null,
-    prompts: session.prompts.map((p) => ({
-      id: p.id,
-      body: p.body,
-      sentAt: p.sentAt.toISOString(),
-      acknowledgedAt: p.acknowledgedAt?.toISOString() ?? null,
-    })),
     tasks: parameters.map((p) => ({
       parameterId: p.id,
       label: `${p.code} ${p.titleEn}`,
@@ -628,16 +589,6 @@ export async function recordSchoolPing(
   });
 
   return { success: true, mode: dropToGuidedCapture ? 'GUIDED_CAPTURE' : session.mode };
-}
-
-export async function acknowledgePrompt(promptId: string): Promise<{ success: boolean }> {
-  const actor = await requireSchool();
-  if (!actor) return { success: false };
-  await prisma.walkthroughPrompt.updateMany({
-    where: { id: promptId, acknowledgedAt: null, session: { run: { schoolUdise: actor.schoolUdise } } },
-    data: { acknowledgedAt: new Date() },
-  });
-  return { success: true };
 }
 
 /** How stale a file's own timestamp may be before the upload is flagged as pre-recorded. */

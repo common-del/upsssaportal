@@ -717,8 +717,10 @@ enum CertificationStatus {
 }
 
 enum WalkthroughMode {
-  /// Verifier watches a live geofenced stream, camera and microphone off, prompts pushed
-  /// as text.
+  /// Verifier watches a live geofenced stream and speaks with the school on the call.
+  /// The verifier's camera stays off; the school sees a pseudonym, never a face. SSSA's
+  /// decision of 24 August 2026, reversing the ToR's text-only protocol: see
+  /// docs/BRIEF_REVIEW.md section 9.
   LIVE
   /// Fallback after two failed connectivity checks: the school records short clips inside
   /// the app, timestamped and location-stamped, reviewed afterwards.
@@ -862,12 +864,6 @@ model ProgrammeConfig {
 
   submissionExtensionDays        Int     @default(15)
   videoWalkthroughTurnaroundDays Int     @default(7)
-  /// Two-way audio on the walkthrough call. The terms of reference and the brief say the
-  /// verifier's microphone is off and instructions go as text only, protecting the
-  /// verifier's anonymity; SSSA chose speech for usability, since a head teacher filming a
-  /// corridor cannot read prompts. The verifier's camera stays off either way. A voice is
-  /// identifiable and calls can be recorded, so this is a stored, reversible choice.
-  walkthroughAudioEnabled        Boolean @default(true)
   /// Local hour on the notified date at which a field verifier's school is revealed.
   dayOfRevealHour                Int     @default(7)
   schoolResponseWindowDays       Int     @default(7)
@@ -1169,26 +1165,10 @@ model WalkthroughSession {
   run          AssessmentCycleRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
   profile      VerifierProfile          @relation(fields: [profileId], references: [id])
   observations WalkthroughObservation[]
-  prompts      WalkthroughPrompt[]
   clips        WalkthroughClip[]
 
   @@index([runId])
   @@index([profileId, scheduledFor])
-}
-
-/// One instruction pushed to the school as on-screen text. Text rather than speech is what
-/// keeps the verifier anonymous on a live call: the school reads a pseudonymous ID and a
-/// queue of prompts, and never hears a voice.
-model WalkthroughPrompt {
-  id             String             @id @default(cuid())
-  sessionId      String
-  body           String
-  sentAt         DateTime           @default(now())
-  /// Set when the school's screen has shown it, so the verifier knows it landed.
-  acknowledgedAt DateTime?
-  session        WalkthroughSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId, sentAt])
 }
 
 /// A short clip recorded inside the app during a guided capture task. Location and capture

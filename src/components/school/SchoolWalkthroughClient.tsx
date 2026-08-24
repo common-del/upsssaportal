@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { upload } from '@vercel/blob/client';
 import {
-  acknowledgePrompt,
   recordSchoolLocation,
   recordSchoolPing,
   saveWalkthroughClip,
@@ -99,7 +98,6 @@ export function SchoolWalkthroughClient({ view }: { view: SchoolWalkthroughView 
   const [uploadingTask, setUploadingTask] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState('');
   const lastOkAtRef = useRef<number | null>(null);
-  const ackedRef = useRef<Set<string>>(new Set());
 
   const live = view.mode === 'LIVE' && view.startedAt !== null;
 
@@ -134,21 +132,12 @@ export function SchoolWalkthroughClient({ view }: { view: SchoolWalkthroughView 
     };
   }, [live, view.sessionId, router]);
 
-  // Refresh for new prompts while anything is active.
+  // Refresh so a session started, dropped to guided capture, or ended by the verifier
+  // shows up without the school having to reload.
   useEffect(() => {
     const t = setInterval(() => router.refresh(), 10_000);
     return () => clearInterval(t);
   }, [router]);
-
-  // Every prompt on screen is acknowledged once, so the verifier sees it landed.
-  useEffect(() => {
-    for (const p of view.prompts) {
-      if (!p.acknowledgedAt && !ackedRef.current.has(p.id)) {
-        ackedRef.current.add(p.id);
-        void acknowledgePrompt(p.id);
-      }
-    }
-  }, [view.prompts]);
 
   async function captureClip(task: { parameterId: string; label: string }, file: File) {
     setUploadError('');
@@ -199,10 +188,9 @@ export function SchoolWalkthroughClient({ view }: { view: SchoolWalkthroughView 
           )}
         </div>
         <p className="mt-2 text-sm" style={{ color: INK_MUTED }}>
-          {view.audioEnabled
-            ? 'The verifier is anonymous on screen: you see an ID, not a name or a face. You will hear their voice and can speak back. Their instructions also arrive as text below, as the written record.'
-            : 'The verifier is anonymous: you see an ID, not a name, and you will not hear a voice. Instructions arrive as text below.'}{' '}
-          Your camera streams; theirs stays off.
+          You and the verifier speak to each other on the call. They stay anonymous on
+          screen: you see an ID, not a name or a face. Your camera streams; theirs stays
+          off.
           {!view.geofenceAnchored &&
             ' Your school has no registered location, so the location check cannot run; register it from this page.'}
         </p>
@@ -213,38 +201,17 @@ export function SchoolWalkthroughClient({ view }: { view: SchoolWalkthroughView 
           <div className="flex aspect-video items-center justify-center" style={{ backgroundColor: '#101826' }}>
             <div className="max-w-md p-6 text-center">
               <p className="text-sm font-bold text-white">
-                {live ? 'Your camera streams from here' : 'The session has not started yet'}
+                {live ? 'Your camera and the voice call run from here' : 'The session has not started yet'}
               </p>
               <p className="mt-2 text-xs" style={{ color: '#8FA0BC' }}>
                 The live transport is not connected in this environment. Location and
-                connection checks are running; instructions appear below as they are sent.
+                connection checks are running; the verifier directs the walkthrough by
+                voice once the call is up.
               </p>
             </div>
           </div>
         </div>
       )}
-
-      {/* Prompt feed */}
-      <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
-        <h2 className="text-base font-bold" style={{ color: NAVY_DEEP }}>
-          Instructions from the verifier
-        </h2>
-        <ul className="mt-2 space-y-1.5">
-          {view.prompts.length === 0 && (
-            <li className="text-sm" style={{ color: INK_MUTED }}>
-              Nothing yet. Instructions appear here during the session.
-            </li>
-          )}
-          {view.prompts.map((p, i) => (
-            <li key={p.id} className="rounded-lg px-3 py-2 text-sm" style={{ backgroundColor: i === view.prompts.length - 1 ? '#EEF2F9' : '#F9FAFB' }}>
-              <span className="font-mono text-xs font-bold" style={{ color: INK_MUTED }}>
-                {new Date(p.sentAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </span>{' '}
-              <span className="font-semibold text-gray-900">{p.body}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
 
       {/* Guided capture */}
       {view.mode === 'GUIDED_CAPTURE' && (

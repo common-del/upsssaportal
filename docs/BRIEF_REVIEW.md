@@ -265,17 +265,19 @@ rubric, which is how the seeded rubric already has it.
 ## 9. Walkthrough voice, decided 24 August 2026
 
 SSSA instructed that the verifier and the school speak to each other on the walkthrough
-call, with the verifier's video still never visible. This reverses section 7 of the brief
-and the terms of reference, which switch the verifier's microphone off and push
-instructions as text precisely to keep the verifier anonymous: a voice is identifiable in
-a small district, and calls can be recorded.
+call, with the verifier's video still never visible, and, on reconfirming the same day,
+that the text prompt queue goes entirely: "text prompts wont work. they need to be able
+to talk to each other."
 
-The usability argument on the other side is real. A head teacher filming a corridor with a
-phone cannot read text prompts while walking, and an inspection conducted at typing speed
-is a slower, worse inspection.
+This reverses section 7 of the brief and the terms of reference, which switch the
+verifier's microphone off and push instructions as text precisely to keep the verifier
+anonymous: a voice is identifiable in a small district, and calls can be recorded. That
+risk was put to SSSA and the instruction stood, so it is recorded here as a settled
+decision rather than held as configuration: a text-only setting whose instruction channel
+no longer exists would be a broken product pretending to be an option.
 
-Implemented the way this project treats every contested requirement: as configuration.
-`walkthroughAudioEnabled` defaults on, per the instruction; the verifier's camera has no
-code path in either setting; the text prompts remain in both settings as the written
-record of what was asked. The admin configuration screen states this conflict beside the
-switch, which is the reversal lever if the anonymity promise is ever re-asserted.
+What remains of the protection: the verifier's camera has no code path at all, the school
+sees a pseudonymous ID and never a name, and the verifier's typed observations against
+each disputed indicator are the written record of the session. When a real video
+transport is procured, session recording should be part of the requirement, because the
+recording then replaces the prompt log as the evidentiary trail of what was asked for.

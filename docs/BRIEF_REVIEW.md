@@ -261,3 +261,21 @@ MANUAL, so 30% of every school's score rests mostly on desk judgement rather tha
 cross-matched records. That is an argument for weighting a desk verifier's
 `EVIDENCE_CONTRADICTS_LEVEL` at least as heavily as an automated mismatch in the risk
 rubric, which is how the seeded rubric already has it.
+
+## 9. Walkthrough voice, decided 24 August 2026
+
+SSSA instructed that the verifier and the school speak to each other on the walkthrough
+call, with the verifier's video still never visible. This reverses section 7 of the brief
+and the terms of reference, which switch the verifier's microphone off and push
+instructions as text precisely to keep the verifier anonymous: a voice is identifiable in
+a small district, and calls can be recorded.
+
+The usability argument on the other side is real. A head teacher filming a corridor with a
+phone cannot read text prompts while walking, and an inspection conducted at typing speed
+is a slower, worse inspection.
+
+Implemented the way this project treats every contested requirement: as configuration.
+`walkthroughAudioEnabled` defaults on, per the instruction; the verifier's camera has no
+code path in either setting; the text prompts remain in both settings as the written
+record of what was asked. The admin configuration screen states this conflict beside the
+switch, which is the reversal lever if the anonymity promise is ever re-asserted.

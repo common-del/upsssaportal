@@ -862,6 +862,12 @@ model ProgrammeConfig {
 
   submissionExtensionDays        Int     @default(15)
   videoWalkthroughTurnaroundDays Int     @default(7)
+  /// Two-way audio on the walkthrough call. The terms of reference and the brief say the
+  /// verifier's microphone is off and instructions go as text only, protecting the
+  /// verifier's anonymity; SSSA chose speech for usability, since a head teacher filming a
+  /// corridor cannot read prompts. The verifier's camera stays off either way. A voice is
+  /// identifiable and calls can be recorded, so this is a stored, reversible choice.
+  walkthroughAudioEnabled        Boolean @default(true)
   /// Local hour on the notified date at which a field verifier's school is revealed.
   dayOfRevealHour                Int     @default(7)
   schoolResponseWindowDays       Int     @default(7)

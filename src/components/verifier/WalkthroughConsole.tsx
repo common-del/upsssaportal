@@ -287,8 +287,9 @@ function Console({ data }: { data: ConsoleData }) {
                 outline
               />
               <span className="text-xs" style={{ color: INK_MUTED }}>
-                Your camera and microphone are off and cannot be enabled. Instructions go as
-                text prompts only.
+                {data.audioEnabled
+                  ? 'Your microphone is live to the school; your camera stays off and cannot be enabled. The school hears a voice but sees only your pseudonym, so prompts remain the written record.'
+                  : 'Your camera and microphone are off and cannot be enabled. Instructions go as text prompts only.'}
               </span>
             </div>
           </div>

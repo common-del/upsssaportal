@@ -199,8 +199,10 @@ export function SchoolWalkthroughClient({ view }: { view: SchoolWalkthroughView 
           )}
         </div>
         <p className="mt-2 text-sm" style={{ color: INK_MUTED }}>
-          The verifier is anonymous: you see an ID, not a name, and you will not hear a voice.
-          Instructions arrive as text below. Your camera streams; theirs stays off.
+          {view.audioEnabled
+            ? 'The verifier is anonymous on screen: you see an ID, not a name or a face. You will hear their voice and can speak back. Their instructions also arrive as text below, as the written record.'
+            : 'The verifier is anonymous: you see an ID, not a name, and you will not hear a voice. Instructions arrive as text below.'}{' '}
+          Your camera streams; theirs stays off.
           {!view.geofenceAnchored &&
             ' Your school has no registered location, so the location check cannot run; register it from this page.'}
         </p>

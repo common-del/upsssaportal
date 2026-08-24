@@ -168,6 +168,13 @@ const SECTIONS: Section[] = [
         input: { kind: 'int', min: 1, max: 60 },
       },
       {
+        key: 'walkthroughAudioEnabled',
+        label: 'Walkthrough voice',
+        help: 'Two-way audio on the walkthrough call. The verifier\'s camera stays off either way, and text prompts remain as the written record.',
+        conflict: 'The terms of reference say the verifier\'s microphone is off and instructions go as text only, protecting anonymity: a voice is identifiable and calls can be recorded. SSSA switched voice on for usability, since a head teacher filming a corridor cannot read prompts. This setting is the reversal lever.',
+        input: { kind: 'bool' },
+      },
+      {
         key: 'dayOfRevealHour',
         label: 'Reveal hour',
         help: 'Local hour on the notified date at which a field verifier\'s school unlocks. The terms of reference say the morning of the visit; midnight would hand the school over the evening before.',

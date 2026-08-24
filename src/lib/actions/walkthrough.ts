@@ -43,9 +43,12 @@ async function myOnlineProfile() {
 async function walkthroughConfig() {
   const config = await prisma.programmeConfig.findUnique({
     where: { id: 'current' },
-    select: { videoWalkthroughTurnaroundDays: true },
+    select: { videoWalkthroughTurnaroundDays: true, walkthroughAudioEnabled: true },
   });
-  return { turnaroundDays: config?.videoWalkthroughTurnaroundDays ?? 7 };
+  return {
+    turnaroundDays: config?.videoWalkthroughTurnaroundDays ?? 7,
+    audioEnabled: config?.walkthroughAudioEnabled ?? true,
+  };
 }
 
 /** Every indicator the desk screening left in dispute: manual decisions that did not accept
@@ -188,6 +191,8 @@ export type WalkthroughConsole = {
       schoolUdise: string;
       districtName: string;
       mode: 'LIVE' | 'GUIDED_CAPTURE';
+      /** Two-way voice on the call, per configuration. The verifier's camera is off either way. */
+      audioEnabled: boolean;
       scheduledFor: string | null;
       startedAt: string | null;
       endedAt: string | null;
@@ -216,7 +221,7 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
   const mine = await mySession(runId);
   if (!mine) return null;
   const { session, me } = mine;
-  const { turnaroundDays } = await walkthroughConfig();
+  const { turnaroundDays, audioEnabled } = await walkthroughConfig();
 
   const run = await prisma.assessmentCycleRun.findUnique({
     where: { id: runId },
@@ -303,6 +308,7 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
     schoolUdise: run.school.udise,
     districtName: run.school.district.nameEn,
     mode: session.mode,
+    audioEnabled,
     scheduledFor: session.scheduledFor?.toISOString() ?? null,
     startedAt: session.startedAt?.toISOString() ?? null,
     endedAt: session.endedAt?.toISOString() ?? null,
@@ -489,9 +495,11 @@ export async function resolveWalkthrough(
 
 export type SchoolWalkthroughView = {
   sessionId: string;
-  /** The verifier as the school sees them: a pseudonym, never a name. */
+  /** The verifier as the school sees them: a pseudonym, never a name or a face. */
   verifierId: string;
   mode: 'LIVE' | 'GUIDED_CAPTURE';
+  /** Whether the call carries the verifier's voice, per configuration. */
+  audioEnabled: boolean;
   scheduledFor: string | null;
   startedAt: string | null;
   guidedCaptureDeadline: string | null;
@@ -523,7 +531,10 @@ export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | 
   });
   if (!session) return null;
 
-  const disputed = await disputedParameterIds(session.run.id);
+  const [disputed, { audioEnabled }] = await Promise.all([
+    disputedParameterIds(session.run.id),
+    walkthroughConfig(),
+  ]);
   const parameters = disputed.length
     ? await prisma.parameter.findMany({
         where: { id: { in: disputed } },
@@ -537,6 +548,7 @@ export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | 
     sessionId: session.id,
     verifierId: session.profile.pseudonym,
     mode: session.mode,
+    audioEnabled,
     scheduledFor: session.scheduledFor?.toISOString() ?? null,
     startedAt: session.startedAt?.toISOString() ?? null,
     guidedCaptureDeadline: session.guidedCaptureDeadline?.toISOString() ?? null,

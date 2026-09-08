@@ -14,7 +14,7 @@ import {
 interface Props {
   ticketId: string;
   ticketStatus: string;
-  role: 'SCHOOL' | 'DISTRICT_OFFICIAL' | 'SSSA_ADMIN';
+  role: 'SCHOOL' | 'DISTRICT_OFFICIAL' | 'DISTRICT_ADMIN' | 'SSSA_ADMIN';
 }
 
 export function TicketActionBar({ ticketId, ticketStatus, role }: Props) {
@@ -87,7 +87,7 @@ export function TicketActionBar({ ticketId, ticketStatus, role }: Props) {
               <Send size={14} /> {t('respond')}
             </button>
           )}
-          {['DISTRICT_OFFICIAL', 'SSSA_ADMIN'].includes(role) && (
+          {['DISTRICT_OFFICIAL', 'DISTRICT_ADMIN', 'SSSA_ADMIN'].includes(role) && (
             <>
               <button type="button" onClick={() => setAction('note')} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-navy-700 transition-colors hover:bg-surface">
                 <StickyNote size={14} /> {t('addNote')}

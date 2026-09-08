@@ -84,9 +84,9 @@ export function SchoolReportCardView({ data }: { data: SchoolReportData }) {
             </div>
           )}
 
-          {!data.resultsPublished && (
+          {!data.published && (
             <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Final results have not been published yet. Scores shown are preliminary.
+              This school&apos;s result has not been published yet. Scores shown are preliminary.
             </p>
           )}
         </div>

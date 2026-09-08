@@ -1,63 +1,22 @@
-import { buildVerificationQueue } from '@/lib/sssa/verificationQueue';
-import { VerificationTabs, type VerificationTab } from '@/components/sssa/VerificationTabs';
+import { redirect } from 'next/navigation';
 
 /**
- * Verification: the whole lifecycle of getting a school checked.
+ * Verification became Appeals in the consolidation: the SQAAF pipeline assigns
+ * verifiers itself, so of this page's two queues only Appeals was still SSSA's own
+ * work, and the page moved to /app/sssa/appeals under that name. The manual queue
+ * survives there as the Legacy queue tab.
  *
- * Three tabs — waiting to be checked, score accepted, appealed. Appeals used to be
- * its own sidebar page, which split one process across two places and meant an
- * appealed school could not be read beside the verification it disputes.
+ * Kept as a redirect rather than deleted: this route is live in notification links
+ * and bookmarks, and a dead URL teaches nobody where the page went. The mapping
+ * preserves what the caller was looking at — a link without ?tab= meant the old
+ * first tab, the assignment queue, so it opens the Legacy queue rather than Appeals.
  */
-export default async function VerificationPage({
+export default async function VerificationMovedPage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const [data, sp] = await Promise.all([buildVerificationQueue(), searchParams]);
-  // 'decide' and 'appealed' are earlier names for the Appeals tab and are live in
-  // notification links and the /appeals redirect, so they still resolve. 'accepted'
-  // and 'settled' named a tab that no longer exists and fall through to To check
-  // rather than erroring.
-  const tab: VerificationTab =
-    sp.tab === 'appeals' || sp.tab === 'decide' || sp.tab === 'appealed' ? 'appeals' : 'todo';
-
-  return (
-    <div className="flex flex-col gap-5">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-900">Verification</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Two queues: schools waiting on a verifier, and appeals waiting on SSSA
-        </p>
-      </header>
-
-      {!data ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          No active cycle. Activate one before assigning verifiers.
-        </div>
-      ) : (
-        <>
-          {tab === 'todo' && data.waiting > 0 && (
-            <p className="max-w-[62ch] text-[16px] leading-relaxed text-gray-600">
-              <b className="font-bold tabular-nums text-gray-900">
-                {data.waiting.toLocaleString('en-IN')}
-              </b>{' '}
-              schools are waiting to be verified. The oldest has waited{' '}
-              <b className="font-bold tabular-nums text-[#C8372D]">{data.oldestDays} days</b>
-              {data.unassigned > 0 && (
-                <>
-                  , and{' '}
-                  <b className="font-bold tabular-nums text-[#C8372D]">
-                    {data.unassigned.toLocaleString('en-IN')}
-                  </b>{' '}
-                  have nobody assigned
-                </>
-              )}
-              .
-            </p>
-          )}
-          <VerificationTabs data={data} initialTab={tab} />
-        </>
-      )}
-    </div>
-  );
+  const sp = await searchParams;
+  const wantsAppeals = sp.tab === 'appeals' || sp.tab === 'decide' || sp.tab === 'appealed';
+  redirect(wantsAppeals ? '/app/sssa/appeals' : '/app/sssa/appeals?tab=legacy');
 }

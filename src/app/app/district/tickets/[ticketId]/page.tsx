@@ -19,7 +19,8 @@ const EVENT_COLORS: Record<string, string> = {
 export default async function DistrictTicketDetailPage(props: { params: Promise<{ ticketId: string }> }) {
   const session = await auth();
   if (!session) redirect('/login?tab=official');
-  if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
+  const role = session.user.role;
+  if (role !== 'DISTRICT_OFFICIAL' && role !== 'DISTRICT_ADMIN') redirect('/');
 
   const { ticketId } = await props.params;
   const t = await getTranslations('ticketDetail');
@@ -85,7 +86,11 @@ export default async function DistrictTicketDetailPage(props: { params: Promise<
         </div>
       </div>
 
-      <TicketActionBar ticketId={ticket.id} ticketStatus={ticket.status} role="DISTRICT_OFFICIAL" />
+      <TicketActionBar
+        ticketId={ticket.id}
+        ticketStatus={ticket.status}
+        role={role === 'DISTRICT_ADMIN' ? 'DISTRICT_ADMIN' : 'DISTRICT_OFFICIAL'}
+      />
     </div>
   );
 }

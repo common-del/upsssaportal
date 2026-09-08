@@ -118,6 +118,17 @@ async function main() {
     }
   }
 
+  // The consolidation retired the supervisor and audit logins: their screens live under
+  // the SSSA admin now, and no login tab accepts these roles any more. The accounts are
+  // deactivated rather than deleted so every ruling, sample and audit finding they signed
+  // keeps its author, and the demo pipeline can still hang its audit case off audit1's
+  // profile. Deactivating (not removing) also makes this trivially reversible if oversight
+  // is re-separated later.
+  await prisma.user.updateMany({
+    where: { username: { in: ['supervisor1', 'supervisor2', 'audit1'] }, active: true },
+    data: { active: false },
+  });
+
   for (const member of WORKFORCE) {
     const user = await prisma.user.findUnique({ where: { username: member.username }, select: { id: true } });
     if (!user) continue;

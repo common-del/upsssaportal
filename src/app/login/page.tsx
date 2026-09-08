@@ -13,8 +13,6 @@ const ROLE_REDIRECT: Record<string, string> = {
   VERIFIER: '/app/verifier',
   ONLINE_VERIFIER: '/app/verifier',
   ONGROUND_VERIFIER: '/app/verifier',
-  SUPERVISOR: '/app/supervisor',
-  AUDIT_CELL: '/app/audit',
   DISTRICT_OFFICIAL: '/app/district',
   DISTRICT_ADMIN: '/app/dashboard',
   SSSA_ADMIN: '/app/sssa',
@@ -48,7 +46,7 @@ const TABS = [
     label: 'Verifier',
     provider: DEMO_CREDENTIAL_PROVIDER_IDS.VERIFIER,
     fallbackUrl: '/app/verifier',
-    hint: 'For verifiers assigned to inspect schools.',
+    hint: 'For online and on-ground verifiers.',
   },
 ];
 

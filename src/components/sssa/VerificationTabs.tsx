@@ -24,10 +24,12 @@ export type VerificationTab = 'todo' | 'appeals';
 /**
  * Two queues, and nothing else.
  *
- * To check is work for a verifier. Appeals is work for SSSA. Every number on this
- * page is therefore a count of things somebody has to do — a completed verification
- * is not work and has no place here; /app/sssa/finalization lists the finished ones,
- * with the final score and an appeal filter.
+ * Appeals is work for SSSA and comes first: since the SQAAF pipeline took over
+ * assignment it is the half of this page that is still the admin's own job. The
+ * legacy queue is the old manual assignment list, kept because the original
+ * VerifierAssignment screens still run on it. Every number on this page is a count
+ * of things somebody has to do — a completed verification is not work and has no
+ * place here; Reporting owns publication of the finished ones.
  *
  * Each earlier version put something on the bar that was not workload:
  *
@@ -57,7 +59,7 @@ export type VerificationTab = 'todo' | 'appeals';
  */
 export function VerificationTabs({
   data,
-  initialTab = 'todo',
+  initialTab = 'appeals',
 }: {
   data: VerificationQueue;
   /** From ?tab= so a link can open the right list and the view is shareable. */
@@ -145,8 +147,8 @@ export function VerificationTabs({
   /** Counted off `matched`, not `queueRows`, so each chip keeps its own number
    *  while another chip is active. */
   const assignedCount = useMemo(() => matched.filter((r) => r.verifierId).length, [matched]);
-  // Only appeals SSSA has not answered. A ruled appeal is finished work and lives
-  // at /app/sssa/finalization with the other completed verifications.
+  // Only appeals SSSA has not answered. A ruled appeal is finished work and shows
+  // up with the other completed verifications on the school's record and Reporting.
   const appealRows = useMemo(
     () => data.verified.filter((r) => match(r) && r.appealPending),
     [data.verified, match],
@@ -431,11 +433,11 @@ export function VerificationTabs({
     );
   }
 
-  // Two counts, both of them work outstanding. Nothing on this bar needs a caveat
-  // about what it includes.
+  // Two counts, both of them work outstanding. Appeals leads because it is the tab
+  // the page is named for; the legacy queue is named for what it now is.
   const TABS: { id: VerificationTab; label: string; count: number; hot?: boolean }[] = [
-    { id: 'todo', label: 'To check', count: data.waiting },
     { id: 'appeals', label: 'Appeals', count: data.awaitingDecisionCount, hot: true },
+    { id: 'todo', label: 'Legacy queue', count: data.waiting },
   ];
 
   return (
@@ -451,14 +453,14 @@ export function VerificationTabs({
               setTab(t.id);
               setEditing(null);
               // Written straight into the history entry, not pushed through the
-              // router: the tab is client state, so without this the URL stayed
-              // /verifiers and opening a school then pressing Back returned to a
+              // router: the tab is client state, so without this the URL never
+              // changed and opening a school then pressing Back returned to a
               // page with no ?tab= — which defaults to the first tab, not the one
               // you were on. replaceState updates the entry in place, so no
               // navigation happens and the district and search filters survive.
               if (typeof window !== 'undefined') {
                 const path = window.location.pathname;
-                window.history.replaceState(null, '', t.id === 'todo' ? path : `${path}?tab=${t.id}`);
+                window.history.replaceState(null, '', t.id === 'appeals' ? path : `${path}?tab=${t.id}`);
               }
             }}
             className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-[13.5px] font-semibold ${

@@ -222,7 +222,7 @@ export async function decideAppeal(
     data: { status: 'DECIDED', decidedAt: now, decidedByUserId: actorUserId },
   });
 
-  revalidatePath('/app/sssa/finalization');
+  revalidatePath('/app/sssa/appeals');
   return { success: true };
 }
 
@@ -332,7 +332,7 @@ export async function computeAndStoreResult(cycleId: string, schoolUdise: string
     update: { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode },
   });
 
-  revalidatePath('/app/sssa/finalization');
+  revalidatePath('/app/sssa/reporting');
   return { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode };
 }
 
@@ -356,7 +356,7 @@ export async function finalizeAllResults(cycleId: string) {
     computed++;
   }
 
-  revalidatePath('/app/sssa/finalization');
+  revalidatePath('/app/sssa/reporting');
   return { success: true, computed };
 }
 
@@ -382,7 +382,7 @@ export async function publishResults(cycleId: string) {
     data: { resultsPublished: true, resultsPublishedAt: now },
   });
 
-  revalidatePath('/app/sssa/finalization');
+  revalidatePath('/app/sssa/reporting');
   revalidatePath('/public/directory');
   revalidatePath('/public/find-your-school');
   return { success: true };

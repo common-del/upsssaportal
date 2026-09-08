@@ -281,3 +281,52 @@ sees a pseudonymous ID and never a name, and the verifier's typed observations a
 each disputed indicator are the written record of the session. When a real video
 transport is procured, session recording should be part of the requirement, because the
 recording then replaces the prompt log as the evidentiary trail of what was asked for.
+
+## 10. The consolidation to two verifier logins and one admin, decided 8 September 2026
+
+SSSA instructed that the portal carry exactly two verifier logins — an Online Verifier and
+an On-Ground Verifier — and that everything else on that tab is a function of the admin:
+"rest everything else is a function of the admin." The proposal was walked through in
+mock-ups and approved as proposed.
+
+What changed. The supervisor and audit portals are gone as sign-ins: their eight screens
+(workforce roster, escalations, quality sample, discrepancies, de-empanelment, risk drift,
+audit queue, integrity reports) moved under /app/sssa in a new Oversight group of the admin
+sidebar, and the verifier login tab accepts only the two working roles plus the original
+legacy VERIFIER account. The demo accounts supervisor1, supervisor2 and audit1 are
+deactivated by the workforce seed rather than deleted, so every ruling and finding they
+signed keeps its author.
+
+The trade this makes, stated plainly. The terms of reference separate the Audit Cell from
+the people it audits; folding audit into the same login that supervises verifiers and runs
+the cycle removes that separation of duties. One admin account now assigns work, samples
+it, rules on discrepancies, audits published cases and acknowledges integrity reports —
+including, in principle, reports about the administration itself. SSSA accepted this for
+the demonstration build. The roles remain in the schema and in `requireRole` gates, so
+re-separating oversight later is a matter of reactivating accounts and narrowing a handful
+of gates (`acknowledgeIntegrityReport` and the audit case scoping in
+`src/lib/actions/audit.ts` are the two that were widened), not of rebuilding screens.
+
+Redundancies removed in the same pass, from the admin build audit:
+
+- Two publication systems. The unlinked Finalization page held a cycle-wide "publish
+  results" switch from before the verification pipeline existed, and the school report
+  card gated on that switch alone — so schools published one-by-one through the pipeline
+  read their own report card as "preliminary" forever. Finalization now redirects to
+  Reporting, and the report card gate is per school: published means this school's
+  `Result.publishedAt` is set, or the old cycle switch was thrown before the retirement.
+  The appeal decision screen under /finalization/appeal/[udise] is alive and linked from
+  Appeals; only the index retired.
+- Two Frameworks. The sidebar pointed at a display editor that persisted nothing while the
+  real manager at /app/sssa/frameworks was linked from nowhere. The sidebar entry now
+  points at the manager and the display editor is deleted.
+- Verification renamed Appeals. The pipeline assigns verifiers itself, so of that page's
+  two queues only Appeals is still the admin's own work. The manual assignment queue
+  survives behind a "Legacy queue" tab because the original VerifierAssignment screens
+  still run on it; old /verifiers links redirect with their tab intent preserved.
+- District links that bounced. Both district navs pointed Monitoring (and the district
+  admin's Dispute Resolution) into /app/sssa pages that middleware bounces district users
+  out of — every click a silent return to the homepage. The district portal now has its
+  own district-scoped Monitoring page, district admins are admitted to the shared district
+  pages with their own nav, and the ticket actions accept and district-scope
+  DISTRICT_ADMIN.

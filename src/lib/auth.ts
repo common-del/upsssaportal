@@ -88,16 +88,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: 'credentials-verifier',
       name: 'Verifier',
       credentials: demoCredentialsFields,
-      // The verification roles share this tab. ONLINE_VERIFIER, ONGROUND_VERIFIER,
-      // SUPERVISOR and AUDIT_CELL are listed so accounts created for the SQAAF pipeline
-      // can sign in without a fifth tab; the role still decides what they then see.
+      // The two verifier jobs share this tab, plus the legacy VERIFIER role from the
+      // original assignment screens. SUPERVISOR and AUDIT_CELL were accepted here until
+      // the consolidation folded their screens into the SSSA login; the roles remain in
+      // the schema so oversight can be re-separated later, but no tab signs them in.
       async authorize(credentials) {
         return authorizeWithPassword(credentials, [
           'VERIFIER',
           'ONLINE_VERIFIER',
           'ONGROUND_VERIFIER',
-          'SUPERVISOR',
-          'AUDIT_CELL',
         ]);
       },
     }),

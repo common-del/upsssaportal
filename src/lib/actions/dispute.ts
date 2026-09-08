@@ -118,15 +118,23 @@ export async function ensureEscalationUpToDate(ticketId: string) {
 export async function runEscalations(districtCode?: string) {
   const session = await auth();
   if (!session) return { error: 'UNAUTHORIZED' };
-  if (!['DISTRICT_OFFICIAL', 'SSSA_ADMIN'].includes(session.user.role!)) {
+  const role = session.user.role!;
+  if (!['DISTRICT_OFFICIAL', 'DISTRICT_ADMIN', 'SSSA_ADMIN'].includes(role)) {
     return { error: 'UNAUTHORIZED' };
   }
+
+  // A district caller sweeps their own district whatever was passed; only SSSA may run
+  // the sweep statewide or name a district. The parameter alone let any district user
+  // pick another district — harmless in effect, since escalation only advances what is
+  // already overdue, but a scope no caller should have.
+  const scopedDistrict = role === 'SSSA_ADMIN' ? districtCode : session.user.districtCode;
+  if (role !== 'SSSA_ADMIN' && !scopedDistrict) return { error: 'UNAUTHORIZED' };
 
   const where: Record<string, unknown> = {
     status: { notIn: CLOSED_STATUSES },
     nextDueAt: { lt: new Date() },
   };
-  if (districtCode) where.districtCode = districtCode;
+  if (scopedDistrict) where.districtCode = scopedDistrict;
 
   const tickets = await prisma.ticket.findMany({
     where,
@@ -292,13 +300,13 @@ export async function addTicketNote(ticketId: string, message: string) {
   const session = await auth();
   if (!session) return { error: 'UNAUTHORIZED' };
   const role = session.user.role!;
-  if (!['DISTRICT_OFFICIAL', 'SSSA_ADMIN'].includes(role)) return { error: 'UNAUTHORIZED' };
+  if (!['DISTRICT_OFFICIAL', 'DISTRICT_ADMIN', 'SSSA_ADMIN'].includes(role)) return { error: 'UNAUTHORIZED' };
 
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) return { error: 'NOT_FOUND' };
 
   // Access control
-  if (role === 'DISTRICT_OFFICIAL' && ticket.districtCode !== session.user.districtCode) {
+  if ((role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') && ticket.districtCode !== session.user.districtCode) {
     return { error: 'NOT_FOUND' };
   }
 
@@ -322,13 +330,13 @@ export async function resolveTicket(ticketId: string, message: string) {
   const session = await auth();
   if (!session) return { error: 'UNAUTHORIZED' };
   const role = session.user.role!;
-  if (!['DISTRICT_OFFICIAL', 'SSSA_ADMIN'].includes(role)) return { error: 'UNAUTHORIZED' };
+  if (!['DISTRICT_OFFICIAL', 'DISTRICT_ADMIN', 'SSSA_ADMIN'].includes(role)) return { error: 'UNAUTHORIZED' };
 
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) return { error: 'NOT_FOUND' };
   if (CLOSED_STATUSES.includes(ticket.status)) return { error: 'ALREADY_CLOSED' };
 
-  if (role === 'DISTRICT_OFFICIAL' && ticket.districtCode !== session.user.districtCode) {
+  if ((role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') && ticket.districtCode !== session.user.districtCode) {
     return { error: 'NOT_FOUND' };
   }
 
@@ -361,7 +369,7 @@ export async function rejectTicket(ticketId: string, reason: string) {
   const session = await auth();
   if (!session) return { error: 'UNAUTHORIZED' };
   const role = session.user.role!;
-  if (!['DISTRICT_OFFICIAL', 'SSSA_ADMIN'].includes(role)) return { error: 'UNAUTHORIZED' };
+  if (!['DISTRICT_OFFICIAL', 'DISTRICT_ADMIN', 'SSSA_ADMIN'].includes(role)) return { error: 'UNAUTHORIZED' };
 
   if (!reason?.trim()) return { error: 'REASON_REQUIRED' };
 
@@ -369,7 +377,7 @@ export async function rejectTicket(ticketId: string, reason: string) {
   if (!ticket) return { error: 'NOT_FOUND' };
   if (CLOSED_STATUSES.includes(ticket.status)) return { error: 'ALREADY_CLOSED' };
 
-  if (role === 'DISTRICT_OFFICIAL' && ticket.districtCode !== session.user.districtCode) {
+  if ((role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') && ticket.districtCode !== session.user.districtCode) {
     return { error: 'NOT_FOUND' };
   }
 

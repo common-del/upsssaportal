@@ -158,7 +158,7 @@ export async function sendVerifierReminder(udise: string): Promise<ReminderResul
     },
   });
 
-  revalidatePath('/app/sssa/verifiers');
+  revalidatePath('/app/sssa/appeals');
   return { sent: 1 };
 }
 

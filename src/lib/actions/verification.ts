@@ -112,7 +112,7 @@ export async function assignVerifiersForCycle({
   }
 
   revalidatePath('/app/sssa/verification/assign');
-  revalidatePath('/app/sssa/verifiers');
+  revalidatePath('/app/sssa/appeals');
   return { assigned, skipped: schools.length - unassigned.length };
 }
 
@@ -148,7 +148,7 @@ export async function assignSchoolsToVerifier(
     assigned++;
   }
 
-  revalidatePath('/app/sssa/verifiers');
+  revalidatePath('/app/sssa/appeals');
   revalidatePath('/app/sssa/verification/assign');
   return { assigned };
 }
@@ -161,7 +161,7 @@ export async function reassignVerifier(assignmentId: string, newVerifierUserId: 
     data: { verifierUserId: newVerifierUserId },
   });
   revalidatePath('/app/sssa/verification/assign');
-  revalidatePath('/app/sssa/verifiers');
+  revalidatePath('/app/sssa/appeals');
 }
 
 export async function getVerifierAssignments(verifierUserId: string) {

@@ -90,7 +90,7 @@ export default async function SssaUsersPage({ searchParams }: { searchParams: Pr
             {waiting === 1 ? 'school waits' : 'schools wait'} to be verified.
           </span>
           <Link
-            href="/app/sssa/verifiers"
+            href="/app/sssa/appeals?tab=legacy"
             className="ml-auto rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100"
           >
             Assign them

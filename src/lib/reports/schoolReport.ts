@@ -10,7 +10,8 @@ export type SchoolReportDomainRow = {
 export type SchoolReportData = {
   cycleId: string;
   cycleName: string;
-  resultsPublished: boolean;
+  /** Whether THIS school's result is published — not a cycle-wide switch. */
+  published: boolean;
   school: {
     udise: string;
     nameEn: string;
@@ -65,7 +66,7 @@ export async function buildSchoolReportData(udise: string): Promise<SchoolReport
   const [result, gradeBands, domains, cycleResults] = await Promise.all([
     prisma.result.findUnique({
       where: { cycleId_schoolUdise: { cycleId: cycle.id, schoolUdise: udise } },
-      select: { selfScorePercent: true, verifierScorePercent: true, finalScorePercent: true, gradeBandCode: true },
+      select: { selfScorePercent: true, verifierScorePercent: true, finalScorePercent: true, gradeBandCode: true, publishedAt: true },
     }),
     prisma.gradeBand.findMany({
       where: { frameworkId: framework.id },
@@ -104,13 +105,20 @@ export async function buildSchoolReportData(udise: string): Promise<SchoolReport
     .map((r) => bestScore(r))
     .filter((n): n is number => typeof n === 'number');
 
+  // Per school, not per cycle. The verification pipeline publishes school by school,
+  // stamping Result.publishedAt; the retired Finalization page's cycle-wide switch is
+  // still honoured so anything it published before the consolidation stays published.
+  // Gating on the cycle switch alone left pipeline-published schools reading their own
+  // report card as "preliminary" forever.
+  const published = result?.publishedAt != null || cycle.resultsPublished;
+
   const gradeStatus: 'PENDING' | 'AVAILABLE' =
-    !cycle.resultsPublished || !result?.gradeBandCode ? 'PENDING' : 'AVAILABLE';
+    !published || !result?.gradeBandCode ? 'PENDING' : 'AVAILABLE';
 
   return {
     cycleId: cycle.id,
     cycleName: cycle.name,
-    resultsPublished: cycle.resultsPublished,
+    published,
     school: {
       udise: school.udise,
       nameEn: school.nameEn,

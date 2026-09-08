@@ -241,7 +241,7 @@ export async function allocateNextDeskCases(
     data: { deskAssigneeProfileId: profileId },
   });
 
-  revalidatePath('/app/supervisor');
+  revalidatePath('/app/sssa/workforce');
   revalidatePath('/app/verifier/desk');
   return { success: true, allocated: result.count };
 }
@@ -351,7 +351,7 @@ export async function resolveEscalation(
     },
   });
 
-  revalidatePath('/app/supervisor/escalations');
+  revalidatePath('/app/sssa/escalations');
   revalidatePath(`/app/verifier/desk/${runId}`);
   return { success: true };
 }
@@ -502,7 +502,7 @@ export async function recordQualityCheck(
     create: { runId, subjectProfileId, verdict, note: trimmed || null, byUserId: scope.actor.userId },
     update: { verdict, note: trimmed || null, byUserId: scope.actor.userId },
   });
-  revalidatePath('/app/supervisor/quality');
+  revalidatePath('/app/sssa/quality');
   return { success: true };
 }
 
@@ -642,8 +642,8 @@ export async function confirmDeEmpanelment(
     }),
   ]);
 
-  revalidatePath('/app/supervisor/de-empanelment');
-  revalidatePath('/app/supervisor');
+  revalidatePath('/app/sssa/de-empanelment');
+  revalidatePath('/app/sssa/workforce');
   return { success: true };
 }
 
@@ -819,7 +819,7 @@ export async function openResponseWindow(runId: string): Promise<{ success: bool
   if (!moved?.ok) {
     return { success: false, error: moved?.ok === false ? moved.reason : 'Run not found.' };
   }
-  revalidatePath('/app/supervisor/discrepancies');
+  revalidatePath('/app/sssa/discrepancies');
   return { success: true };
 }
 
@@ -855,7 +855,7 @@ export async function ruleOnDiscrepancies(
     if (!moved?.ok) {
       return { success: false, error: moved?.ok === false ? moved.reason : 'Could not refer the case.' };
     }
-    revalidatePath('/app/supervisor/discrepancies');
+    revalidatePath('/app/sssa/discrepancies');
     return { success: true, routedTo: 'FIELD_COHORT' };
   }
 
@@ -916,6 +916,6 @@ export async function ruleOnDiscrepancies(
     return { success: false, error: moved?.ok === false ? moved.reason : 'Could not publish.' };
   }
 
-  revalidatePath('/app/supervisor/discrepancies');
+  revalidatePath('/app/sssa/discrepancies');
   return { success: true, routedTo: 'PUBLISHED' };
 }

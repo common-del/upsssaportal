@@ -47,9 +47,17 @@ const MAX_ROWS = 50;
  * Each is computed from a small result set rather than one query per district or
  * block — with a few hundred submissions statewide it is far cheaper to pull the
  * rows once and aggregate in memory than to issue 75 averages.
+ *
+ * `scope` narrows every group to one district for the district portal's own
+ * monitoring page: their blocks, their schools' score gaps, their verifiers, and the
+ * Uday-band question asked only of themselves. Unscoped it is the statewide view.
  */
-export async function buildExceptions(cycleId: string | null): Promise<ExceptionGroup[]> {
+export async function buildExceptions(
+  cycleId: string | null,
+  scope?: { districtCode: string },
+): Promise<ExceptionGroup[]> {
   if (!cycleId) return [];
+  const districtCode = scope?.districtCode;
 
   const [
     blocksWithSubmissionRows,
@@ -64,24 +72,41 @@ export async function buildExceptions(cycleId: string | null): Promise<Exception
     // relation filter rather than fetching every submitted UDISE and passing them
     // back as an IN list, which would grow to tens of thousands as the cycle fills.
     prisma.school.findMany({
-      where: { selfAssessments: { some: { cycleId, status: 'SUBMITTED' } } },
+      where: {
+        selfAssessments: { some: { cycleId, status: 'SUBMITTED' } },
+        ...(districtCode ? { districtCode } : {}),
+      },
       select: { blockCode: true },
       distinct: ['blockCode'],
     }),
     prisma.block.findMany({
+      where: districtCode ? { districtCode } : undefined,
       select: { code: true, nameEn: true, district: { select: { nameEn: true } } },
       orderBy: { nameEn: 'asc' },
     }),
-    prisma.school.groupBy({ by: ['blockCode'], _count: { _all: true } }),
+    prisma.school.groupBy({
+      by: ['blockCode'],
+      _count: { _all: true },
+      ...(districtCode ? { where: { districtCode } } : {}),
+    }),
     prisma.result.findMany({
-      where: { cycleId, finalScorePercent: { not: null } },
+      where: {
+        cycleId,
+        finalScorePercent: { not: null },
+        ...(districtCode ? { school: { districtCode } } : {}),
+      },
       select: {
         finalScorePercent: true,
         school: { select: { districtCode: true, district: { select: { nameEn: true } } } },
       },
     }),
     prisma.result.findMany({
-      where: { cycleId, selfScorePercent: { not: null }, verifierScorePercent: { not: null } },
+      where: {
+        cycleId,
+        selfScorePercent: { not: null },
+        verifierScorePercent: { not: null },
+        ...(districtCode ? { school: { districtCode } } : {}),
+      },
       select: {
         selfScorePercent: true,
         verifierScorePercent: true,
@@ -91,7 +116,7 @@ export async function buildExceptions(cycleId: string | null): Promise<Exception
       },
     }),
     prisma.user.findMany({
-      where: { role: 'VERIFIER' },
+      where: { role: 'VERIFIER', ...(districtCode ? { districtCode } : {}) },
       select: { id: true, username: true, verifierCapacity: true, districtCode: true },
     }),
     prisma.verifierAssignment.findMany({ where: { cycleId }, select: { verifierUserId: true } }),

@@ -29,7 +29,7 @@ export default async function DiscrepanciesPage() {
           {rows.map((r) => (
             <Link
               key={r.runId}
-              href={`/app/supervisor/discrepancies/${r.runId}`}
+              href={`/app/sssa/discrepancies/${r.runId}`}
               className="block rounded-xl border-2 border-gray-200 bg-white p-4 hover:border-gray-300"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">

@@ -78,6 +78,11 @@ export const DEMO_CREDENTIAL_SETS: Record<'official' | 'school' | 'verifier', De
       dot: '#1B2A6B',
     },
   ],
+  // Two rows, matching the two verifier jobs. Supervision and audit are admin functions
+  // now: their screens live under the SSSA login and their demo accounts (supervisor1,
+  // supervisor2, audit1) are deactivated by the workforce seed. verifier1, the first
+  // seeded account on the legacy assignment screens, still signs in but is not offered
+  // here — a demo audience should meet the two roles the programme actually staffs.
   verifier: [
     {
       label: 'Online Verifier',
@@ -92,34 +97,6 @@ export const DEMO_CREDENTIAL_SETS: Record<'official' | 'school' | 'verifier', De
       username: 'field1',
       password: 'verifier123',
       dot: '#BF9000',
-    },
-    {
-      label: 'Supervisor, online cell',
-      detail: 'Roster, escalations, quality sample, de-empanelment, discrepancies.',
-      username: 'supervisor1',
-      password: 'super123',
-      dot: '#073763',
-    },
-    {
-      label: 'Supervisor, field cell',
-      detail: 'The same screens as the online supervisor, over the field verifiers.',
-      username: 'supervisor2',
-      password: 'super123',
-      dot: '#073763',
-    },
-    {
-      label: 'Audit Cell',
-      detail: 'Blind re-verification of published cases, integrity reports.',
-      username: 'audit1',
-      password: 'audit123',
-      dot: '#96271E',
-    },
-    {
-      label: 'Verifier, original account',
-      detail: 'The first seeded verifier, on the older assignment screens.',
-      username: 'verifier1',
-      password: 'verifier123',
-      dot: '#5F7190',
     },
   ],
 };

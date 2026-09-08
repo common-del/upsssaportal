@@ -388,6 +388,7 @@
     "event_NOTE": "टिप्पणी",
     "role_SCHOOL": "विद्यालय",
     "role_DISTRICT_OFFICIAL": "जिला अधिकारी",
+    "role_DISTRICT_ADMIN": "जिला व्यवस्थापक",
     "role_SSSA_ADMIN": "एसएसएसए व्यवस्थापक",
     "role_SYSTEM": "प्रणाली",
     "level_SCHOOL": "विद्यालय",

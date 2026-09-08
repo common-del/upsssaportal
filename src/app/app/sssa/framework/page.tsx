@@ -1,14 +1,11 @@
-import { FrameworkPage } from '@/components/sssa/FrameworkPage';
-import { prisma } from '@/lib/db';
+import { redirect } from 'next/navigation';
 
-export default async function SssaFrameworkPage() {
-  const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
-  let locked = false;
-  if (cycle) {
-    const subs = await prisma.selfAssessmentSubmission.count({
-      where: { cycleId: cycle.id, status: 'SUBMITTED' },
-    });
-    locked = subs > 0;
-  }
-  return <FrameworkPage locked={locked} />;
+/**
+ * This route rendered a display-only copy of the hardcoded UP SQAAF framework with
+ * edit affordances that saved nothing — an editor in appearance only, and a second
+ * "Framework" beside the real one. The sidebar now points at /app/sssa/frameworks,
+ * the manager the cycle actually reads from; this redirect catches old bookmarks.
+ */
+export default function SssaFrameworkRedirect() {
+  redirect('/app/sssa/frameworks');
 }

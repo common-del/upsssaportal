@@ -53,7 +53,7 @@ function CaseRow({ row }: { row: AuditQueueRow }) {
           </span>
           {row.mine ? (
             <Link
-              href={`/app/audit/${row.caseId}`}
+              href={`/app/sssa/audit/${row.caseId}`}
               className="rounded-lg px-4 py-2 text-sm font-bold text-white"
               style={{ backgroundColor: NAVY }}
             >
@@ -147,7 +147,7 @@ export function AuditQueueClient({ overview }: { overview: AuditOverview }) {
 
       <section className="space-y-3">
         <h2 className="text-base font-bold" style={{ color: NAVY_DEEP }}>
-          My cases ({overview.mine.length})
+          Claimed cases ({overview.mine.length})
         </h2>
         {overview.mine.length === 0 ? (
           <p className="text-sm" style={{ color: INK_MUTED }}>

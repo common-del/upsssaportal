@@ -81,6 +81,14 @@ export async function getAuditOverview(): Promise<AuditOverview | null> {
   if (!actor) return null;
   const myProfile = await myAuditProfileId(false);
 
+  // The admin works any claimed case, not only ones claimed under their own profile.
+  // Without this, the cases the retired audit1 account had claimed would sit in neither
+  // list after the consolidation: not unclaimed, and never "mine".
+  const workable = (c: { auditorProfileId: string | null }) =>
+    actor.role === 'SSSA_ADMIN'
+      ? c.auditorProfileId !== null
+      : c.auditorProfileId !== null && c.auditorProfileId === myProfile;
+
   const [cases, candidateCount, config] = await Promise.all([
     prisma.auditCase.findMany({
       include: {
@@ -110,7 +118,7 @@ export async function getAuditOverview(): Promise<AuditOverview | null> {
     schoolUdise: c.run.school.udise,
     districtName: c.run.school.district.nameEn,
     sampledAt: c.sampledAt.toISOString(),
-    mine: c.auditorProfileId !== null && c.auditorProfileId === myProfile,
+    mine: workable(c),
     submittedAt: c.submittedAt?.toISOString() ?? null,
     reconciledAt: c.reconciledAt?.toISOString() ?? null,
     contradicted: c.contradicted,
@@ -120,7 +128,7 @@ export async function getAuditOverview(): Promise<AuditOverview | null> {
 
   return {
     unclaimed: cases.filter((c) => c.auditorProfileId === null).map(toRow),
-    mine: cases.filter((c) => c.auditorProfileId !== null && c.auditorProfileId === myProfile).map(toRow),
+    mine: cases.filter(workable).map(toRow),
     candidateCount,
     samplePercentage: config?.auditSamplePercentage ?? 3,
     sampleBasis: config?.auditSampleBasis ?? 'PER_DISTRICT',
@@ -169,7 +177,7 @@ export async function buildAuditSample(): Promise<{ success: boolean; created: n
     skipDuplicates: true,
   });
 
-  revalidatePath('/app/audit');
+  revalidatePath('/app/sssa/audit');
   return { success: true, created: result.count };
 }
 
@@ -184,7 +192,7 @@ export async function claimAuditCase(caseId: string): Promise<{ success: boolean
   });
   if (result.count === 0) return { success: false, error: 'This case is already claimed.' };
 
-  revalidatePath('/app/audit');
+  revalidatePath('/app/sssa/audit');
   return { success: true };
 }
 
@@ -230,12 +238,21 @@ const codeOrder = (a: string, b: string) => {
 };
 
 async function myCase(caseId: string) {
+  const actor = await auditActor();
+  if (!actor) return null;
+  // The admin opens and acts on any claimed case. The blind is untouched by this: it keys
+  // off submittedAt, not off who is looking. Unclaimed cases still have to be claimed
+  // first, so every finding keeps an accountable auditor profile.
+  if (actor.role === 'SSSA_ADMIN') {
+    const auditCase = await prisma.auditCase.findUnique({ where: { id: caseId } });
+    return auditCase && auditCase.auditorProfileId !== null ? { auditCase } : null;
+  }
   const profileId = await myAuditProfileId(false);
   if (!profileId) return null;
   const auditCase = await prisma.auditCase.findFirst({
     where: { id: caseId, auditorProfileId: profileId },
   });
-  return auditCase ? { auditCase, profileId } : null;
+  return auditCase ? { auditCase } : null;
 }
 
 export async function getAuditCaseDetail(caseId: string): Promise<AuditCaseDetail | null> {
@@ -365,7 +382,7 @@ export async function saveAuditFinding(
     update: { observedLevel, note: note.trim() || null },
   });
 
-  revalidatePath(`/app/audit/${caseId}`);
+  revalidatePath(`/app/sssa/audit/${caseId}`);
   return { success: true };
 }
 
@@ -409,7 +426,7 @@ export async function submitAuditCase(caseId: string): Promise<{ success: boolea
     data: { submittedAt: new Date(), findingCount, contradictionCount },
   });
 
-  revalidatePath(`/app/audit/${caseId}`);
+  revalidatePath(`/app/sssa/audit/${caseId}`);
   return { success: true };
 }
 
@@ -442,8 +459,8 @@ export async function reconcileAuditCase(
     data: { contradicted, reconciledAt: new Date(), reconciliationNote: trimmed || null },
   });
 
-  revalidatePath(`/app/audit/${caseId}`);
-  revalidatePath('/app/audit');
+  revalidatePath(`/app/sssa/audit/${caseId}`);
+  revalidatePath('/app/sssa/audit');
   return { success: true };
 }
 
@@ -518,15 +535,17 @@ export async function getIntegrityReports(): Promise<IntegrityReportRow[]> {
   }));
 }
 
-/** Audit Cell only, per the schema: deliberately not settable by a supervisor, who may be
- *  the subject of the report. */
+/** Originally Audit Cell only, deliberately not settable by a supervisor, who may be the
+ *  subject of the report. The consolidation folds the audit function into the admin login,
+ *  so SSSA_ADMIN acknowledges these now — an accepted independence trade, recorded in
+ *  docs/BRIEF_REVIEW.md, and reversible by narrowing this gate again. */
 export async function acknowledgeIntegrityReport(id: string): Promise<{ success: boolean; error?: string }> {
-  const actor = await requireRole('AUDIT_CELL');
-  if (!actor) return { success: false, error: 'Only the Audit Cell acknowledges these.' };
+  const actor = await requireRole('AUDIT_CELL', 'SSSA_ADMIN');
+  if (!actor) return { success: false, error: 'Only the audit function acknowledges these.' };
   await prisma.integrityReport.update({
     where: { id },
     data: { auditAcknowledgedAt: new Date() },
   });
-  revalidatePath('/app/audit/integrity');
+  revalidatePath('/app/sssa/integrity');
   return { success: true };
 }

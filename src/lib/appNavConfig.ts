@@ -30,34 +30,52 @@ export type NavSection = { label?: string; items: NavItem[] };
  * `exact` is required on the Dashboard: without it the prefix match would light it
  * up on every /app/sssa/* page.
  */
+/**
+ * The admin sidebar after the 24 August consolidation: one login runs the whole programme.
+ *
+ * Three labelled groups. Programme is the cycle's daily round; Oversight is the eight
+ * screens that used to hide behind the retired supervisor and audit logins; General is
+ * everything touched rarely. Two entries changed meaning in the same pass: Appeals is the
+ * page formerly called Verification, renamed for the half that stays now the pipeline does
+ * assignment, and Framework finally points at the real manager rather than the display
+ * editor that saved nothing.
+ */
 export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
   {
+    label: 'Programme',
     items: [
       { href: '/app/sssa', label: 'Dashboard', exact: true },
       { href: '/app/sssa/schools', label: 'Schools' },
+      // Exception-first self assessment monitoring: built, working, and in no sidebar
+      // until now.
+      { href: '/app/sssa/monitoring', label: 'Monitoring' },
       { href: '/app/sssa/compliance', label: 'Compliance' },
-      // Verification carries appeals as a tab. An appeal is one of the two ways a
-      // verification ends, so a separate sidebar item split one process in half and
-      // listed appealed schools in two places at once.
-      { href: '/app/sssa/verifiers', label: 'Verification' },
+      { href: '/app/sssa/appeals', label: 'Appeals' },
       { href: '/app/sssa/cohort', label: 'Field Cohort' },
-      // Step 8: the pipeline's status by state, division and district, and the publication
-      // lever for the census queue.
       { href: '/app/sssa/reporting', label: 'Reporting' },
-      { href: '/app/sssa/disputes', label: 'Complaints' },
-      { href: '/app/sssa/framework', label: 'Framework' },
-      { href: '/app/sssa/users', label: 'Users' },
     ],
   },
   {
+    label: 'Oversight',
     items: [
-      // Step 8: the section 6 table with its audit trail, and rubric versioning. In the
-      // utility group with Settings because it is touched rarely and deliberately.
+      { href: '/app/sssa/workforce', label: 'Workforce' },
+      { href: '/app/sssa/escalations', label: 'Escalations' },
+      { href: '/app/sssa/quality', label: 'Quality Sample' },
+      { href: '/app/sssa/discrepancies', label: 'Discrepancies' },
+      { href: '/app/sssa/de-empanelment', label: 'De-empanelment' },
+      { href: '/app/sssa/drift', label: 'Risk Drift' },
+      { href: '/app/sssa/audit', label: 'Audit' },
+      { href: '/app/sssa/integrity', label: 'Integrity Reports' },
+    ],
+  },
+  {
+    label: 'General',
+    items: [
+      { href: '/app/sssa/disputes', label: 'Complaints' },
+      { href: '/app/sssa/frameworks', label: 'Framework' },
+      { href: '/app/sssa/users', label: 'Users' },
       { href: '/app/sssa/configuration', label: 'Configuration' },
       { href: '/app/sssa/notifications', label: 'Notifications' },
-      // Built, working, and reachable from nowhere until now. It sits in the
-      // utility group rather than above with the workflow pages: an audit trail is
-      // something you go looking for, not part of anyone's daily round.
       { href: '/app/sssa/activity', label: 'Activity log' },
       { href: '/app/sssa/help/sqaaf', label: 'Help' },
       { href: '/app/sssa/settings', label: 'Settings' },
@@ -65,9 +83,13 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
   },
 ];
 
+// Both district navs used to point Monitoring (and the district admin's Dispute
+// Resolution) into /app/sssa/*, which middleware role-gates to SSSA_ADMIN — so for a
+// district user every one of those links was a silent bounce to the homepage. They now
+// stay inside /app/district, which admits both district roles.
 export const DISTRICT_NAV_ITEMS: NavItem[] = [
   { href: '/app/district', label: 'Dashboard', exact: true },
-  { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
+  { href: '/app/district/monitoring', label: 'Self Assessment Monitoring' },
   { href: '/app/district/tickets', label: 'Dispute Resolution' },
   { href: '/app/district/help/sqaaf', label: 'How to fill SQAAF' },
   { href: '/app/district/faq', label: 'FAQ' },
@@ -75,8 +97,8 @@ export const DISTRICT_NAV_ITEMS: NavItem[] = [
 
 export const DISTRICT_ADMIN_DASHBOARD_NAV_ITEMS: NavItem[] = [
   { href: '/app/dashboard', label: 'Dashboard', exact: true },
-  { href: '/app/sssa/monitoring', label: 'Self Assessment Monitoring' },
-  { href: '/app/sssa/disputes', label: 'Dispute Resolution' },
+  { href: '/app/district/monitoring', label: 'Self Assessment Monitoring' },
+  { href: '/app/district/tickets', label: 'Dispute Resolution' },
   { href: '/app/dashboard/help/sqaaf', label: 'How to fill SQAAF' },
   { href: '/app/dashboard/faq', label: 'FAQ' },
 ];
@@ -156,44 +178,9 @@ export const VERIFIER_SIDEBAR_SECTIONS: NavSection[] = [
   },
 ];
 
-/**
- * The supervisor's round, in the order the brief lists the screens: who is doing the work,
- * what is stuck (escalations), what to sample, who is at risk of removal, whether the
- * algorithm is moving, and the discrepancy rulings that gate publication.
- */
-export const SUPERVISOR_SIDEBAR_SECTIONS: NavSection[] = [
-  {
-    items: [
-      { href: '/app/supervisor', label: 'Roster', exact: true },
-      { href: '/app/supervisor/escalations', label: 'Escalations' },
-      { href: '/app/supervisor/quality', label: 'Quality Sample' },
-      { href: '/app/supervisor/discrepancies', label: 'Discrepancies' },
-      { href: '/app/supervisor/de-empanelment', label: 'De-empanelment' },
-      { href: '/app/supervisor/drift', label: 'Risk Drift' },
-    ],
-  },
-  {
-    items: [{ href: '/app/supervisor/notifications', label: 'Notifications' }],
-  },
-];
-
-export const AUDIT_SIDEBAR_SECTIONS: NavSection[] = [
-  {
-    items: [
-      { href: '/app/audit', label: 'Audit Queue', exact: true },
-      { href: '/app/audit/integrity', label: 'Integrity Reports' },
-    ],
-  },
-  {
-    items: [{ href: '/app/audit/notifications', label: 'Notifications' }],
-  },
-];
-
 export const NOTIFICATIONS_HREF = {
   school: '/app/school/notifications',
   verifier: '/app/verifier/notifications',
-  supervisor: '/app/supervisor/notifications',
-  audit: '/app/audit/notifications',
   district: '/app/district/notifications',
   sssa: '/app/sssa/notifications',
 } as const;
@@ -201,13 +188,11 @@ export const NOTIFICATIONS_HREF = {
 export function notificationsHrefForBrand(brandHref: string): string {
   if (brandHref.startsWith('/app/school')) return NOTIFICATIONS_HREF.school;
   if (brandHref.startsWith('/app/verifier')) return NOTIFICATIONS_HREF.verifier;
-  if (brandHref.startsWith('/app/supervisor')) return NOTIFICATIONS_HREF.supervisor;
-  if (brandHref.startsWith('/app/audit')) return NOTIFICATIONS_HREF.audit;
   if (brandHref.startsWith('/app/district')) return NOTIFICATIONS_HREF.district;
   return NOTIFICATIONS_HREF.sssa;
 }
 
-export type RoleLabel = 'OFFICIAL' | 'DISTRICT' | 'SCHOOL' | 'VERIFIER' | 'SUPERVISOR' | 'AUDIT';
+export type RoleLabel = 'OFFICIAL' | 'DISTRICT' | 'SCHOOL' | 'VERIFIER';
 
 /**
  * The three verifier roles route to the verifier portal, not to the officials' one.
@@ -217,15 +202,14 @@ export type RoleLabel = 'OFFICIAL' | 'DISTRICT' | 'SCHOOL' | 'VERIFIER' | 'SUPER
  * which role-gates that prefix. A login that ends in a redirect loop is indistinguishable from
  * a broken account.
  *
- * SUPERVISOR and AUDIT_CELL were parked here until their own areas existed. They now route to
- * /app/supervisor and /app/audit.
+ * SUPERVISOR and AUDIT_CELL no longer route anywhere: their screens moved under /app/sssa in
+ * the consolidation and their demo accounts are deactivated. A stale session carrying one of
+ * those roles falls through to /app/sssa here and middleware bounces it, which fails closed.
  */
 const VERIFICATION_ROLES = new Set(['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER']);
 
 export function roleLabelForRole(role: string): RoleLabel {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return 'SCHOOL';
-  if (role === 'SUPERVISOR') return 'SUPERVISOR';
-  if (role === 'AUDIT_CELL') return 'AUDIT';
   if (VERIFICATION_ROLES.has(role)) return 'VERIFIER';
   if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return 'DISTRICT';
   return 'OFFICIAL';
@@ -233,8 +217,6 @@ export function roleLabelForRole(role: string): RoleLabel {
 
 export function brandHrefForRole(role: string): string {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return '/app/school';
-  if (role === 'SUPERVISOR') return '/app/supervisor';
-  if (role === 'AUDIT_CELL') return '/app/audit';
   if (VERIFICATION_ROLES.has(role)) return '/app/verifier';
   if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return '/app/district';
   return '/app/sssa';

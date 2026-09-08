@@ -388,6 +388,7 @@
     "event_NOTE": "Note",
     "role_SCHOOL": "School",
     "role_DISTRICT_OFFICIAL": "District Official",
+    "role_DISTRICT_ADMIN": "District Admin",
     "role_SSSA_ADMIN": "SSSA Admin",
     "role_SYSTEM": "System",
     "level_SCHOOL": "School",

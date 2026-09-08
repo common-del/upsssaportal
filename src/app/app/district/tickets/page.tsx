@@ -25,9 +25,13 @@ export default async function DistrictTicketsPage(props: {
 }) {
   const session = await auth();
   if (!session) redirect('/login?tab=official');
-  if (session.user.role !== 'DISTRICT_OFFICIAL') redirect('/');
+  const role = session.user.role;
+  if (role !== 'DISTRICT_OFFICIAL' && role !== 'DISTRICT_ADMIN') redirect('/');
 
-  const districtCode = session.user.districtCode!;
+  // Fail closed: a district user without a district set must see nothing, not
+  // everything — an undefined code here would drop the filter from every query below.
+  const districtCode = session.user.districtCode;
+  if (!districtCode) redirect('/');
   const searchParams = await props.searchParams;
   const t = await getTranslations('adminTickets');
   const locale = await getLocale();

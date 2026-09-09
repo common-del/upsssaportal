@@ -222,7 +222,7 @@ export async function decideAppeal(
     data: { status: 'DECIDED', decidedAt: now, decidedByUserId: actorUserId },
   });
 
-  revalidatePath('/app/sssa/appeals');
+  revalidatePath('/app/sssa/decisions');
   return { success: true };
 }
 

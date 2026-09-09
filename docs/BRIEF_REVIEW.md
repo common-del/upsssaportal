@@ -330,3 +330,29 @@ Redundancies removed in the same pass, from the admin build audit:
   own district-scoped Monitoring page, district admins are admitted to the shared district
   pages with their own nav, and the ticket actions accept and district-scope
   DISTRICT_ADMIN.
+
+## 11. The Decisions inbox, decided 9 September 2026
+
+Walking the consolidated admin, SSSA found that Appeals, Escalations and Discrepancies
+"feel the same", and they were right for a structural reason: three sidebar entries, each
+a heading over a list of rulings waiting on the same one person. A first pass that kept
+the three pages and differentiated their presentation did not cure it, so the pages were
+merged. Three layouts were mocked up (one list worst-first; three lanes; inbox with a
+side workbench) and SSSA chose the first.
+
+/app/sssa/decisions is now the single queue: every pending ruling in one list, sorted by
+how long it has waited. Each row carries a type chip naming its consequence (an appeal
+changes a published score, an escalation freezes its case, a discrepancy blocks
+publication), a line naming who brought it (schools file appeals, online verifiers raise
+escalations, the system opens a discrepancy when a signed-off field visit differs from
+the claim), and a waiting clock that turns amber at 7 days and red at 14. Escalations are
+ruled inline; appeals and discrepancy cases open their existing screens unchanged. The
+sidebar entry carries a live count of rulings waiting.
+
+What it replaced: the Appeals, Escalations and Discrepancies entries are gone from the
+sidebar and their URLs redirect into the inbox's filters, so old notification links keep
+working. The legacy manual assignment queue is not a decision and stays reachable at
+/app/sssa/appeals?tab=legacy, linked from the inbox footer and the verifier profiles, in
+no sidebar because it is on the way out. Audit deliberately did not merge: it is a blind
+re-check of finished work, and putting it in the same list would seat the primary
+findings one click from the person meant not to see them before submitting.

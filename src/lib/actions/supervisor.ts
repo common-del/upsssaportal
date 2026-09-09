@@ -351,7 +351,7 @@ export async function resolveEscalation(
     },
   });
 
-  revalidatePath('/app/sssa/escalations');
+  revalidatePath('/app/sssa/decisions');
   revalidatePath(`/app/verifier/desk/${runId}`);
   return { success: true };
 }
@@ -819,7 +819,7 @@ export async function openResponseWindow(runId: string): Promise<{ success: bool
   if (!moved?.ok) {
     return { success: false, error: moved?.ok === false ? moved.reason : 'Run not found.' };
   }
-  revalidatePath('/app/sssa/discrepancies');
+  revalidatePath('/app/sssa/decisions');
   return { success: true };
 }
 
@@ -855,7 +855,7 @@ export async function ruleOnDiscrepancies(
     if (!moved?.ok) {
       return { success: false, error: moved?.ok === false ? moved.reason : 'Could not refer the case.' };
     }
-    revalidatePath('/app/sssa/discrepancies');
+    revalidatePath('/app/sssa/decisions');
     return { success: true, routedTo: 'FIELD_COHORT' };
   }
 
@@ -916,6 +916,6 @@ export async function ruleOnDiscrepancies(
     return { success: false, error: moved?.ok === false ? moved.reason : 'Could not publish.' };
   }
 
-  revalidatePath('/app/sssa/discrepancies');
+  revalidatePath('/app/sssa/decisions');
   return { success: true, routedTo: 'PUBLISHED' };
 }

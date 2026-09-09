@@ -36,12 +36,12 @@ export default async function SupervisorHomePage() {
         <StatCard
           label="Open escalations"
           value={overview.escalationsOpen}
-          href="/app/sssa/escalations"
+          href="/app/sssa/decisions?type=escalations"
         />
         <StatCard
           label="Discrepancy cases"
           value={overview.discrepancyCases}
-          href="/app/sssa/discrepancies"
+          href="/app/sssa/decisions?type=discrepancies"
         />
       </div>
 

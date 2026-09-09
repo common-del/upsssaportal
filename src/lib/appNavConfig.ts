@@ -3,6 +3,9 @@ export type NavItem = {
   label: string;
   exact?: boolean;
   hideForGovt?: boolean;
+  /** A live count shown beside the label, e.g. rulings waiting on Decisions.
+   *  Injected per-request by the layout, never stored in this static config. */
+  badge?: number;
 };
 
 export type NavSection = { label?: string; items: NavItem[] };
@@ -33,24 +36,27 @@ export type NavSection = { label?: string; items: NavItem[] };
 /**
  * The admin sidebar after the 24 August consolidation: one login runs the whole programme.
  *
- * Three labelled groups. Programme is the cycle's daily round; Oversight is the eight
- * screens that used to hide behind the retired supervisor and audit logins; General is
- * everything touched rarely. Two entries changed meaning in the same pass: Appeals is the
- * page formerly called Verification, renamed for the half that stays now the pipeline does
- * assignment, and Framework finally points at the real manager rather than the display
- * editor that saved nothing.
+ * Three labelled groups. Programme is the cycle's daily round; Oversight is what remains of
+ * the screens that used to hide behind the retired supervisor and audit logins; General is
+ * everything touched rarely.
+ *
+ * Decisions replaced three entries — Appeals, Escalations and Discrepancies — that were one
+ * page wearing three names: a list of rulings waiting on the same person. The inbox merges
+ * them worst-first, and the layout injects a live count as its badge. The legacy assignment
+ * queue keeps /app/sssa/appeals?tab=legacy but earns no entry: it is on the way out, and
+ * the Decisions page links to it.
  */
 export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
   {
     label: 'Programme',
     items: [
       { href: '/app/sssa', label: 'Dashboard', exact: true },
+      { href: '/app/sssa/decisions', label: 'Decisions' },
       { href: '/app/sssa/schools', label: 'Schools' },
       // Exception-first self assessment monitoring: built, working, and in no sidebar
       // until now.
       { href: '/app/sssa/monitoring', label: 'Monitoring' },
       { href: '/app/sssa/compliance', label: 'Compliance' },
-      { href: '/app/sssa/appeals', label: 'Appeals' },
       { href: '/app/sssa/cohort', label: 'Field Cohort' },
       { href: '/app/sssa/reporting', label: 'Reporting' },
     ],
@@ -59,9 +65,7 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
     label: 'Oversight',
     items: [
       { href: '/app/sssa/workforce', label: 'Workforce' },
-      { href: '/app/sssa/escalations', label: 'Escalations' },
       { href: '/app/sssa/quality', label: 'Quality Sample' },
-      { href: '/app/sssa/discrepancies', label: 'Discrepancies' },
       { href: '/app/sssa/de-empanelment', label: 'De-empanelment' },
       { href: '/app/sssa/drift', label: 'Risk Drift' },
       { href: '/app/sssa/audit', label: 'Audit' },

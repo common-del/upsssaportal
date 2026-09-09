@@ -1,43 +1,50 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { buildVerificationQueue } from '@/lib/sssa/verificationQueue';
-import { VerificationTabs, type VerificationTab } from '@/components/sssa/VerificationTabs';
+import { LegacyAssignmentQueue } from '@/components/sssa/LegacyAssignmentQueue';
 
 /**
- * Appeals, with the legacy assignment queue behind a second tab.
+ * The legacy assignment queue's home, and a redirect for everything else.
  *
- * This page was called Verification when SSSA assigned every school to a verifier by
- * hand. The SQAAF pipeline does assignment itself now — masked desk batches and the
- * seeded field cohort — so of the page's two queues only Appeals is still SSSA's own
- * work, and the page is named for what it is for. The manual queue is not deleted,
- * because the original VerifierAssignment screens still run on it; it sits behind the
- * Legacy queue tab until that pathway is formally retired.
+ * This URL has been three things: the Appeals page of the first build, then the
+ * renamed Verification page, then Appeals again with the manual queue behind a tab.
+ * Appeals now live in the Decisions inbox, so a link that meant appeals redirects
+ * there; only ?tab=legacy (or the old ?tab=todo) still renders here, serving the
+ * original VerifierAssignment pathway until it is formally retired. Deliberately in
+ * no sidebar: the Decisions page and the verifier profiles link in.
  */
-export default async function AppealsPage({
+export default async function LegacyQueuePage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const [data, sp] = await Promise.all([buildVerificationQueue(), searchParams]);
-  // 'todo' is the old first tab's id and 'legacy' its new name, so both open the
-  // legacy queue. Anything else — including 'decide' and 'appealed', earlier names
-  // still live in notification links — lands on Appeals, the page's own name.
-  const tab: VerificationTab = sp.tab === 'todo' || sp.tab === 'legacy' ? 'todo' : 'appeals';
+  const sp = await searchParams;
+  if (sp.tab !== 'legacy' && sp.tab !== 'todo') {
+    redirect('/app/sssa/decisions?type=appeals');
+  }
+
+  const data = await buildVerificationQueue();
 
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">Appeals</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Legacy assignment queue</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Appeals waiting on an SSSA decision, with the legacy manual assignment queue
+          Manual verifier assignment from before the SQAAF pipeline. Appeals moved to{' '}
+          <Link href="/app/sssa/decisions" className="underline hover:text-gray-700">
+            Decisions
+          </Link>
+          .
         </p>
       </header>
 
       {!data ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          No active cycle. Appeals arrive once one is running.
+          No active cycle, so there is no queue.
         </div>
       ) : (
         <>
-          {tab === 'todo' && data.waiting > 0 && (
+          {data.waiting > 0 && (
             <p className="max-w-[62ch] text-[16px] leading-relaxed text-gray-600">
               <b className="font-bold tabular-nums text-gray-900">
                 {data.waiting.toLocaleString('en-IN')}
@@ -56,7 +63,7 @@ export default async function AppealsPage({
               .
             </p>
           )}
-          <VerificationTabs data={data} initialTab={tab} />
+          <LegacyAssignmentQueue data={data} />
         </>
       )}
     </div>

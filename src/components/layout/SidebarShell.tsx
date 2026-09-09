@@ -77,12 +77,22 @@ export function SidebarShell({
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   active ? 'text-[#1B2A6B]' : 'text-white/80 hover:bg-white/10 hover:text-white',
                 )}
                 style={active ? { backgroundColor: GOLD } : undefined}
               >
                 {item.label}
+                {typeof item.badge === 'number' && item.badge > 0 && (
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none tabular-nums',
+                      active ? 'bg-[#1B2A6B]/15 text-[#1B2A6B]' : 'bg-white/15 text-white',
+                    )}
+                  >
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

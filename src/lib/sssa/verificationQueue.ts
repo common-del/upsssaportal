@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { bandForScore } from './bands';
 
 /**
  * Everything the Verification page needs, in one query pass.
@@ -199,18 +200,7 @@ export async function buildVerificationQueue(): Promise<VerificationQueue | null
     }
   }
 
-  /** Upper bound exclusive except on the top band, matching computeAndStoreResult. */
-  const bandFor = (score: number | null): string | null => {
-    if (score == null) return null;
-    for (let i = 0; i < gradeBands.length; i++) {
-      const b = gradeBands[i]!;
-      const last = i === gradeBands.length - 1;
-      if (score >= b.minPercent && (last ? score <= b.maxPercent : score < b.maxPercent)) {
-        return b.labelEn;
-      }
-    }
-    return null;
-  };
+  const bandFor = (score: number | null): string | null => bandForScore(gradeBands, score);
 
   const rows: QueueRow[] = submissions
     .filter((s) => !done.has(s.schoolUdise))

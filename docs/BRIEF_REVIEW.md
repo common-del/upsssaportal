@@ -356,3 +356,19 @@ working. The legacy manual assignment queue is not a decision and stays reachabl
 no sidebar because it is on the way out. Audit deliberately did not merge: it is a blind
 re-check of finished work, and putting it in the same list would seat the primary
 findings one click from the person meant not to see them before submitting.
+
+## 12. Decisions dealt one at a time, decided 10 September 2026
+
+Seeing the merged inbox live with 22 real rows, SSSA found it overwhelming, and the
+diagnosis held up: every card carried seven pieces of information and five of them
+repeated, fourteen times over for the appeals alone. Seven presentation options were
+mocked up; SSSA chose focus mode.
+
+The Decisions page now deals one ruling at a time, oldest first: a single card with
+everything needed to act (the score movement and the school's written grounds for an
+appeal, the verifier's rationale and the full inline ruling form for an escalation, the
+contradiction and response-window state for a discrepancy), a progress bar standing in
+for the rest, and Skip to push a case to the back of the sitting. The full list remains
+one toggle away for scanning, jumping and batching, and ?view=list deep-links to it.
+Nothing about ruling changed: escalations resolve inline, appeals and discrepancy cases
+open their existing screens.

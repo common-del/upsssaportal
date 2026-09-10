@@ -1,25 +1,30 @@
 import Link from 'next/link';
 import { buildDecisionsInbox } from '@/lib/sssa/decisionsInbox';
-import { DecisionsInbox, type DecisionsFilter } from '@/components/sssa/DecisionsInbox';
+import { DecisionsInbox, type DecisionsFilter, type DecisionsView } from '@/components/sssa/DecisionsInbox';
 
 /**
- * Every ruling waiting on the admin, in one list, worst first.
+ * Every ruling waiting on the admin, dealt one at a time, worst first.
  *
  * This page replaced three sidebar entries — Appeals, Escalations and Discrepancies —
  * that were identical in shape: a heading over a list of pending decisions for the
- * same one person. The old URLs redirect here with their filter preselected, so
- * notification links keep working. The legacy assignment queue is not a decision and
- * lives on at /app/sssa/appeals?tab=legacy; Audit stays its own page on purpose,
- * being a blind re-check of finished work rather than a pending ruling.
+ * same one person. The first cut showed all of them as a list of cards, which SSSA
+ * found overwhelming at real volume, so focus mode is the default: one decision on
+ * screen with everything needed to act, a progress bar for the rest, and the full
+ * list one toggle away for scanning and jumping. The old URLs redirect here with
+ * their filter preselected, so notification links keep working. The legacy
+ * assignment queue is not a decision and lives on at /app/sssa/appeals?tab=legacy;
+ * Audit stays its own page on purpose, being a blind re-check of finished work
+ * rather than a pending ruling.
  */
 export default async function DecisionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; view?: string }>;
 }) {
   const [data, sp] = await Promise.all([buildDecisionsInbox(), searchParams]);
   const filter: DecisionsFilter =
     sp.type === 'appeals' || sp.type === 'escalations' || sp.type === 'discrepancies' ? sp.type : 'all';
+  const view: DecisionsView = sp.view === 'list' ? 'list' : 'focus';
 
   const { total, blocking, oldestDays } = data.counts;
 
@@ -50,7 +55,7 @@ export default async function DecisionsPage({
         </p>
       </header>
 
-      <DecisionsInbox data={data} initialFilter={filter} />
+      <DecisionsInbox data={data} initialFilter={filter} initialView={view} />
 
       <p className="text-[12px] text-gray-400">
         Looking for manual verifier assignment? That is not a decision and lives on the{' '}

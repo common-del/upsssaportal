@@ -33,6 +33,9 @@ export type AppealDecision = {
   verifiedBand: string | null;
   /** Indicators the school is arguing, one AppealItem each. */
   contested: number;
+  /** The school's written justification, first non-empty item, for the focus card.
+   *  The full argument lives on the appeal screen. */
+  grounds: string | null;
   /** Who signed off the verification being contested; null when unresolvable. */
   verifierName: string | null;
   waitingDays: number;
@@ -114,7 +117,7 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
         schoolUdise: true,
         submittedAt: true,
         createdAt: true,
-        _count: { select: { items: true } },
+        items: { select: { schoolJustification: true } },
         school: {
           select: {
             nameEn: true,
@@ -190,7 +193,8 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
       selfBand: bandForScore(gradeBands, r?.selfScorePercent ?? null),
       verifiedScore: r?.verifierScorePercent ?? null,
       verifiedBand: bandForScore(gradeBands, r?.verifierScorePercent ?? null),
-      contested: a._count.items,
+      contested: a.items.length,
+      grounds: a.items.map((i) => i.schoolJustification?.trim()).find((j) => j) ?? null,
       verifierName: verifier ? (verifier.name ?? verifier.username) : null,
       waitingDays: daysSince(a.submittedAt ?? a.createdAt, now),
     };

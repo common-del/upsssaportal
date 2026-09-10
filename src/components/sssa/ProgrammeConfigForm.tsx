@@ -170,7 +170,7 @@ const SECTIONS: Section[] = [
       {
         key: 'dayOfRevealHour',
         label: 'Reveal hour',
-        help: 'Local hour on the notified date at which a field verifier\'s school unlocks. The terms of reference say the morning of the visit; midnight would hand the school over the evening before.',
+        help: 'Local hour on the notified date at which the school information unlocks for the field verifier. The terms of reference say the morning of the visit; midnight would hand the school over the evening before.',
         input: { kind: 'int', min: 5, max: 12 },
       },
       {

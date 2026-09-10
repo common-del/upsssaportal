@@ -210,8 +210,8 @@ async function FieldOverview({
           Welcome, {userName}
         </h1>
         <p className="mt-1 text-sm" style={{ color: INK_MUTED }}>
-          Field cell. You are told the district and travel window in advance; the school itself
-          unlocks at 7 in the morning on the day of the inspection.
+          Field cell. You are told the district and travel window in advance; the school
+          information unlocks at 7 in the morning on the day of the inspection.
         </p>
       </div>
 

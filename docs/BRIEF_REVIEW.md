@@ -468,3 +468,34 @@ pipeline demo's marker already exists in the production database and code added 
 would never run: field1 gains one submitted appeal awaiting the SSSA and one decided
 mixed (one indicator kept, one revised), built on the pipeline demo's published runs and
 coherent with their discrepancy records.
+
+## 17. Field Assignments becomes a day plan, decided 10 September 2026
+
+SSSA rejected the assignment screen outright and approved a redesign through three mock-up
+rounds. The old screen gave a visit happening this minute and a sealed visit four days out
+the same gold card at the same weight, in a two column grid that scrambled their order,
+repeated the reveal explanation on every sealed card, and dropped signed-off visits from
+view entirely.
+
+The screen is now a day plan on one page. Today's work sits on top at full size: an
+in-progress visit shows arrival time, a live progress line (graded count, total, and how
+many differ from the claim so far) and one button; a revealed visit not yet begun shows
+the school and the conflict confirmation. The sealed future is a route list, one row per
+visit with a calendar date tile, the district, the travel window and the desk flag count;
+a row opens in place to its travel facts, the seal explanation (written once, on the row
+being asked about, with only one row open at a time) and the desk flag teaser. Finished
+work is one green line with the cycle's signed-off count. A day with no visit says so and
+points at the next unlock rather than dead-ending.
+
+Two SSSA decisions are recorded with it. First, wording: what unlocks is the school
+information, never "the school" (an earlier instruction to say "opens" was superseded in
+the same session). Second, the conflict declaration is a single confirmation: the
+prominent red "I have a connection" button is removed at SSSA's direction. The stand-down
+mechanism itself remains, as the terms of reference require, behind a quiet two-step link
+under the confirmation (a muted line, then an explicit "Yes, stand down"); if SSSA later
+wants no interface path at all, the remedy becomes administrative and that is a rules
+decision to take knowingly.
+
+AssignmentCard.tsx is deleted; the screen renders through FieldAssignmentsList, whose
+sealed rows are built from the sealed assignment shape and so cannot name a school. All
+dates and times on the screen render in IST regardless of the device's zone.

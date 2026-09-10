@@ -372,3 +372,23 @@ for the rest, and Skip to push a case to the back of the sitting. The full list 
 one toggle away for scanning, jumping and batching, and ?view=list deep-links to it.
 Nothing about ruling changed: escalations resolve inline, appeals and discrepancy cases
 open their existing screens.
+
+## 13. The Decisions page settles into three tabs, decided 10 September 2026
+
+Iterating on the live inbox through mock-up rounds, SSSA settled the Decisions page's
+final shape: an Overview tab as the default (who-count tiles that double as doors, the
+backlog by age with a ruled-this-week line, districts carrying the queue, appeals decided
+with the upheld share, the median time to decide an appeal, and the most escalated
+indicator), then two work tabs — Appeals, and Verification issues with a who-raised
+filter. Every decision of any kind renders one six-slot card: who raised it and the
+consequence, a waiting clock, the one big fact, a who-line, the substance quoted (the
+school's grounds, the verifier's reason, or the school's response, honestly empty when
+none), and one button. Escalations rule inline behind their button; appeals and
+discrepancy cases open their existing screens. "Rule oldest first" in the header deals
+the same cards one at a time, worst first, across every kind.
+
+Two naming decisions are SSSA's own and are recorded as such: escalations read "raised
+by an online verifier", and discrepancy cases read "from the on-ground verifier" rather
+than "from the system" — attributing the case to the verifier whose signed-off findings
+it is built on, with the sub-line "field visit differs from the claim" keeping it clear
+that the portal opens the case automatically and no one files it by hand.

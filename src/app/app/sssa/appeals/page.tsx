@@ -20,7 +20,7 @@ export default async function LegacyQueuePage({
 }) {
   const sp = await searchParams;
   if (sp.tab !== 'legacy' && sp.tab !== 'todo') {
-    redirect('/app/sssa/decisions?type=appeals');
+    redirect('/app/sssa/decisions?tab=appeals');
   }
 
   const data = await buildVerificationQueue();

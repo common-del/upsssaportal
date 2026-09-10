@@ -13,7 +13,7 @@ export default async function DiscrepancyCasePage(props: { params: Promise<{ run
   return (
     <div className="space-y-5">
       <BackButton
-        fallbackHref="/app/sssa/decisions?type=discrepancies"
+        fallbackHref="/app/sssa/decisions?tab=issues&who=field"
         label="Back to the review queue"
         className="inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
         style={{ color: NAVY }}

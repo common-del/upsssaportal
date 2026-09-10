@@ -72,10 +72,27 @@ export type DiscrepancyDecision = {
   response: DiscrepancyResponseState;
   respondedDaysAgo: number | null;
   windowDaysLeft: number | null;
+  /** The school's reply, for the card's quote slot; null when it has not replied. */
+  responseBody: string | null;
+  /** Set when the window closed unanswered, so the card can say when. */
+  windowClosedOn: string | null;
   waitingDays: number;
 };
 
 export type DecisionRow = AppealDecision | EscalationDecision | DiscrepancyDecision;
+
+/** The Overview tab's standing signals, all derived or counted cheaply. */
+export type DecisionsOverview = {
+  ageBands: { over14: number; oneToTwo: number; under7: number };
+  ruledThisWeek: number;
+  /** Districts carrying the queue, biggest first, capped at three. */
+  districts: { name: string; count: number }[];
+  otherDistrictsCount: number;
+  appealsDecided: { decided: number; upheld: number; dismissed: number };
+  /** Median days from submission to decision across this cycle's decided appeals. */
+  medianDaysToDecideAppeal: number | null;
+  mostEscalated: { code: string; title: string; times: number } | null;
+};
 
 export type DecisionsInboxData = {
   /** Sorted by waiting time, longest first. */
@@ -89,6 +106,7 @@ export type DecisionsInboxData = {
     blocking: number;
     oldestDays: number;
   };
+  overview: DecisionsOverview;
 };
 
 export function daysSince(from: Date | string | null | undefined, now: number): number {
@@ -98,9 +116,20 @@ export function daysSince(from: Date | string | null | undefined, now: number): 
   return Math.max(0, Math.floor((now - t) / 86_400_000));
 }
 
+const EMPTY_OVERVIEW: DecisionsOverview = {
+  ageBands: { over14: 0, oneToTwo: 0, under7: 0 },
+  ruledThisWeek: 0,
+  districts: [],
+  otherDistrictsCount: 0,
+  appealsDecided: { decided: 0, upheld: 0, dismissed: 0 },
+  medianDaysToDecideAppeal: null,
+  mostEscalated: null,
+};
+
 const EMPTY: DecisionsInboxData = {
   rows: [],
   counts: { total: 0, appeals: 0, escalations: 0, discrepancies: 0, blocking: 0, oldestDays: 0 },
+  overview: EMPTY_OVERVIEW,
 };
 
 export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
@@ -137,7 +166,7 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
         enteredStateAt: true,
         school: { select: { nameEn: true, district: { select: { nameEn: true } } } },
         discrepancies: { select: { id: true } },
-        responses: { select: { submittedAt: true }, orderBy: { submittedAt: 'desc' }, take: 1 },
+        responses: { select: { submittedAt: true, body: true }, orderBy: { submittedAt: 'desc' }, take: 1 },
         fieldVisits: {
           where: { signedOffAt: { not: null } },
           orderBy: { signedOffAt: 'desc' },
@@ -224,6 +253,7 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
     let state: DiscrepancyResponseState;
     let respondedDaysAgo: number | null = null;
     let windowDaysLeft: number | null = null;
+    let windowClosedOn: string | null = null;
     if (response) {
       state = 'RESPONDED';
       respondedDaysAgo = daysSince(response.submittedAt, now);
@@ -233,6 +263,7 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
         windowDaysLeft = Math.max(0, Math.ceil((closesAt - now) / 86_400_000));
       } else {
         state = 'WINDOW_CLOSED';
+        windowClosedOn = new Date(closesAt).toISOString();
       }
     } else {
       state = 'NOT_OPENED';
@@ -251,13 +282,105 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
       response: state,
       respondedDaysAgo,
       windowDaysLeft,
+      responseBody: response?.body ?? null,
+      windowClosedOn,
       waitingDays: daysSince(r.enteredStateAt, now),
-    };
+    } satisfies DiscrepancyDecision;
   });
 
   const rows: DecisionRow[] = [...appeals, ...escalations, ...discrepancies].sort(
     (a, b) => b.waitingDays - a.waitingDays || a.school.localeCompare(b.school),
   );
+
+  // ── The Overview's standing signals ────────────────────────────────────────
+  const weekAgo = new Date(now - 7 * 86_400_000);
+  const [decidedAppeals, ruledEscalationsThisWeek, ruledDiscrepancyRuns, escalationHistory] =
+    await Promise.all([
+      prisma.appeal.findMany({
+        where: { cycleId: cycle.id, status: 'DECIDED', decidedAt: { not: null } },
+        select: { decidedAt: true, submittedAt: true, items: { select: { decision: true } } },
+        take: 1000,
+      }),
+      // A resolved escalation keeps its escalatedAt and loses its flag; updatedAt is when
+      // the ruling landed.
+      prisma.deskScreeningDecision.count({
+        where: { escalated: false, escalatedAt: { not: null }, updatedAt: { gte: weekAgo } },
+      }),
+      prisma.discrepancy.findMany({
+        where: { upheldAt: { gte: weekAgo } },
+        select: { runId: true },
+        distinct: ['runId'],
+      }),
+      prisma.deskScreeningDecision.findMany({
+        where: { escalatedAt: { not: null }, run: { cycleId: cycle.id } },
+        select: { parameterId: true, parameter: { select: { code: true, titleEn: true } } },
+        take: 500,
+      }),
+    ]);
+
+  const ageBands = { over14: 0, oneToTwo: 0, under7: 0 };
+  for (const r of rows) {
+    if (r.waitingDays >= 14) ageBands.over14 += 1;
+    else if (r.waitingDays >= 7) ageBands.oneToTwo += 1;
+    else ageBands.under7 += 1;
+  }
+
+  const byDistrict = new Map<string, number>();
+  for (const r of rows) {
+    const name = r.district || 'Unknown';
+    byDistrict.set(name, (byDistrict.get(name) ?? 0) + 1);
+  }
+  const districtsSorted = [...byDistrict.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+
+  // Upheld means at least one indicator went the school's way.
+  const upheld = decidedAppeals.filter((a) =>
+    a.items.some((i) => i.decision === 'ACCEPT_SCHOOL'),
+  ).length;
+
+  const decideDurations = decidedAppeals
+    .filter((a) => a.decidedAt && a.submittedAt)
+    .map((a) => Math.max(0, Math.floor((a.decidedAt!.getTime() - a.submittedAt!.getTime()) / 86_400_000)))
+    .sort((a, b) => a - b);
+  const mid = decideDurations.length;
+  const medianDaysToDecideAppeal =
+    mid === 0
+      ? null
+      : mid % 2
+        ? decideDurations[(mid - 1) / 2]!
+        : Math.round((decideDurations[mid / 2 - 1]! + decideDurations[mid / 2]!) / 2);
+
+  const escCounts = new Map<string, { code: string; title: string; times: number }>();
+  for (const e of escalationHistory) {
+    const cur = escCounts.get(e.parameterId) ?? {
+      code: e.parameter.code,
+      title: e.parameter.titleEn,
+      times: 0,
+    };
+    cur.times += 1;
+    escCounts.set(e.parameterId, cur);
+  }
+  const mostEscalated =
+    [...escCounts.values()].sort((a, b) => b.times - a.times || a.code.localeCompare(b.code))[0] ??
+    null;
+
+  const overview: DecisionsOverview = {
+    ageBands,
+    ruledThisWeek:
+      decidedAppeals.filter((a) => a.decidedAt && a.decidedAt >= weekAgo).length +
+      ruledEscalationsThisWeek +
+      ruledDiscrepancyRuns.length,
+    districts: districtsSorted.slice(0, 3).map(([name, count]) => ({ name, count })),
+    otherDistrictsCount: districtsSorted.slice(3).reduce((sum, [, count]) => sum + count, 0),
+    appealsDecided: {
+      decided: decidedAppeals.length,
+      upheld,
+      dismissed: decidedAppeals.length - upheld,
+    },
+    medianDaysToDecideAppeal,
+    mostEscalated,
+  };
 
   return {
     rows,
@@ -269,6 +392,7 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
       blocking: discrepancies.length,
       oldestDays: rows[0]?.waitingDays ?? 0,
     },
+    overview,
   };
 }
 

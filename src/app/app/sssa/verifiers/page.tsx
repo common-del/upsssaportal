@@ -13,5 +13,5 @@ export default async function VerificationMovedPage({
 }) {
   const sp = await searchParams;
   const wantsAppeals = sp.tab === 'appeals' || sp.tab === 'decide' || sp.tab === 'appealed';
-  redirect(wantsAppeals ? '/app/sssa/decisions?type=appeals' : '/app/sssa/appeals?tab=legacy');
+  redirect(wantsAppeals ? '/app/sssa/decisions?tab=appeals' : '/app/sssa/appeals?tab=legacy');
 }

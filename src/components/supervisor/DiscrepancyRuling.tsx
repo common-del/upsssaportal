@@ -63,7 +63,7 @@ export function DiscrepancyRuling({ detail }: { detail: DiscrepancyDetail }) {
     setError('');
     startTransition(async () => {
       const res = await ruleOnDiscrepancies(detail.runId, [...rulings.values()], referBack);
-      if (res.success) router.push('/app/sssa/decisions?type=discrepancies');
+      if (res.success) router.push('/app/sssa/decisions?tab=issues&who=field');
       else setError(res.error ?? 'Could not complete the ruling.');
     });
   }

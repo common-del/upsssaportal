@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import type { DeskDecision } from '@prisma/client';
-import { requireRole, requireVerifier } from '@/lib/authz';
+import { requireRole, requireOnlineVerifier } from '@/lib/authz';
 import { maskSchool, type MaskedSchool } from '@/lib/verification/masking';
 import {
   computeRisk,
@@ -81,7 +81,7 @@ async function activeRubric(): Promise<Rubric | null> {
 }
 
 async function myProfileId(): Promise<string | null> {
-  const actor = await requireVerifier();
+  const actor = await requireOnlineVerifier();
   if (!actor) return null;
   const profile = await prisma.verifierProfile.findUnique({
     where: { userId: actor.userId },
@@ -371,7 +371,7 @@ export async function completeDeskScreening(
   const profileId = await myProfileId();
   if (!profileId) return { success: false, error: 'Not authorised.' };
 
-  const actor = await requireVerifier();
+  const actor = await requireOnlineVerifier();
   if (!actor) return { success: false, error: 'Not authorised.' };
 
   const deskCase = await getDeskCase(runId);

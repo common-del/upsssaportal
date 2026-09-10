@@ -1,14 +1,15 @@
 import { notFound, redirect } from 'next/navigation';
 import { BackButton } from '@/components/common/BackButton';
-import { requireVerifier } from '@/lib/authz';
+import { currentActor, requireOngroundVerifier } from '@/lib/authz';
 import { getFieldVisit } from '@/lib/actions/fieldVisit';
 import { FieldVisitWorkspace } from '@/components/verifier/FieldVisitWorkspace';
 
 const NAVY = '#1F3864';
 
 export default async function FieldVisitPage(props: { params: Promise<{ visitId: string }> }) {
-  const actor = await requireVerifier();
-  if (!actor) redirect('/login?tab=verifier');
+  const actor = await requireOngroundVerifier();
+  // A signed-in verifier of the other cell goes to their own Overview, not to login.
+  if (!actor) redirect((await currentActor()) ? '/app/verifier' : '/login?tab=verifier');
 
   const { visitId } = await props.params;
   const visit = await getFieldVisit(visitId);

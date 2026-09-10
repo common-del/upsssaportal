@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { requireRole, requireVerifier } from '@/lib/authz';
+import { requireRole, requireOngroundVerifier } from '@/lib/authz';
 import { planCohort, PRIORITY_LABEL, type CohortCandidate, type CohortPlan } from '@/lib/verification/cohort';
 import { assignmentFor, isExcluded, revealMomentFor, type Assignment } from '@/lib/verification/reveal';
 import { transitionRun } from '@/lib/verification/stateMachine';
@@ -237,7 +237,7 @@ export async function buildCohort(
  * is how one of them ends up wrong.
  */
 export async function getMyAssignments(): Promise<Assignment[]> {
-  const actor = await requireVerifier();
+  const actor = await requireOngroundVerifier();
   if (!actor) return [];
 
   const profile = await prisma.verifierProfile.findUnique({
@@ -312,7 +312,7 @@ export async function declareConflict(
   visitId: string,
   hasConflict: boolean,
 ): Promise<{ success: boolean; error?: string; recused?: boolean }> {
-  const actor = await requireVerifier();
+  const actor = await requireOngroundVerifier();
   if (!actor) return { success: false, error: 'Not authorised.' };
 
   const profile = await prisma.verifierProfile.findUnique({

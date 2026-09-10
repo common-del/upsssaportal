@@ -156,32 +156,54 @@ export const SCHOOL_SIDEBAR_SECTIONS: NavSection[] = [
   },
 ];
 
+const VERIFIER_REFERENCE_SECTION: NavSection = {
+  items: [
+    { href: '/app/verifier/notifications', label: 'Notifications' },
+    { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
+    { href: '/app/verifier/faq', label: 'FAQ' },
+    { href: '/app/verifier/settings', label: 'Settings' },
+  ],
+};
+
 /**
- * The verifier portal's sidebar, in the same two-group shape as the school's: the working
- * destinations, then the reference pages you touch rarely. These three portals ran on the
- * top-bar shell until now, which made them look like a different product from the school
- * portal they sit beside, and wrapped their pills onto a second row on a laptop.
+ * The verifier portal's sidebar, per cell. The two cells are separate people with separate
+ * work: an online verifier never travels and an on-ground verifier never screens a desk
+ * batch, so a nav entry to the other cell's queue was an empty page pretending to be a job.
+ * Each role gets only its own destinations; the legacy VERIFIER account's old assignment
+ * table lives on its Overview, so it gets no queue entries at all.
+ *
+ * "Overview", not "My Assignments": the front door summarises whichever queues this
+ * verifier's cell works from, and an online verifier has no assignments in the old sense.
  */
-export const VERIFIER_SIDEBAR_SECTIONS: NavSection[] = [
-  {
-    items: [
-      // "Overview", not "My Assignments": the front door summarises whichever queues this
-      // verifier's cell works from, and an online verifier has no assignments in the old sense.
-      { href: '/app/verifier', label: 'Overview', exact: true },
-      { href: '/app/verifier/desk', label: 'Desk Screening' },
-      { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
-      { href: '/app/verifier/assignments', label: 'Field Assignments' },
-    ],
-  },
-  {
-    items: [
-      { href: '/app/verifier/notifications', label: 'Notifications' },
-      { href: '/app/verifier/help/sqaaf', label: 'How to fill SQAAF' },
-      { href: '/app/verifier/faq', label: 'FAQ' },
-      { href: '/app/verifier/settings', label: 'Settings' },
-    ],
-  },
-];
+export function verifierSidebarSections(role: string): NavSection[] {
+  if (role === 'ONLINE_VERIFIER') {
+    return [
+      {
+        items: [
+          { href: '/app/verifier', label: 'Overview', exact: true },
+          { href: '/app/verifier/desk', label: 'Desk Screening' },
+          { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
+        ],
+      },
+      VERIFIER_REFERENCE_SECTION,
+    ];
+  }
+  if (role === 'ONGROUND_VERIFIER') {
+    return [
+      {
+        items: [
+          { href: '/app/verifier', label: 'Overview', exact: true },
+          { href: '/app/verifier/assignments', label: 'Field Assignments' },
+        ],
+      },
+      VERIFIER_REFERENCE_SECTION,
+    ];
+  }
+  return [
+    { items: [{ href: '/app/verifier', label: 'Overview', exact: true }] },
+    VERIFIER_REFERENCE_SECTION,
+  ];
+}
 
 export const NOTIFICATIONS_HREF = {
   school: '/app/school/notifications',

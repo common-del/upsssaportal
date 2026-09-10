@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { requireSchool, requireVerifier } from '@/lib/authz';
+import { requireSchool, requireOnlineVerifier } from '@/lib/authz';
 import { maskSchool } from '@/lib/verification/masking';
 import {
   canResolve,
@@ -31,7 +31,7 @@ import type { WalkthroughOutcome } from '@prisma/client';
  */
 
 async function myOnlineProfile() {
-  const actor = await requireVerifier();
+  const actor = await requireOnlineVerifier();
   if (!actor) return null;
   const profile = await prisma.verifierProfile.findUnique({
     where: { userId: actor.userId },

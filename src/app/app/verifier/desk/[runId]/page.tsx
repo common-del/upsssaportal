@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { BackButton } from '@/components/common/BackButton';
-import { requireVerifier } from '@/lib/authz';
+import { currentActor, requireOnlineVerifier } from '@/lib/authz';
 import { getDeskCase } from '@/lib/actions/deskScreening';
 import { DeskCaseWorkspace } from '@/components/verifier/DeskCaseWorkspace';
 
@@ -8,8 +8,9 @@ const NAVY = '#1F3864';
 const INK_MUTED = '#5F7190';
 
 export default async function DeskCasePage(props: { params: Promise<{ runId: string }> }) {
-  const actor = await requireVerifier();
-  if (!actor) redirect('/login?tab=verifier');
+  const actor = await requireOnlineVerifier();
+  // A signed-in verifier of the other cell goes to their own Overview, not to login.
+  if (!actor) redirect((await currentActor()) ? '/app/verifier' : '/login?tab=verifier');
 
   const { runId } = await props.params;
   const deskCase = await getDeskCase(runId);

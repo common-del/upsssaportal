@@ -406,3 +406,23 @@ stay until demo history is regenerated through the pipeline. One consequence to 
 the portal currently has no manual-assignment fallback in the interface; if the pipeline
 mis-assigns, the remedy is administrative until the pipeline grows its own reassignment
 control.
+
+## 15. The two verifier cells are sealed off from each other, decided 10 September 2026
+
+SSSA clarified that online and on-ground verifiers are separate groups of people: an
+online verifier never receives physical assignments and an on-ground verifier never
+receives desk screening work. Assignment already respected this (desk batches only go to
+online-cell profiles, cohort visits only to field-cell profiles), but the portal did not:
+one shared sidebar showed Desk Screening, Walkthroughs and Field Assignments to every
+verifier, with empty states standing in for gates.
+
+Now the separation is structural. The verifier sidebar is per cell — online sees Overview,
+Desk Screening and Walkthroughs; on-ground sees Overview and Field Assignments; the legacy
+VERIFIER account sees only its Overview, where its old assignment table lives. The desk,
+walkthrough and assignment pages gate on the specific role and send a signed-in verifier
+of the other cell to their own Overview rather than to login. Server actions follow:
+requireOnlineVerifier guards desk screening and walkthrough actions, requireOngroundVerifier
+guards cohort assignment and field visit actions, the legacy assessment actions accept only
+the legacy VERIFIER role, and requireVerifier itself dropped the retired SUPERVISOR and
+AUDIT_CELL roles. The walkthrough and field actions' existing profile-cell checks remain as
+a second lock.

@@ -1,6 +1,6 @@
 'use server';
 
-import { requireSssa, requireVerifier } from '@/lib/authz';
+import { requireSssa, requireRole } from '@/lib/authz';
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
@@ -165,7 +165,7 @@ export async function reassignVerifier(assignmentId: string, newVerifierUserId: 
 }
 
 export async function getVerifierAssignments(verifierUserId: string) {
-  const actor = await requireVerifier();
+  const actor = await requireRole('VERIFIER');
   if (!actor) return { assignments: [], cycleName: null };
   const canReadOthers = actor.role === 'SUPERVISOR';
   if (!canReadOthers && verifierUserId !== actor.userId) {
@@ -188,7 +188,7 @@ export async function getVerifierAssignments(verifierUserId: string) {
 }
 
 export async function getActiveFrameworkForVerification(schoolUdise: string) {
-  if (!(await requireVerifier())) return null;
+  if (!(await requireRole('VERIFIER'))) return null;
 
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
   if (!cycle) return null;
@@ -257,7 +257,7 @@ export async function getOrCreateVerificationSubmission(
   frameworkId: string,
   verifierUserId: string,
 ) {
-  if (!(await requireVerifier())) return null;
+  if (!(await requireRole('VERIFIER'))) return null;
 
   const existing = await prisma.verificationSubmission.findUnique({
     where: { assignmentId },
@@ -276,7 +276,7 @@ export async function saveVerificationResponses(
   verifierUserId: string,
   responses: { parameterId: string; selectedOptionKey: string; notes?: string }[],
 ): Promise<{ success: boolean; message?: string }> {
-  if (!(await requireVerifier())) return { success: false, message: 'Not authorised.' };
+  if (!(await requireRole('VERIFIER'))) return { success: false, message: 'Not authorised.' };
 
   const submission = await prisma.verificationSubmission.findUnique({ where: { id: submissionId } });
   if (!submission) return { success: false, message: 'Submission not found.' };
@@ -304,7 +304,7 @@ export async function submitVerification(
   submissionId: string,
   verifierUserId: string,
 ): Promise<{ success: boolean; errors?: { parameterCode: string; message: string }[]; message?: string }> {
-  if (!(await requireVerifier())) return { success: false, errors: [{ parameterCode: '', message: 'Not authorised.' }] };
+  if (!(await requireRole('VERIFIER'))) return { success: false, errors: [{ parameterCode: '', message: 'Not authorised.' }] };
 
   const submission = await prisma.verificationSubmission.findUnique({
     where: { id: submissionId },

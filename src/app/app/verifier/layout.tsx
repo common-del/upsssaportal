@@ -19,7 +19,7 @@ export default async function VerifierRouteLayout({ children }: { children: Reac
   const unreadCount = await unreadNotificationCount(session.user.id!);
 
   return (
-    <VerifierAppLayout userName={userName} unreadCount={unreadCount}>
+    <VerifierAppLayout role={role} userName={userName} unreadCount={unreadCount}>
       {children}
     </VerifierAppLayout>
   );

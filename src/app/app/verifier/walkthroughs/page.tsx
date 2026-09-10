@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { requireVerifier } from '@/lib/authz';
+import { currentActor, requireOnlineVerifier } from '@/lib/authz';
 import { getWalkthroughQueue } from '@/lib/actions/walkthrough';
 import { ClaimWalkthroughButton } from '@/components/verifier/ClaimWalkthroughButton';
 
@@ -23,8 +23,9 @@ const STATE_LABELS: Record<string, string> = {
  * console, at a recorded moment, after the conflict declaration.
  */
 export default async function WalkthroughsPage() {
-  const actor = await requireVerifier();
-  if (!actor) redirect('/login?tab=verifier');
+  const actor = await requireOnlineVerifier();
+  // A signed-in verifier of the other cell goes to their own Overview, not to login.
+  if (!actor) redirect((await currentActor()) ? '/app/verifier' : '/login?tab=verifier');
   const rows = await getWalkthroughQueue();
 
   return (

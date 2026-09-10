@@ -75,15 +75,22 @@ export async function requireSssa(): Promise<Actor | null> {
 }
 
 /** Anyone who does verification work, of any cell. Individual actions still have to scope
- *  to the caller's own assignment; this only establishes that they are a verifier. */
+ *  to the caller's own assignment; this only establishes that they are a verifier.
+ *  SUPERVISOR and AUDIT_CELL left this list with the consolidation: no login accepts them. */
 export async function requireVerifier(): Promise<Actor | null> {
-  return requireRole(
-    'VERIFIER',
-    'ONLINE_VERIFIER',
-    'ONGROUND_VERIFIER',
-    'SUPERVISOR',
-    'AUDIT_CELL',
-  );
+  return requireRole('VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER');
+}
+
+/** The online cell only: desk screening and video walkthroughs. The two cells are separate
+ *  people — an online verifier never travels, an on-ground verifier never screens a batch —
+ *  so their actions gate on the specific role, not the family. */
+export async function requireOnlineVerifier(): Promise<Actor | null> {
+  return requireRole('ONLINE_VERIFIER');
+}
+
+/** The field cell only: sealed assignments and physical visits. */
+export async function requireOngroundVerifier(): Promise<Actor | null> {
+  return requireRole('ONGROUND_VERIFIER');
 }
 
 /** Officials who may read across schools: SSSA PMU, a district official, or a supervisor. */

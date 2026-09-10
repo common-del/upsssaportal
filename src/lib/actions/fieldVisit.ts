@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { requireVerifier } from '@/lib/authz';
+import { requireOngroundVerifier } from '@/lib/authz';
 import { isRevealed } from '@/lib/verification/reveal';
 import {
   drawSpotCheckSample,
@@ -26,7 +26,7 @@ import { transitionRun } from '@/lib/verification/stateMachine';
  */
 
 async function myFieldProfile() {
-  const actor = await requireVerifier();
+  const actor = await requireOngroundVerifier();
   if (!actor) return null;
   const profile = await prisma.verifierProfile.findUnique({
     where: { userId: actor.userId },

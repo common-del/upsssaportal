@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { requireVerifier } from '@/lib/authz';
+import { currentActor, requireOngroundVerifier } from '@/lib/authz';
 import { getMyAssignments } from '@/lib/actions/cohort';
 import { AssignmentCard } from '@/components/verifier/AssignmentCard';
 import { IntegrityReportForm } from '@/components/verifier/IntegrityReportForm';
@@ -15,8 +15,9 @@ const INK_MUTED = '#5F7190';
  * shadowed, the declaration buttons are full-height, and nothing here is set below 12px.
  */
 export default async function AssignmentsPage() {
-  const actor = await requireVerifier();
-  if (!actor) redirect('/login?tab=verifier');
+  const actor = await requireOngroundVerifier();
+  // A signed-in verifier of the other cell goes to their own Overview, not to login.
+  if (!actor) redirect((await currentActor()) ? '/app/verifier' : '/login?tab=verifier');
 
   const assignments = await getMyAssignments();
   const sealed = assignments.filter((a) => a.state === 'SEALED').length;

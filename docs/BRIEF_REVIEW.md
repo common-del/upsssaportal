@@ -392,3 +392,17 @@ by an online verifier", and discrepancy cases read "from the on-ground verifier"
 than "from the system" — attributing the case to the verifier whose signed-off findings
 it is built on, with the sub-line "field visit differs from the claim" keeping it clear
 that the portal opens the case automatically and no one files it by hand.
+
+## 14. The legacy assignment window closes, decided 10 September 2026
+
+Seeing the legacy manual-assignment queue live — 83 seeded schools, the oldest
+"waiting" 130 days, none of which anyone would ever work — SSSA asked why it still
+existed and ordered it removed. The window is gone: the page, the users-page shortcuts
+into it, and the reminder button are deleted, and every old URL for it redirects to
+Decisions. What remains, deliberately, is the pathway's data: the cycle's completed
+verifications, results, report cards and the appeals now in the Decisions inbox were all
+produced by the legacy VerifierAssignment machinery, so its models, actions and seeds
+stay until demo history is regenerated through the pipeline. One consequence to know:
+the portal currently has no manual-assignment fallback in the interface; if the pipeline
+mis-assigns, the remedy is administrative until the pipeline grows its own reassignment
+control.

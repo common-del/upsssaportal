@@ -10,9 +10,9 @@ import { DecisionsInbox, type DecisionsTab, type IssuesWho } from '@/components/
  * every decision on the same six-slot card; "Rule oldest first" deals the same
  * cards one at a time. This page replaced the three sidebar entries Appeals,
  * Escalations and Discrepancies; their URLs and old query shapes land on the right
- * slice below. The legacy assignment queue is not a decision and lives on at
- * /app/sssa/appeals?tab=legacy; Audit stays its own page on purpose, being a blind
- * re-check of finished work rather than a pending ruling.
+ * slice below. The legacy manual-assignment queue's window is retired outright (its
+ * data still feeds results and appeals); Audit stays its own page on purpose, being
+ * a blind re-check of finished work rather than a pending ruling.
  */
 export default async function DecisionsPage({
   searchParams,
@@ -47,14 +47,6 @@ export default async function DecisionsPage({
       </header>
 
       <DecisionsInbox data={data} initialTab={tab} initialWho={who} initialFocus={focus} />
-
-      <p className="text-[12px] text-gray-400">
-        Looking for manual verifier assignment? That is not a decision and lives on the{' '}
-        <Link href="/app/sssa/appeals?tab=legacy" className="underline hover:text-gray-600">
-          legacy assignment queue
-        </Link>
-        .
-      </p>
     </div>
   );
 }

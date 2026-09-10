@@ -1,17 +1,10 @@
 import { redirect } from 'next/navigation';
 
 /**
- * The page once called Verification. Its appeals half now lives in the Decisions
- * inbox; its manual assignment half is the legacy queue at /app/sssa/appeals. This
- * redirect preserves what the caller was looking at: a link without ?tab= meant the
- * old first tab, the assignment queue.
+ * The page once called Verification. Appeals live in the Decisions inbox; the
+ * manual assignment queue it also carried is retired outright, so every old link
+ * lands on Decisions.
  */
-export default async function VerificationMovedPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const sp = await searchParams;
-  const wantsAppeals = sp.tab === 'appeals' || sp.tab === 'decide' || sp.tab === 'appealed';
-  redirect(wantsAppeals ? '/app/sssa/decisions?tab=appeals' : '/app/sssa/appeals?tab=legacy');
+export default function VerificationMovedPage() {
+  redirect('/app/sssa/decisions?tab=appeals');
 }

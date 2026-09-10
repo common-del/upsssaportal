@@ -173,15 +173,6 @@ export default async function VerifierProfilePage({
           >
             Edit
           </Link>
-          {p.role === 'VERIFIER' && (
-            <Link
-              href="/app/sssa/appeals?tab=legacy"
-              className="rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-white"
-              style={{ background: NAVY }}
-            >
-              Assign schools
-            </Link>
-          )}
         </div>
       </div>
 

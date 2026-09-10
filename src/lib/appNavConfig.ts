@@ -42,9 +42,10 @@ export type NavSection = { label?: string; items: NavItem[] };
  *
  * Decisions replaced three entries — Appeals, Escalations and Discrepancies — that were one
  * page wearing three names: a list of rulings waiting on the same person. The inbox merges
- * them worst-first, and the layout injects a live count as its badge. The legacy assignment
- * queue keeps /app/sssa/appeals?tab=legacy but earns no entry: it is on the way out, and
- * the Decisions page links to it.
+ * them worst-first, and the layout injects a live count as its badge. The legacy manual
+ * assignment queue has no window at all any more: the pathway is deprecated, its seeded
+ * backlog was noise, and every old URL for it redirects to Decisions. Its data still feeds
+ * the cycle's results and appeals.
  */
 export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
   {

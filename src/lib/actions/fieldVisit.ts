@@ -63,6 +63,16 @@ export type FieldIndicator = {
   observedLevel: number | null;
   note: string | null;
   photoBlobUrl: string | null;
+  /** What the desk screening said about this indicator, when it said anything other than
+   *  "the evidence supports the level". The verifier's briefing, never the school's: no
+   *  school-facing screen renders a desk decision, and this shape only exists behind the
+   *  reveal gate. Null means the desk had no quarrel with the claim. */
+  deskFlag: {
+    decision: 'EVIDENCE_INSUFFICIENT' | 'EVIDENCE_CONTRADICTS_LEVEL' | 'EVIDENCE_MISSING';
+    note: string | null;
+    /** The flag was escalated and the SSSA has ruled on it; the ruling is in the note. */
+    ruledBySssa: boolean;
+  } | null;
 };
 
 export type FieldVisitCase = {
@@ -89,6 +99,8 @@ export type FieldVisitCase = {
   };
   /** Indicators where what was seen differs from what was claimed. */
   discrepancyCount: number;
+  /** Indicators carrying a desk screening flag, for the briefing strip. */
+  deskFlagCount: number;
 };
 
 export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | null> {
@@ -129,8 +141,14 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
     },
   });
 
-  const [findings, spotChecks, config] = await Promise.all([
+  const [findings, deskFlags, spotChecks, config] = await Promise.all([
     prisma.fieldFinding.findMany({ where: { visitId } }),
+    // The online cell's flags on this case, joined in as the field verifier's briefing. Only
+    // the non-supporting decisions travel: a clean desk decision is not a flag.
+    prisma.deskScreeningDecision.findMany({
+      where: { runId: visit.runId, decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' } },
+      select: { parameterId: true, decision: true, rationale: true, escalated: true, escalatedAt: true },
+    }),
     prisma.studentSpotCheck.findMany({ where: { visitId }, orderBy: [{ classLevel: 'asc' }, { rollPosition: 'asc' }] }),
     prisma.programmeConfig.findUnique({
       where: { id: 'current' },
@@ -144,6 +162,7 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
   ]);
 
   const findingBy = new Map(findings.map((f) => [f.parameterId, f]));
+  const deskFlagBy = new Map(deskFlags.map((d) => [d.parameterId, d]));
 
   // A non-submitter has no responses, and it is one of the reasons a school is visited. The
   // indicator list then comes from the framework itself, with nothing claimed against any of
@@ -177,6 +196,7 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
     .map(({ parameter: p, selectedKey }) => {
       const claimed = p.options.find((o) => o.key === selectedKey);
       const f = findingBy.get(p.id);
+      const flag = deskFlagBy.get(p.id);
       return {
         parameterId: p.id,
         code: p.code,
@@ -189,6 +209,19 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
         observedLevel: f?.observedLevel ?? null,
         note: f?.note ?? null,
         photoBlobUrl: f?.photoBlobUrl ?? null,
+        deskFlag: flag
+          ? {
+              // The query excludes the supporting decision, so the cast only narrows.
+              decision: flag.decision as
+                | 'EVIDENCE_INSUFFICIENT'
+                | 'EVIDENCE_CONTRADICTS_LEVEL'
+                | 'EVIDENCE_MISSING',
+              note: flag.rationale,
+              // Escalated once, no longer frozen: the supervisor's ruling was appended to the
+              // rationale when the escalation was resolved.
+              ruledBySssa: flag.escalatedAt !== null && !flag.escalated,
+            }
+          : null,
       };
     })
     .sort((a, b) => codeOrder(a.code, b.code));
@@ -246,6 +279,7 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
     discrepancyCount: indicators.filter(
       (i) => i.observedLevel !== null && i.claimedLevel !== null && i.observedLevel !== i.claimedLevel,
     ).length,
+    deskFlagCount: indicators.filter((i) => i.deskFlag !== null).length,
   };
 }
 

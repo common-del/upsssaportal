@@ -254,6 +254,7 @@ export async function getMyAssignments(): Promise<Assignment[]> {
     orderBy: { notifiedDate: 'asc' },
     select: {
       id: true,
+      runId: true,
       districtCode: true,
       travelWindowStart: true,
       travelWindowEnd: true,
@@ -274,6 +275,21 @@ export async function getMyAssignments(): Promise<Assignment[]> {
   const districts = await prisma.district.findMany({ select: { code: true, nameEn: true } });
   const districtNameBy = new Map(districts.map((d) => [d.code, d.nameEn]));
 
+  // What the desk screening flagged, as a count per case. Safe to carry on a sealed card: the
+  // number of flags identifies no school. The flags themselves come from getFieldVisit, which
+  // sits behind the reveal gate.
+  const flagged = visits.length
+    ? await prisma.deskScreeningDecision.groupBy({
+        by: ['runId'],
+        where: {
+          runId: { in: visits.map((v) => v.runId) },
+          decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' },
+        },
+        _count: { _all: true },
+      })
+    : [];
+  const deskFlagCountBy = new Map(flagged.map((f) => [f.runId, f._count._all]));
+
   const now = new Date();
   return visits.map((v) =>
     assignmentFor(
@@ -287,6 +303,7 @@ export async function getMyAssignments(): Promise<Assignment[]> {
         revealAt: v.revealAt,
         conflictDeclaredAt: v.conflictDeclaredAt,
         recusedAt: v.recusedAt,
+        deskFlagCount: deskFlagCountBy.get(v.runId) ?? 0,
       },
       {
         udise: v.run.school.udise,

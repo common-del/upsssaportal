@@ -95,6 +95,15 @@ type LocalSpot = {
   unavailable: boolean;
 };
 
+/** The desk decision, in the words a person standing in a corridor can act on. */
+const DESK_FLAG_LABELS: Record<string, string> = {
+  EVIDENCE_INSUFFICIENT: 'Evidence insufficient',
+  EVIDENCE_CONTRADICTS_LEVEL: 'Evidence contradicts the level',
+  EVIDENCE_MISSING: 'Evidence missing',
+};
+
+const NAVY_WASH = '#EEF2F9';
+
 const spotKeyOf = (classLevel: number, rollPosition: number) => `${classLevel}:${rollPosition}`;
 const isTested = (s: LocalSpot | undefined) =>
   !!s && s.reading !== null && s.writing !== null && s.numeracy !== null;
@@ -140,6 +149,7 @@ export function FieldVisitWorkspace({ visit }: { visit: FieldVisitCase }) {
   const [signedResult, setSignedResult] = useState<{ raised: number; routedTo: string } | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [photoErrors, setPhotoErrors] = useState<Record<string, string>>({});
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
 
   const { status, signOffCheck, online, syncing, add, flushNow } = useSyncQueue(
     visit.visitId,
@@ -355,6 +365,35 @@ export function FieldVisitWorkspace({ visit }: { visit: FieldVisitCase }) {
         </div>
       </div>
 
+      {/* The desk screening briefing. Navy inside gold: the notes come from the other cell. */}
+      {visit.deskFlagCount > 0 && (
+        <div className="rounded-xl border-2 px-4 py-3" style={{ borderColor: GOLD_TINT, backgroundColor: GOLD_WASH }}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-bold" style={{ color: GOLD_DARK }}>
+              Desk screening flagged {visit.deskFlagCount}{' '}
+              {visit.deskFlagCount === 1 ? 'indicator' : 'indicators'} on this school. Check those
+              with particular care.
+            </p>
+            <button
+              type="button"
+              onClick={() => setFlaggedOnly((v) => !v)}
+              className="min-h-10 rounded-lg border-2 px-4 py-2 text-sm font-bold"
+              style={
+                flaggedOnly
+                  ? { backgroundColor: NAVY_DEEP, borderColor: NAVY_DEEP, color: 'white' }
+                  : { borderColor: NAVY_DEEP, color: NAVY_DEEP, backgroundColor: 'white' }
+              }
+            >
+              {flaggedOnly ? 'Showing flagged only. Show all' : 'Show flagged only'}
+            </button>
+          </div>
+          <p className="mt-1 text-xs" style={{ color: GOLD_DARK }}>
+            The flags are your briefing, not the school&apos;s: the school has not seen them and no
+            school screen shows them. Grade what you see; the flag tells you where to look hardest.
+          </p>
+        </div>
+      )}
+
       {signedOffAt && (
         <div className="rounded-xl border-2 p-4" style={{ borderColor: GREEN, backgroundColor: GREEN_WASH }}>
           <p className="text-base font-bold" style={{ color: GREEN }}>
@@ -419,13 +458,17 @@ export function FieldVisitWorkspace({ visit }: { visit: FieldVisitCase }) {
         </div>
       </div>
 
-      {/* Indicators, by domain */}
-      {[...byDomain.entries()].map(([domain, indicators]) => (
+      {/* Indicators, by domain. The flagged-only view narrows what is listed, never what is
+          counted: progress and sign-off always run over the full indicator set. */}
+      {[...byDomain.entries()].map(([domain, indicators]) => {
+        const shown = flaggedOnly ? indicators.filter((i) => i.deskFlag !== null) : indicators;
+        if (shown.length === 0) return null;
+        return (
         <section key={domain} className="space-y-3">
           <h2 className="text-base font-bold" style={{ color: NAVY_DEEP }}>
             {domain}
           </h2>
-          {indicators.map((indicator) => (
+          {shown.map((indicator) => (
             <IndicatorCard
               key={indicator.parameterId}
               indicator={indicator}
@@ -459,7 +502,8 @@ export function FieldVisitWorkspace({ visit }: { visit: FieldVisitCase }) {
             />
           ))}
         </section>
-      ))}
+        );
+      })}
 
       {/* Student spot check */}
       <section className="space-y-3">
@@ -608,7 +652,10 @@ function IndicatorCard({
   const photoReady = local.observedLevel !== null && online && !readOnly;
 
   return (
-    <div className="rounded-xl border-2 bg-white p-4" style={{ borderColor: differs ? RED : '#E5E7EB' }}>
+    <div
+      className="rounded-xl border-2 bg-white p-4"
+      style={{ borderColor: differs ? RED : indicator.deskFlag ? GOLD : '#E5E7EB' }}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-mono text-xs font-bold" style={{ color: GOLD_DARK }}>
@@ -619,11 +666,18 @@ function IndicatorCard({
             {indicator.titleHi}
           </p>
         </div>
-        {differs && (
-          <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: RED }}>
-            Differs from the claim
-          </span>
-        )}
+        <div className="flex flex-wrap gap-1.5">
+          {indicator.deskFlag && (
+            <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: NAVY_DEEP }}>
+              Flagged at desk
+            </span>
+          )}
+          {differs && (
+            <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: RED }}>
+              Differs from the claim
+            </span>
+          )}
+        </div>
       </div>
 
       <p className="mt-2 text-sm font-semibold" style={{ color: NAVY_DEEP }}>
@@ -631,6 +685,25 @@ function IndicatorCard({
           ? `School claimed Level ${indicator.claimedLevel}: ${indicator.claimedLabelEn ?? ''}`
           : 'The school made no claim. This school did not submit a self assessment.'}
       </p>
+
+      {/* The other cell's note, kept in the desk track's navy so it reads as received
+          intelligence rather than as this verifier's own finding. */}
+      {indicator.deskFlag && (
+        <div className="mt-3 rounded-lg border-l-4 p-3" style={{ borderColor: NAVY_DEEP, backgroundColor: NAVY_WASH }}>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: NAVY_DEEP }}>
+            Desk screening: {DESK_FLAG_LABELS[indicator.deskFlag.decision] ?? indicator.deskFlag.decision}
+            {indicator.deskFlag.ruledBySssa && ' · ruled by SSSA'}
+          </p>
+          {indicator.deskFlag.note && (
+            <p className="mt-1 text-sm" style={{ color: NAVY_DEEP }}>
+              {indicator.deskFlag.note}
+            </p>
+          )}
+          <p className="mt-1 text-xs" style={{ color: INK_MUTED }}>
+            Not visible to the school.
+          </p>
+        </div>
+      )}
 
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         {indicator.levels.map((level) => {

@@ -426,3 +426,45 @@ guards cohort assignment and field visit actions, the legacy assessment actions 
 the legacy VERIFIER role, and requireVerifier itself dropped the retired SUPERVISOR and
 AUDIT_CELL roles. The walkthrough and field actions' existing profile-cell checks remain as
 a second lock.
+
+## 16. The field visit briefing and post-inspection appeals, decided 10 September 2026
+
+SSSA asked that whatever the online screener flagged reach the on-ground verifier, and
+that appeals be visible to the verifier they concern. Two rules shaped the build, both
+SSSA's own corrections during design review: a school can appeal only after the on-ground
+assessment, so no appeal exists at inspection time and nothing appeal-shaped appears in
+the visit workspace; and a school never sees the desk screening, so the flags travel to
+the field verifier and to no one else.
+
+The desk briefing rides the reveal mechanism rather than weakening it. A sealed
+assignment now carries one new fact, a count: "N indicators flagged at desk screening
+wait behind the seal". A count names no school and no indicator, so the sealed type's
+promise holds; the tests pin this. The flags themselves open with the school, inside the
+visit workspace: a strip under the school header gives the count and a flagged-only
+toggle, and each flagged indicator carries the desk decision, the screener's rationale
+(with the SSSA's ruling appended where the flag had been escalated and ruled), a "ruled
+by SSSA" mark, and the line "Not visible to the school". The note is styled in the desk
+track's navy inside the field track's gold, so it reads as received intelligence, not as
+the field verifier's own finding. The flagged-only toggle narrows what is listed, never
+what is counted: progress and sign-off still run over every indicator.
+
+Appeals appear after the fact, on the on-ground verifier's Overview: "Appeals on your
+inspections" lists appeals schools filed against visits this verifier signed off, waiting
+ones first, then decided ones with the per-indicator outcome ("upheld as you found it" /
+"revised to the school's level"). Read-only by design; deciding appeals is the SSSA's
+Decisions page, and the same waiting appeal shows there.
+
+Fixing the visibility exposed an eligibility gap: appeal eligibility keyed only on the
+legacy VerificationSubmission, so no school verified through the pipeline could appeal at
+all. Eligibility now also accepts a published run resting on a signed-off field visit,
+with the five-day window anchored to publication, the first moment the school can see the
+result it would contest. A desk-only publication is deliberately not appealable: the
+school never saw the desk screening, so there is nothing for it to argue against. The
+appeal form's diff likewise reads the visit's findings (levels translated to option keys)
+where a signed-off visit exists, falling back to the legacy submission otherwise.
+
+Demo data comes from a separately guarded seed (seedFieldAppealsDemo), because the
+pipeline demo's marker already exists in the production database and code added inside it
+would never run: field1 gains one submitted appeal awaiting the SSSA and one decided
+mixed (one indicator kept, one revised), built on the pipeline demo's published runs and
+coherent with their discrepancy records.

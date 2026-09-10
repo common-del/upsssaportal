@@ -80,6 +80,20 @@ function SealedCard({ assignment }: { assignment: Assignment & { state: 'SEALED'
             district and open this card on the morning of the inspection.
           </p>
         </div>
+        {/* A count is the most the sealed card may say: it names no school and no indicator. */}
+        {assignment.deskFlagCount > 0 && (
+          <div className="border-t-2 border-dashed pt-3" style={{ borderColor: GOLD_TINT }}>
+            <p className="text-sm font-bold" style={{ color: NAVY_DEEP }}>
+              {assignment.deskFlagCount}{' '}
+              {assignment.deskFlagCount === 1 ? 'indicator' : 'indicators'} flagged at desk
+              screening wait behind the seal
+            </p>
+            <p className="mt-1 text-xs" style={{ color: INK_MUTED }}>
+              The online cell&apos;s notes open with the school on reveal morning, inside the
+              visit workspace. The school has not seen them.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -29,6 +29,10 @@ export type SealedAssignment = {
   notifiedDate: string;
   /** When the school unlocks, so the field app can show a countdown without knowing more. */
   revealAt: string;
+  /** How many indicators the desk screening flagged on this case. A count and nothing else:
+   *  it names no school and no indicator, so it can sit on the sealed shape without weakening
+   *  the type's promise. The flags themselves open with the school, inside the visit. */
+  deskFlagCount: number;
 };
 
 /** After the gate. */
@@ -41,6 +45,7 @@ export type RevealedAssignment = {
   travelWindowEnd: string;
   notifiedDate: string;
   revealAt: string;
+  deskFlagCount: number;
   schoolUdise: string;
   schoolName: string;
   blockName: string;
@@ -109,6 +114,9 @@ export function assignmentFor(
     revealAt: Date;
     conflictDeclaredAt: Date | null;
     recusedAt: Date | null;
+    /** Supplied by the caller, like districtName: how many desk screening decisions on this
+     *  case were anything other than "supports the level". */
+    deskFlagCount: number;
   },
   school: { udise: string; nameEn: string; blockName: string; addressEn: string | null } | null,
   now: Date = new Date(),
@@ -121,6 +129,7 @@ export function assignmentFor(
     travelWindowEnd: visit.travelWindowEnd.toISOString(),
     notifiedDate: visit.notifiedDate.toISOString(),
     revealAt: visit.revealAt.toISOString(),
+    deskFlagCount: visit.deskFlagCount,
   };
 
   // Sealed unless both conditions hold: the clock has passed and the caller actually supplied a

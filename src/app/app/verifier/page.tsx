@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CheckCircle2, Clock, Circle } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getVerifierAssignments } from '@/lib/actions/verification';
+import { getAppealsOnMyInspections, type InspectionAppeal } from '@/lib/verification/inspectionAppeals';
 import { brandHrefForRole } from '@/lib/appNavConfig';
 
 const VERIFIER_PORTAL_ROLES = new Set(['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER']);
@@ -186,10 +187,13 @@ async function FieldOverview({
   userName: string;
   blocked: boolean;
 }) {
-  const visits = await prisma.fieldVisit.findMany({
-    where: { profileId, recusedAt: null },
-    select: { revealAt: true, signedOffAt: true },
-  });
+  const [visits, appeals] = await Promise.all([
+    prisma.fieldVisit.findMany({
+      where: { profileId, recusedAt: null },
+      select: { revealAt: true, signedOffAt: true },
+    }),
+    getAppealsOnMyInspections(profileId),
+  ]);
   const now = Date.now();
   const open = visits.filter((v) => !v.signedOffAt);
   const revealed = open.filter((v) => v.revealAt.getTime() <= now).length;
@@ -241,6 +245,27 @@ async function FieldOverview({
         />
       </div>
 
+      {/* Appeals exist only after a visit: a school contests a published result, never an
+          inspection in progress and never the desk screening it has not seen. Read-only here,
+          because appeals are the SSSA's to decide; the verifier is shown the outcome for the
+          record. Rendered only when there is something to show. */}
+      {appeals.length > 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: NAVY_DEEP }}>
+              Appeals on your inspections
+            </h2>
+            <p className="mt-0.5 text-sm" style={{ color: INK_MUTED }}>
+              Schools can contest a published result after your visit. The SSSA decides these, not
+              you; they are shown here so you know how your calls stood up.
+            </p>
+          </div>
+          {appeals.map((appeal) => (
+            <InspectionAppealCard key={`${appeal.schoolUdise}:${appeal.filedOn}`} appeal={appeal} />
+          ))}
+        </section>
+      )}
+
       <p className="text-sm" style={{ color: INK_MUTED }}>
         Everything happens in{' '}
         <Link href="/app/verifier/assignments" className="font-bold underline" style={{ color: GOLD_DARK }}>
@@ -248,6 +273,71 @@ async function FieldOverview({
         </Link>
         . The visit workspace works offline once a visit is open; photographs need signal.
       </p>
+    </div>
+  );
+}
+
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+function InspectionAppealCard({ appeal }: { appeal: InspectionAppeal }) {
+  const pending = appeal.status === 'SUBMITTED';
+  const chip = pending
+    ? { label: 'Waiting on SSSA', colour: RED }
+    : appeal.revisedCount === 0
+      ? { label: 'Upheld as you found it', colour: GREEN }
+      : appeal.keptCount === 0
+        ? { label: 'Revised to the school’s levels', colour: RED }
+        : { label: 'Partly revised', colour: GOLD_DARK };
+
+  return (
+    <div className="rounded-xl border-2 border-gray-200 bg-white p-4" style={{ borderLeft: `4px solid ${chip.colour}` }}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-base font-bold" style={{ color: NAVY_DEEP }}>
+            {appeal.schoolName}
+          </p>
+          <p className="mt-0.5 text-xs" style={{ color: INK_MUTED }}>
+            Inspected {shortDate(appeal.inspectedOn)} · appeal filed {shortDate(appeal.filedOn)}
+            {appeal.decidedOn && <> · decided {shortDate(appeal.decidedOn)}</>}
+            {' · '}
+            {appeal.items.length} {appeal.items.length === 1 ? 'indicator' : 'indicators'} contested
+          </p>
+        </div>
+        <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: chip.colour }}>
+          {chip.label}
+        </span>
+      </div>
+
+      <ul className="mt-3 space-y-1.5">
+        {appeal.items.map((item) => (
+          <li key={item.code} className="text-sm">
+            <span className="font-mono text-xs font-bold" style={{ color: GOLD_DARK }}>
+              {item.code}
+            </span>{' '}
+            <span className="text-gray-800">{item.titleEn}</span>
+            {!pending && (
+              <span
+                className="ml-1 font-semibold"
+                style={{ color: item.decision === 'KEEP_VERIFIER' ? GREEN : item.decision === 'ACCEPT_SCHOOL' ? RED : INK_MUTED }}
+              >
+                {item.decision === 'KEEP_VERIFIER'
+                  ? '· upheld as you found it'
+                  : item.decision === 'ACCEPT_SCHOOL'
+                    ? '· revised to the school’s level'
+                    : '· not yet ruled'}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {pending && (
+        <p className="mt-2 text-xs" style={{ color: INK_MUTED }}>
+          Nothing is needed from you. The SSSA rules on the school&apos;s justification and your
+          recorded findings, including your notes and photographs.
+        </p>
+      )}
     </div>
   );
 }

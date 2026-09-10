@@ -19,13 +19,34 @@ export async function getAppealEligibility(cycleId: string, schoolUdise: string)
   if (!actor) return { eligible: false as const, reason: 'not_authorised' as const };
   if (actor.schoolUdise && actor.schoolUdise !== schoolUdise) return { eligible: false as const, reason: 'not_authorised' as const };
 
-  const vSub = await prisma.verificationSubmission.findFirst({
-    where: { cycleId, schoolUdise, status: 'SUBMITTED' },
-    select: { submittedAt: true },
-  });
-  if (!vSub || !vSub.submittedAt) return { eligible: false as const, reason: 'no_verification' as const };
+  // Two verification pathways can open the window. The current pipeline: a published run whose
+  // result rests on a signed-off field visit, anchored to publication because that is the first
+  // moment the school can see the result it would contest. A desk-only publication is not
+  // appealable: the desk screening is never shown to the school, so there is nothing for it to
+  // argue against. The legacy pathway keys on the old VerificationSubmission and stays for the
+  // seeded history that still renders from it.
+  const [run, vSub] = await Promise.all([
+    prisma.assessmentCycleRun.findFirst({
+      where: {
+        cycleId,
+        schoolUdise,
+        state: 'PUBLISHED',
+        publishedAt: { not: null },
+        fieldVisits: { some: { signedOffAt: { not: null } } },
+      },
+      orderBy: { publishedAt: 'desc' },
+      select: { publishedAt: true },
+    }),
+    prisma.verificationSubmission.findFirst({
+      where: { cycleId, schoolUdise, status: 'SUBMITTED' },
+      select: { submittedAt: true },
+    }),
+  ]);
 
-  const deadline = new Date(vSub.submittedAt.getTime() + APPEAL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const anchor = run?.publishedAt ?? vSub?.submittedAt ?? null;
+  if (!anchor) return { eligible: false as const, reason: 'no_verification' as const };
+
+  const deadline = new Date(anchor.getTime() + APPEAL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const now = new Date();
   const expired = now > deadline;
 
@@ -38,7 +59,9 @@ export async function getAppealEligibility(cycleId: string, schoolUdise: string)
     eligible: !expired || !!existing,
     expired,
     deadline,
-    verifierSubmittedAt: vSub.submittedAt,
+    // Kept under its old name for the screens that read it: the moment the window anchors to,
+    // which is publication on the pipeline and the verifier's submission on the legacy path.
+    verifierSubmittedAt: anchor,
     existingAppeal: existing,
   };
 }
@@ -53,7 +76,7 @@ export async function getDifferingParameters(cycleId: string, schoolUdise: strin
   const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { category: true } });
   const catCode = CATEGORY_TO_CODE[school?.category ?? 'Primary'] ?? 'PRIMARY';
 
-  const [saSubmission, vSubmission, parameters] = await Promise.all([
+  const [saSubmission, vSubmission, fieldVisit, parameters] = await Promise.all([
     prisma.selfAssessmentSubmission.findUnique({
       where: { cycleId_schoolUdise: { cycleId, schoolUdise } },
       include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
@@ -62,11 +85,17 @@ export async function getDifferingParameters(cycleId: string, schoolUdise: strin
       where: { cycleId, schoolUdise, status: 'SUBMITTED' },
       include: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
     }),
+    // The pipeline's verifier record: the latest signed-off field visit's findings.
+    prisma.fieldVisit.findFirst({
+      where: { run: { cycleId, schoolUdise }, signedOffAt: { not: null } },
+      orderBy: { signedOffAt: 'desc' },
+      select: { findings: { select: { parameterId: true, observedLevel: true } } },
+    }),
     prisma.parameter.findMany({
       where: { frameworkId, isActive: true },
       select: {
         id: true, code: true, titleEn: true, titleHi: true, applicability: true,
-        options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { key: true, labelEn: true, labelHi: true } },
+        options: { where: { isActive: true }, orderBy: { order: 'asc' }, select: { key: true, order: true, labelEn: true, labelHi: true } },
         subDomain: { select: { domain: { select: { titleEn: true, titleHi: true } } } },
       },
     }),
@@ -75,8 +104,21 @@ export async function getDifferingParameters(cycleId: string, schoolUdise: strin
   const saMap = new Map<string, string>();
   if (saSubmission) for (const r of saSubmission.responses) saMap.set(r.parameterId, r.selectedOptionKey);
 
+  // The verifier's side of the diff. A field visit's findings are levels, not option keys, so
+  // they translate through each parameter's option order; the legacy submission already speaks
+  // in keys. The visit wins when both exist, because it is the pathway a published pipeline
+  // result actually rests on.
   const vMap = new Map<string, string>();
-  if (vSubmission) for (const r of vSubmission.responses) vMap.set(r.parameterId, r.selectedOptionKey);
+  if (fieldVisit && fieldVisit.findings.length > 0) {
+    const keyByOrder = new Map<string, string>();
+    for (const p of parameters) for (const o of p.options) keyByOrder.set(`${p.id}:${o.order}`, o.key);
+    for (const f of fieldVisit.findings) {
+      const key = keyByOrder.get(`${f.parameterId}:${f.observedLevel}`);
+      if (key) vMap.set(f.parameterId, key);
+    }
+  } else if (vSubmission) {
+    for (const r of vSubmission.responses) vMap.set(r.parameterId, r.selectedOptionKey);
+  }
 
   const applicable = parameters.filter((p) => (p.applicability as string[]).includes(catCode));
 

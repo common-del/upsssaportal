@@ -29,6 +29,7 @@ function visit(overrides: Partial<Parameters<typeof assignmentFor>[0]> = {}) {
     revealAt: REVEAL_AT,
     conflictDeclaredAt: null,
     recusedAt: null,
+    deskFlagCount: 3,
     ...overrides,
   };
 }
@@ -66,6 +67,15 @@ describe('the sealed payload carries no school identity', () => {
   it('stays sealed when the clock has passed but no school was supplied', () => {
     const a = assignmentFor(visit(), null, new Date('2026-08-22T00:00:00.000Z'));
     expect(a.state).toBe('SEALED');
+  });
+
+  // The one thing the desk may say through the seal is a number: enough to expect a briefing,
+  // not enough to guess a school.
+  it('carries the desk flag count on both sides of the gate', () => {
+    const sealed = assignmentFor(visit(), SCHOOL, new Date('2026-08-20T18:00:00.000Z'));
+    expect(sealed.deskFlagCount).toBe(3);
+    const revealed = assignmentFor(visit(), SCHOOL, new Date('2026-08-21T04:00:00.000Z'));
+    expect(revealed.deskFlagCount).toBe(3);
   });
 });
 

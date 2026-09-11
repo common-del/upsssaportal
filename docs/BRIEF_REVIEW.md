@@ -545,3 +545,20 @@ record. At five or fewer the bar does not render at all, and the empty page expl
 five day appeal window rather than dead-ending. A second guarded demo seed adds up to six
 more appeals against field1's published inspections (two waiting, four decided across two
 months and both outcomes) so the demo login actually crosses the find bar's threshold.
+
+## 20. The pre-visit school briefing, and the flag names its raiser, decided 11 September 2026
+
+Two SSSA corrections to the visit flow. First, before an inspection starts the verifier now
+gets a briefing: between the workspace header and the arrival button sits "Know the school
+before you walk in", six facts from the school's own record (category, management, students
+on roll, classes, when the self assessment was submitted, and the claimed level split), then
+the flag list as a checklist preview, each flag's reason in two words. It renders only after
+the school information has unlocked and only until arrival; once the visit is under way the
+flag strip and the inline notes carry the same intelligence.
+
+Second, the word "desk" is gone from everything the field verifier reads: the strip says
+"The online verifier flagged N indicators on this school", the indicator chip says "Flagged
+by online verifier", the navy note block is headed "Online verifier · <decision> · ruled by
+SSSA", and the sealed row's teaser and fact tile say the same. The internal pipeline keeps
+its names; only the copy changed, because a person who has never heard the phrase "desk
+screening" should still know exactly who flagged the indicator in front of them.

@@ -320,7 +320,7 @@ function UpcomingRow({ visit, open, onToggle }: { visit: UpcomingVisit; open: bo
             className="flex-none rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white"
             style={{ backgroundColor: NAVY_DEEP }}
           >
-            {visit.deskFlagCount} flagged at desk
+            {visit.deskFlagCount} flagged by online verifier
           </span>
         )}
         <span
@@ -339,7 +339,7 @@ function UpcomingRow({ visit, open, onToggle }: { visit: UpcomingVisit; open: bo
             <Fact k="Inspection day" v={`${weekdayOf(visit.notifiedDate)} ${shortDate(visit.notifiedDate)}`} />
             <Fact k="Information unlocks" v={`${timeOf(visit.revealAt)} on the day`} />
             <Fact
-              k="Flagged at desk"
+              k="Flagged by online verifier"
               v={visit.deskFlagCount > 0 ? `${visit.deskFlagCount} ${visit.deskFlagCount === 1 ? 'indicator' : 'indicators'}` : 'None'}
             />
           </div>
@@ -358,11 +358,11 @@ function UpcomingRow({ visit, open, onToggle }: { visit: UpcomingVisit; open: bo
               <div className="mt-2.5 border-t-2 border-dashed pt-2.5" style={{ borderColor: GOLD_TINT }}>
                 <p className="text-[13px] font-extrabold" style={{ color: NAVY_DEEP }}>
                   {visit.deskFlagCount} {visit.deskFlagCount === 1 ? 'indicator' : 'indicators'} flagged
-                  at desk screening {visit.deskFlagCount === 1 ? 'waits' : 'wait'} behind the seal
+                  by the online verifier {visit.deskFlagCount === 1 ? 'waits' : 'wait'} behind the seal
                 </p>
                 <p className="mt-1 text-xs" style={{ color: INK_MUTED }}>
-                  The online cell&apos;s notes open with the school on reveal morning, inside the
-                  visit workspace. The school has not seen them.
+                  The online verifier&apos;s notes open with the school information on reveal
+                  morning, inside the visit workspace. The school has not seen them.
                 </p>
               </div>
             )}

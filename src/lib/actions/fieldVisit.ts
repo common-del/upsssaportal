@@ -81,6 +81,16 @@ export type FieldVisitCase = {
   schoolUdise: string;
   blockName: string;
   districtName: string;
+  /** The pre-visit briefing: who this school is on paper. Facts from the school's own record,
+   *  shown only after the reveal, before arrival. */
+  briefing: {
+    category: string;
+    management: string | null;
+    totalStudents: number | null;
+    classesFrom: string | null;
+    classesTo: string | null;
+    selfAssessmentSubmittedAt: string | null;
+  };
   arrivedAt: string | null;
   signedOffAt: string | null;
   indicators: FieldIndicator[];
@@ -116,6 +126,8 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
         select: {
           udise: true,
           nameEn: true,
+          category: true,
+          management: true,
           block: { select: { nameEn: true } },
           district: { select: { nameEn: true } },
           profileDetail: { select: { totalStudents: true, classesFrom: true, classesTo: true } },
@@ -260,6 +272,14 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
     schoolUdise: run.school.udise,
     blockName: run.school.block.nameEn,
     districtName: run.school.district.nameEn,
+    briefing: {
+      category: run.school.category,
+      management: run.school.management,
+      totalStudents: detail?.totalStudents ?? null,
+      classesFrom: detail?.classesFrom ?? null,
+      classesTo: detail?.classesTo ?? null,
+      selfAssessmentSubmittedAt: submission?.submittedAt?.toISOString() ?? null,
+    },
     arrivedAt: visit.arrivedAt?.toISOString() ?? null,
     signedOffAt: visit.signedOffAt?.toISOString() ?? null,
     indicators,

@@ -95,14 +95,37 @@ type LocalSpot = {
   unavailable: boolean;
 };
 
-/** The desk decision, in the words a person standing in a corridor can act on. */
+/** The online verifier's decision, in the words a person standing in a corridor can act on. */
 const DESK_FLAG_LABELS: Record<string, string> = {
   EVIDENCE_INSUFFICIENT: 'Evidence insufficient',
   EVIDENCE_CONTRADICTS_LEVEL: 'Evidence contradicts the level',
   EVIDENCE_MISSING: 'Evidence missing',
 };
 
+/** The same decisions at briefing-list size: two words beside the indicator's name. */
+const SHORT_FLAG_LABELS: Record<string, string> = {
+  EVIDENCE_INSUFFICIENT: 'Insufficient',
+  EVIDENCE_CONTRADICTS_LEVEL: 'Contradicts the level',
+  EVIDENCE_MISSING: 'Evidence missing',
+};
+
 const NAVY_WASH = '#EEF2F9';
+
+const briefingDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+
+function BriefingFact({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="rounded-lg border-2 border-gray-200 bg-[#F8F9FB] px-2.5 py-2">
+      <p className="text-[10.5px] font-extrabold uppercase tracking-wide" style={{ color: INK_MUTED }}>
+        {k}
+      </p>
+      <p className="mt-0.5 text-sm font-bold" style={{ color: NAVY_DEEP }}>
+        {v}
+      </p>
+    </div>
+  );
+}
 
 const spotKeyOf = (classLevel: number, rollPosition: number) => `${classLevel}:${rollPosition}`;
 const isTested = (s: LocalSpot | undefined) =>
@@ -275,6 +298,19 @@ export function FieldVisitWorkspace({ visit }: { visit: FieldVisitCase }) {
     return groups;
   }, [visit.indicators]);
 
+  // The briefing's one-line picture of what the school claimed, e.g. "L3 38 · L2 33 · L1 18".
+  const claimSplit = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const i of visit.indicators) {
+      if (i.claimedLevel !== null) counts.set(i.claimedLevel, (counts.get(i.claimedLevel) ?? 0) + 1);
+    }
+    if (counts.size === 0) return 'No claims made';
+    return [3, 2, 1]
+      .filter((level) => (counts.get(level) ?? 0) > 0)
+      .map((level) => `L${level} ${counts.get(level)}`)
+      .join(' · ');
+  }, [visit.indicators]);
+
   const total = visit.indicators.length;
   const graded = visit.indicators.filter((i) => findings[i.parameterId]?.observedLevel != null).length;
   const discrepancies = visit.indicators.filter((i) => {
@@ -365,12 +401,86 @@ export function FieldVisitWorkspace({ visit }: { visit: FieldVisitCase }) {
         </div>
       </div>
 
-      {/* The desk screening briefing. Navy inside gold: the notes come from the other cell. */}
-      {visit.deskFlagCount > 0 && (
+      {/* The pre-visit briefing: who this school is on paper, and where the online verifier
+          smelt trouble. Renders only before arrival; once the visit starts, the strip and the
+          inline notes carry the same intelligence. */}
+      {!readOnly && arrivedAt === null && (
+        <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
+          <p className="text-[11px] font-extrabold uppercase tracking-widest" style={{ color: NAVY_DEEP }}>
+            Know the school before you walk in
+          </p>
+          <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <BriefingFact k="Category" v={visit.briefing.category} />
+            <BriefingFact k="Management" v={visit.briefing.management ?? 'Not recorded'} />
+            <BriefingFact
+              k="Students on roll"
+              v={
+                visit.briefing.totalStudents !== null
+                  ? visit.briefing.totalStudents.toLocaleString('en-IN')
+                  : 'Not recorded'
+              }
+            />
+            <BriefingFact
+              k="Classes"
+              v={
+                visit.briefing.classesFrom && visit.briefing.classesTo
+                  ? `${visit.briefing.classesFrom} to ${visit.briefing.classesTo}`
+                  : 'Not recorded'
+              }
+            />
+            <BriefingFact
+              k="Self assessment"
+              v={
+                visit.briefing.selfAssessmentSubmittedAt
+                  ? `Submitted ${briefingDate(visit.briefing.selfAssessmentSubmittedAt)}`
+                  : 'Not submitted'
+              }
+            />
+            <BriefingFact k="Claimed levels" v={claimSplit} />
+          </div>
+
+          {visit.deskFlagCount > 0 && (
+            <>
+              <p className="mt-4 text-[11px] font-extrabold uppercase tracking-widest" style={{ color: NAVY_DEEP }}>
+                Flagged by online verifier · {visit.deskFlagCount}{' '}
+                {visit.deskFlagCount === 1 ? 'indicator' : 'indicators'}
+              </p>
+              <div className="mt-1">
+                {visit.indicators
+                  .filter((i) => i.deskFlag !== null)
+                  .map((i) => (
+                    <div
+                      key={i.parameterId}
+                      className="flex items-baseline gap-2 border-t-2 border-[#EDEFF3] py-1.5 first:border-t-0"
+                    >
+                      <span className="flex-none font-mono text-[11px] font-extrabold" style={{ color: GOLD_DARK }}>
+                        {i.code}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[13px] font-semibold text-gray-800">
+                        {i.titleEn}
+                      </span>
+                      <span className="flex-none text-[11px] font-extrabold" style={{ color: NAVY_DEEP }}>
+                        {i.deskFlag ? (SHORT_FLAG_LABELS[i.deskFlag.decision] ?? '') : ''}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+              <p className="mt-2 text-xs" style={{ color: INK_MUTED }}>
+                Their full note appears on each of these indicators inside the checklist. The
+                school has not seen these flags and no school screen shows them.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* The flag strip carries the toggle once the visit is under way. Navy inside gold: the
+          notes come from the other cell. */}
+      {visit.deskFlagCount > 0 && (arrivedAt !== null || readOnly) && (
         <div className="rounded-xl border-2 px-4 py-3" style={{ borderColor: GOLD_TINT, backgroundColor: GOLD_WASH }}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-bold" style={{ color: GOLD_DARK }}>
-              Desk screening flagged {visit.deskFlagCount}{' '}
+              The online verifier flagged {visit.deskFlagCount}{' '}
               {visit.deskFlagCount === 1 ? 'indicator' : 'indicators'} on this school. Check those
               with particular care.
             </p>
@@ -669,7 +779,7 @@ function IndicatorCard({
         <div className="flex flex-wrap gap-1.5">
           {indicator.deskFlag && (
             <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: NAVY_DEEP }}>
-              Flagged at desk
+              Flagged by online verifier
             </span>
           )}
           {differs && (
@@ -691,7 +801,7 @@ function IndicatorCard({
       {indicator.deskFlag && (
         <div className="mt-3 rounded-lg border-l-4 p-3" style={{ borderColor: NAVY_DEEP, backgroundColor: NAVY_WASH }}>
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: NAVY_DEEP }}>
-            Desk screening: {DESK_FLAG_LABELS[indicator.deskFlag.decision] ?? indicator.deskFlag.decision}
+            Online verifier · {DESK_FLAG_LABELS[indicator.deskFlag.decision] ?? indicator.deskFlag.decision}
             {indicator.deskFlag.ruledBySssa && ' · ruled by SSSA'}
           </p>
           {indicator.deskFlag.note && (

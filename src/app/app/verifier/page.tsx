@@ -68,17 +68,27 @@ function Tile({
   detail,
   href,
   colour,
+  wash = false,
 }: {
-  value: number;
+  value: number | string;
   label: string;
   detail: string;
   href: string;
   colour: string;
+  /** The gold-washed variant, for the one tile that is a moment rather than a count. */
+  wash?: boolean;
 }) {
   return (
-    <Link href={href} className="block rounded-xl border-2 bg-white p-5 hover:border-gray-300" style={{ borderColor: '#E5E7EB' }}>
+    <Link
+      href={href}
+      className="block rounded-xl border-2 p-5 hover:border-gray-300"
+      style={{
+        borderColor: wash ? '#D0AD42' : '#E5E7EB',
+        backgroundColor: wash ? '#FDF8EC' : 'white',
+      }}
+    >
       <p className="text-3xl font-bold" style={{ color: colour }}>
-        {value.toLocaleString('en-IN')}
+        {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
       </p>
       <p className="mt-1 text-sm font-bold" style={{ color: NAVY_DEEP }}>
         {label}
@@ -187,21 +197,64 @@ async function FieldOverview({
   userName: string;
   blocked: boolean;
 }) {
-  const [visits, appeals] = await Promise.all([
+  const [visits, appeals, activeCycle, districtRows] = await Promise.all([
     prisma.fieldVisit.findMany({
       where: { profileId, recusedAt: null },
-      select: { revealAt: true, signedOffAt: true },
+      select: { id: true, districtCode: true, revealAt: true, arrivedAt: true, signedOffAt: true },
     }),
     getAppealsOnMyInspections(profileId),
+    prisma.cycle.findFirst({ where: { isActive: true }, select: { name: true } }),
+    prisma.district.findMany({ select: { code: true, nameEn: true } }),
   ]);
+  const districtNameBy = new Map(districtRows.map((d) => [d.code, d.nameEn]));
   const now = Date.now();
-  const open = visits.filter((v) => !v.signedOffAt);
-  const revealed = open.filter((v) => v.revealAt.getTime() <= now).length;
-  const sealed = open.filter((v) => v.revealAt.getTime() > now);
-  const nextReveal = sealed.length
-    ? sealed.reduce((min, v) => (v.revealAt < min ? v.revealAt : min), sealed[0]!.revealAt)
+
+  // The four working states, mutually exclusive; "pending" groups the two not-begun ones.
+  const doneCount = visits.filter((v) => v.signedOffAt !== null).length;
+  const inProgress = visits.filter((v) => !v.signedOffAt && v.arrivedAt !== null);
+  const ready = visits.filter(
+    (v) => !v.signedOffAt && !v.arrivedAt && v.revealAt.getTime() <= now,
+  );
+  const sealed = visits.filter(
+    (v) => !v.signedOffAt && !v.arrivedAt && v.revealAt.getTime() > now,
+  );
+  const pendingCount = ready.length + sealed.length;
+
+  const nextSealed = sealed.length
+    ? sealed.reduce((min, v) => (v.revealAt < min.revealAt ? v : min))
     : null;
-  const signedOff = visits.length - open.length;
+  const waitingAppeals = appeals.filter((a) => a.status === 'SUBMITTED').length;
+
+  // Per-district tallies for the ledger. A district row says what is left there, not just a count.
+  const byDistrict = new Map<string, DistrictTally>();
+  for (const v of visits) {
+    const tally =
+      byDistrict.get(v.districtCode) ??
+      ({
+        name: districtNameBy.get(v.districtCode) ?? v.districtCode,
+        total: 0,
+        done: 0,
+        inProgress: 0,
+        ready: 0,
+        sealedAt: [],
+      } satisfies DistrictTally);
+    tally.total += 1;
+    if (v.signedOffAt) tally.done += 1;
+    else if (v.arrivedAt) tally.inProgress += 1;
+    else if (v.revealAt.getTime() <= now) tally.ready += 1;
+    else tally.sealedAt.push(v.revealAt);
+    byDistrict.set(v.districtCode, tally);
+  }
+  // Districts with live work first: mid-visit, then ready, then sealed, then finished.
+  const tallyWeight = (t: DistrictTally) =>
+    t.inProgress > 0 ? 0 : t.ready > 0 ? 1 : t.sealedAt.length > 0 ? 2 : 3;
+  const ledger = [...byDistrict.values()].sort(
+    (a, b) => tallyWeight(a) - tallyWeight(b) || b.total - a.total || a.name.localeCompare(b.name),
+  );
+
+  // The one case where a tile can be a door to the exact room: a single visit under way.
+  const inProgressHref =
+    inProgress.length === 1 ? `/app/verifier/visit/${inProgress[0]!.id}` : '/app/verifier/assignments';
 
   return (
     <div className="space-y-5">
@@ -210,47 +263,109 @@ async function FieldOverview({
           Welcome, {userName}
         </h1>
         <p className="mt-1 text-sm" style={{ color: INK_MUTED }}>
-          Field cell. You are told the district and travel window in advance; the school
-          information unlocks at 7 in the morning on the day of the inspection.
+          Field cell
+          {activeCycle ? ` · ${activeCycle.name} cycle` : ''}
+          {ledger.length > 0
+            ? ` · ${ledger.length} ${ledger.length === 1 ? 'district' : 'districts'}`
+            : ''}
         </p>
       </div>
 
       {blocked && <BlockedBanner />}
 
+      {/* Six tiles, each a door: the five numbers SSSA asked to track, plus the next unlock. */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Tile
-          value={revealed}
-          label="Ready to visit"
-          detail="Revealed and waiting. Open the card, declare conflicts, and begin."
+          value={visits.length}
+          label="Assigned"
+          detail={`This cycle, ${ledger.length} ${ledger.length === 1 ? 'district' : 'districts'}`}
           href="/app/verifier/assignments"
-          colour={revealed > 0 ? GOLD : INK_MUTED}
+          colour={NAVY_DEEP}
         />
         <Tile
-          value={sealed.length}
-          label="Sealed assignments"
-          detail={
-            nextReveal
-              ? `Next unlocks ${nextReveal.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at 07:00.`
-              : 'District and travel window only, until reveal day.'
-          }
+          value={pendingCount}
+          label="Pending"
+          detail="Sealed or not begun"
           href="/app/verifier/assignments"
-          colour={NAVY}
+          colour={pendingCount > 0 ? GOLD_DARK : INK_MUTED}
         />
         <Tile
-          value={signedOff}
-          label="Signed off"
-          detail="Completed visits on your record."
+          value={inProgress.length}
+          label="In progress"
+          detail="Arrived, not signed off"
+          href={inProgressHref}
+          colour={inProgress.length > 0 ? GOLD : INK_MUTED}
+        />
+        <Tile
+          value={doneCount}
+          label="Done"
+          detail="Signed off"
           href="/app/verifier/assignments"
           colour={GREEN}
         />
+        <Tile
+          value={appeals.length}
+          label="Appeals"
+          detail={
+            waitingAppeals > 0
+              ? `${waitingAppeals} waiting on SSSA`
+              : appeals.length > 0
+                ? 'All decided'
+                : 'None on your inspections'
+          }
+          href="#appeals"
+          colour={waitingAppeals > 0 ? RED : INK_MUTED}
+        />
+        <Tile
+          value={nextSealed ? istTime(nextSealed.revealAt) : 'None'}
+          label="Next unlock"
+          detail={
+            nextSealed
+              ? `${capitalise(unlockDayPhrase(nextSealed.revealAt))}, ${districtNameBy.get(nextSealed.districtCode) ?? nextSealed.districtCode}`
+              : 'No sealed assignments right now'
+          }
+          href="/app/verifier/assignments"
+          colour={GOLD_DARK}
+          wash
+        />
       </div>
+
+      {ledger.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold" style={{ color: NAVY_DEEP }}>
+            Your districts
+          </h2>
+          {ledger.map((district) => (
+            <Link
+              key={district.name}
+              href="/app/verifier/assignments"
+              className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3 hover:border-gray-300"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold" style={{ color: NAVY_DEEP }}>
+                  {district.name}
+                </span>
+                <span className="mt-0.5 block text-xs" style={{ color: INK_MUTED }}>
+                  {districtLine(district)}
+                </span>
+              </span>
+              <span className="flex-none text-sm font-bold" style={{ color: NAVY_DEEP }}>
+                {district.total.toLocaleString('en-IN')} {district.total === 1 ? 'school' : 'schools'}
+              </span>
+              <span aria-hidden className="flex-none text-lg font-bold" style={{ color: INK_MUTED }}>
+                ›
+              </span>
+            </Link>
+          ))}
+        </section>
+      )}
 
       {/* Appeals exist only after a visit: a school contests a published result, never an
           inspection in progress and never the desk screening it has not seen. Read-only here,
           because appeals are the SSSA's to decide; the verifier is shown the outcome for the
           record. Rendered only when there is something to show. */}
       {appeals.length > 0 && (
-        <section className="space-y-3">
+        <section id="appeals" className="space-y-3">
           <div>
             <h2 className="text-lg font-bold" style={{ color: NAVY_DEEP }}>
               Appeals on your inspections
@@ -266,15 +381,53 @@ async function FieldOverview({
         </section>
       )}
 
-      <p className="text-sm" style={{ color: INK_MUTED }}>
-        Everything happens in{' '}
-        <Link href="/app/verifier/assignments" className="font-bold underline" style={{ color: GOLD_DARK }}>
-          Field Assignments
-        </Link>
-        . The visit workspace works offline once a visit is open; photographs need signal.
-      </p>
     </div>
   );
+}
+
+const IST = 'Asia/Kolkata';
+
+const istTime = (d: Date) =>
+  d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: IST });
+
+/** Calendar-day difference in IST, so "tomorrow" flips at midnight in India, not in UTC. */
+function istDaysUntil(d: Date) {
+  const istDay = (t: number) => Math.floor((t + 5.5 * 3_600_000) / 86_400_000);
+  return istDay(d.getTime()) - istDay(Date.now());
+}
+
+function unlockDayPhrase(d: Date): string {
+  const days = istDaysUntil(d);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST });
+}
+
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+type DistrictTally = {
+  name: string;
+  total: number;
+  done: number;
+  inProgress: number;
+  ready: number;
+  sealedAt: Date[];
+};
+
+/** The ledger row's second line: what is left in this district, in working order. */
+function districtLine(t: DistrictTally): string {
+  if (t.done === t.total) return t.total === 1 ? 'Done' : `All ${t.total} done`;
+  const parts: string[] = [];
+  if (t.done > 0) parts.push(`${t.done} done`);
+  if (t.inProgress > 0) parts.push(`${t.inProgress} mid-visit`);
+  if (t.ready > 0) parts.push(`${t.ready} ready to begin`);
+  if (t.sealedAt.length > 0) {
+    const earliest = t.sealedAt.reduce((min, d) => (d < min ? d : min));
+    parts.push(
+      `${t.sealedAt.length} sealed, information unlocks ${unlockDayPhrase(earliest)}`,
+    );
+  }
+  return parts.join(' · ');
 }
 
 const shortDate = (iso: string) =>

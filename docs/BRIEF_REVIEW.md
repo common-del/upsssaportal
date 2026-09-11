@@ -499,3 +499,25 @@ decision to take knowingly.
 AssignmentCard.tsx is deleted; the screen renders through FieldAssignmentsList, whose
 sealed rows are built from the sealed assignment shape and so cannot name a school. All
 dates and times on the screen render in IST regardless of the device's zone.
+
+## 18. The field verifier's Overview becomes a tracking page, decided 11 September 2026
+
+SSSA asked for the on-ground verifier's front door to be a one stop tracking page:
+geography, assigned, pending, in progress, done, appeals. Option B of three mock-ups was
+chosen: tiles as doors, then a district ledger, matching the tile pattern already approved
+on the admin side so the product speaks one language.
+
+Six tiles, each a door. Assigned (the cycle's total and its district count), Pending
+(sealed or not begun), In progress (arrived, not signed off; when exactly one visit is
+under way the tile opens that visit directly), Done (signed off), Appeals (with how many
+wait on the SSSA; the tile scrolls to the appeal cards), and Next unlock, the one tile
+that is a moment rather than a count, gold-washed, showing the next reveal time, day and
+district. Under them, "Your districts": one row per district with the total and a
+working-order line of what is left there (done, mid-visit, ready to begin, sealed with its
+unlock day), districts with live work sorted first. The appeal cards from section 16 keep
+their place at the foot under an anchor.
+
+The old three tiles (Ready to visit, Sealed, Signed off) are gone: they counted only open
+work, blurred pending with in progress, carried no geography or totals, and all led to the
+same page. All dates and times on the new Overview render in IST, and the wording rule
+holds: school information unlocks.

@@ -23,6 +23,7 @@ export type InspectionAppealItem = {
 export type InspectionAppeal = {
   schoolName: string;
   schoolUdise: string;
+  districtName: string;
   /** When this verifier signed off the visit the appeal contests. */
   inspectedOn: string;
   filedOn: string;
@@ -66,7 +67,7 @@ export async function getAppealsOnMyInspections(profileId: string): Promise<Insp
       status: true,
       submittedAt: true,
       decidedAt: true,
-      school: { select: { nameEn: true } },
+      school: { select: { nameEn: true, district: { select: { nameEn: true } } } },
       items: {
         select: {
           decision: true,
@@ -88,6 +89,7 @@ export async function getAppealsOnMyInspections(profileId: string): Promise<Insp
       return {
         schoolName: a.school.nameEn,
         schoolUdise: a.schoolUdise,
+        districtName: a.school.district?.nameEn ?? '',
         inspectedOn: (signedOffBy.get(`${a.cycleId}:${a.schoolUdise}`) ?? new Date(0)).toISOString(),
         filedOn: (a.submittedAt ?? new Date(0)).toISOString(),
         decidedOn: a.decidedAt?.toISOString() ?? null,
@@ -106,4 +108,28 @@ export async function getAppealsOnMyInspections(profileId: string): Promise<Insp
           : 1
         : b.filedOn.localeCompare(a.filedOn),
     );
+}
+
+/** The sidebar badge: appeals against this verifier's inspections still waiting on the SSSA. */
+export async function countWaitingAppealsOnMyInspections(profileId: string): Promise<number> {
+  const visits = await prisma.fieldVisit.findMany({
+    where: { profileId, signedOffAt: { not: null }, recusedAt: null },
+    select: { run: { select: { cycleId: true, schoolUdise: true } } },
+  });
+  if (visits.length === 0) return 0;
+  const udisesByCycle = new Map<string, Set<string>>();
+  for (const v of visits) {
+    const set = udisesByCycle.get(v.run.cycleId) ?? new Set<string>();
+    set.add(v.run.schoolUdise);
+    udisesByCycle.set(v.run.cycleId, set);
+  }
+  return prisma.appeal.count({
+    where: {
+      status: 'SUBMITTED',
+      OR: [...udisesByCycle.entries()].map(([cycleId, udises]) => ({
+        cycleId,
+        schoolUdise: { in: [...udises] },
+      })),
+    },
+  });
 }

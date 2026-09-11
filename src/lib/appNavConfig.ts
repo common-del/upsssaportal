@@ -174,8 +174,11 @@ const VERIFIER_REFERENCE_SECTION: NavSection = {
  *
  * "Overview", not "My Assignments": the front door summarises whichever queues this
  * verifier's cell works from, and an online verifier has no assignments in the old sense.
+ *
+ * `appealsBadge` is the on-ground cell's live count of appeals waiting on the SSSA, injected
+ * per-request by the layout like the admin's Decisions badge; the config itself stays static.
  */
-export function verifierSidebarSections(role: string): NavSection[] {
+export function verifierSidebarSections(role: string, appealsBadge = 0): NavSection[] {
   if (role === 'ONLINE_VERIFIER') {
     return [
       {
@@ -194,6 +197,11 @@ export function verifierSidebarSections(role: string): NavSection[] {
         items: [
           { href: '/app/verifier', label: 'Overview', exact: true },
           { href: '/app/verifier/assignments', label: 'Field Assignments' },
+          {
+            href: '/app/verifier/appeals',
+            label: 'Appeals',
+            ...(appealsBadge > 0 ? { badge: appealsBadge } : {}),
+          },
         ],
       },
       VERIFIER_REFERENCE_SECTION,

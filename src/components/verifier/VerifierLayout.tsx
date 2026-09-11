@@ -12,16 +12,19 @@ export function VerifierAppLayout({
   role,
   userName,
   unreadCount = 0,
+  appealsBadge = 0,
   children,
 }: {
   role: string;
   userName: string;
   unreadCount?: number;
+  /** On-ground only: appeals on this verifier's inspections still waiting on the SSSA. */
+  appealsBadge?: number;
   children: React.ReactNode;
 }) {
   return (
     <SidebarShell
-      sections={verifierSidebarSections(role)}
+      sections={verifierSidebarSections(role, appealsBadge)}
       roleLabel="VERIFIER"
       userName={userName}
       brandHref="/app/verifier"

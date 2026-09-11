@@ -521,3 +521,27 @@ The old three tiles (Ready to visit, Sealed, Signed off) are gone: they counted 
 work, blurred pending with in progress, carried no geography or totals, and all led to the
 same page. All dates and times on the new Overview render in IST, and the wording rule
 holds: school information unlocks.
+
+## 19. Appeals leave the Overview for a page built for volume, decided 11 September 2026
+
+SSSA's second look at the tracking page: appeals should not be cards on the Overview, and a
+page of two cards is no answer to a cycle with twenty of them. The Overview now carries only
+the number (the Appeals tile, which opens the new page), and the on-ground sidebar gains an
+Appeals entry whose badge is the live count of appeals still waiting on the SSSA, injected
+per-request like the admin's Decisions badge.
+
+The page itself is the case ledger at volume. Waiting appeals are pinned above everything
+under their own heading with the wait shown in days, so the only appeals that can still
+change are never buried under history. The decided pile reads newest first under month
+headings, ten rows at a time behind a show-more button that says how many remain and from
+when. Every closed row is two lines carrying its verdict chip: Upheld in full, Partly
+revised, Revised (outline), or Waiting with days. Rows open in place, one at a time, the
+same gesture as the Field Assignments route list.
+
+Past five appeals a find bar appears: All, Waiting and Decided chips with counts, search
+matching school name or UDISE as you type, a district filter, and a match line ("2 of 8
+appeals match") with a one-tap clear, so a filtered page never masquerades as the whole
+record. At five or fewer the bar does not render at all, and the empty page explains the
+five day appeal window rather than dead-ending. A second guarded demo seed adds up to six
+more appeals against field1's published inspections (two waiting, four decided across two
+months and both outcomes) so the demo login actually crosses the find bar's threshold.

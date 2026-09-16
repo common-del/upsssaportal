@@ -6,9 +6,11 @@ import { requireSchool, requireOnlineVerifier } from '@/lib/authz';
 import { maskSchool } from '@/lib/verification/masking';
 import {
   canResolve,
+  clipCapturedAt,
   connectivityAfter,
   fenceReading,
   GUIDED_CAPTURE_HOURS,
+  isFreshCapture,
 } from '@/lib/verification/walkthroughRules';
 import { transitionRun } from '@/lib/verification/stateMachine';
 import type { WalkthroughOutcome } from '@prisma/client';
@@ -639,6 +641,48 @@ export async function resolveWalkthrough(
 // School side
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** A clip as the school sees its own: the same facts the verifier is shown, and no more. */
+export type SchoolClip = {
+  id: string;
+  blobUrl: string;
+  capturedAt: string;
+  /** False means the file's own timestamp said it was not filmed in the app just now, which
+   *  the verifier sees too. Shown to the school for the same reason: a mark applied in
+   *  silence is a penalty nobody can answer. */
+  freshCapture: boolean;
+  hasLocation: boolean;
+};
+
+/**
+ * One recording task, as the person holding the phone needs it.
+ *
+ * The framework's title alone ("4.1 Separate functional toilets for girls") is a name, not an
+ * instruction, and a verifier sets a level from whatever the clip happens to show. So the task
+ * also carries the level the school itself claimed and SCERT's own evidence checklist for the
+ * indicator, which is the authored answer to "what has to be visible". Both already existed;
+ * neither reached this screen.
+ */
+export type SchoolTask = {
+  parameterId: string;
+  /** Stored on the clip so the verifier's console can label it: "4.1 Separate toilets...". */
+  label: string;
+  code: string;
+  titleEn: string;
+  titleHi: string;
+  /** What this school answered in its self assessment, which is what the clip has to show. */
+  claimedLevel: number | null;
+  claimedLabelEn: string | null;
+  claimedLabelHi: string | null;
+  /** SCERT's evidence checklist for this indicator, bilingual. Empty for indicators the
+   *  checklist does not cover. */
+  checklistEn: string[];
+  checklistHi: string[];
+  /** The clip that stands as this task's answer, and how many attempts came before it. Every
+   *  attempt stays on the record; the verifier sees them all. */
+  clip: SchoolClip | null;
+  earlierAttempts: number;
+};
+
 export type SchoolWalkthroughView = {
   sessionId: string;
   /** The verifier as the school sees them: a pseudonym, never a name or a face. */
@@ -647,10 +691,11 @@ export type SchoolWalkthroughView = {
   scheduledFor: string | null;
   startedAt: string | null;
   guidedCaptureDeadline: string | null;
+  /** Nothing more can be sent, whatever is still missing. */
+  windowClosed: boolean;
   geofenceAnchored: boolean;
   /** Guided capture tasks: one per disputed indicator, plus what has been recorded. */
-  tasks: { parameterId: string; label: string; done: boolean }[];
-  clips: { taskLabel: string; capturedAt: string }[];
+  tasks: SchoolTask[];
 };
 
 export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | null> {
@@ -667,21 +712,60 @@ export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | 
     orderBy: { createdAt: 'desc' },
     include: {
       profile: { select: { pseudonym: true } },
-      clips: { orderBy: { capturedAt: 'asc' }, select: { parameterId: true, taskLabel: true, capturedAt: true } },
-      run: { select: { id: true, school: { select: { geoLat: true, geoLng: true } } } },
+      clips: {
+        orderBy: { capturedAt: 'asc' },
+        select: {
+          id: true,
+          parameterId: true,
+          blobUrl: true,
+          capturedAt: true,
+          freshCapture: true,
+          lat: true,
+          lng: true,
+        },
+      },
+      run: {
+        select: {
+          id: true,
+          cycleId: true,
+          schoolUdise: true,
+          school: { select: { geoLat: true, geoLng: true } },
+        },
+      },
     },
   });
   if (!session) return null;
 
   const disputed = await disputedParameterIds(session.run.id);
-  const parameters = disputed.length
-    ? await prisma.parameter.findMany({
-        where: { id: { in: disputed } },
-        select: { id: true, code: true, titleEn: true },
-        orderBy: { code: 'asc' },
-      })
-    : [];
-  const doneParameterIds = new Set(session.clips.map((c) => c.parameterId).filter(Boolean));
+  const [parameters, submission] = await Promise.all([
+    disputed.length
+      ? prisma.parameter.findMany({
+          where: { id: { in: disputed } },
+          select: {
+            id: true,
+            code: true,
+            titleEn: true,
+            titleHi: true,
+            evidenceChecklistEn: true,
+            evidenceChecklistHi: true,
+            options: { where: { isActive: true }, orderBy: { order: 'asc' } },
+          },
+          orderBy: { code: 'asc' },
+        })
+      : Promise.resolve([]),
+    prisma.selfAssessmentSubmission.findUnique({
+      where: { cycleId_schoolUdise: { cycleId: session.run.cycleId, schoolUdise: session.run.schoolUdise } },
+      select: { responses: { select: { parameterId: true, selectedOptionKey: true } } },
+    }),
+  ]);
+  const claimBy = new Map((submission?.responses ?? []).map((r) => [r.parameterId, r.selectedOptionKey]));
+
+  // Latest attempt per task, with the earlier ones counted rather than hidden.
+  const clipsBy = new Map<string, (typeof session.clips)[number][]>();
+  for (const clip of session.clips) {
+    if (!clip.parameterId) continue;
+    clipsBy.set(clip.parameterId, [...(clipsBy.get(clip.parameterId) ?? []), clip]);
+  }
 
   return {
     sessionId: session.id,
@@ -690,13 +774,36 @@ export async function getMySchoolWalkthrough(): Promise<SchoolWalkthroughView | 
     scheduledFor: session.scheduledFor?.toISOString() ?? null,
     startedAt: session.startedAt?.toISOString() ?? null,
     guidedCaptureDeadline: session.guidedCaptureDeadline?.toISOString() ?? null,
+    windowClosed:
+      session.guidedCaptureDeadline !== null && Date.now() > session.guidedCaptureDeadline.getTime(),
     geofenceAnchored: session.run.school.geoLat !== null && session.run.school.geoLng !== null,
-    tasks: parameters.map((p) => ({
-      parameterId: p.id,
-      label: `${p.code} ${p.titleEn}`,
-      done: doneParameterIds.has(p.id),
-    })),
-    clips: session.clips.map((c) => ({ taskLabel: c.taskLabel, capturedAt: c.capturedAt.toISOString() })),
+    tasks: parameters.map((p) => {
+      const attempts = clipsBy.get(p.id) ?? [];
+      const latest = attempts[attempts.length - 1];
+      const claimed = p.options.find((o) => o.key === claimBy.get(p.id));
+      return {
+        parameterId: p.id,
+        label: `${p.code} ${p.titleEn}`,
+        code: p.code,
+        titleEn: p.titleEn,
+        titleHi: p.titleHi,
+        claimedLevel: claimed?.order ?? null,
+        claimedLabelEn: claimed?.labelEn ?? null,
+        claimedLabelHi: claimed?.labelHi ?? null,
+        checklistEn: (p.evidenceChecklistEn as string[]) ?? [],
+        checklistHi: (p.evidenceChecklistHi as string[]) ?? [],
+        clip: latest
+          ? {
+              id: latest.id,
+              blobUrl: latest.blobUrl,
+              capturedAt: latest.capturedAt.toISOString(),
+              freshCapture: latest.freshCapture,
+              hasLocation: latest.lat !== null && latest.lng !== null,
+            }
+          : null,
+        earlierAttempts: Math.max(0, attempts.length - 1),
+      };
+    }),
   };
 }
 
@@ -762,9 +869,6 @@ export async function recordSchoolPing(
   return { success: true, mode: dropToGuidedCapture ? 'GUIDED_CAPTURE' : session.mode };
 }
 
-/** How stale a file's own timestamp may be before the upload is flagged as pre-recorded. */
-const FRESH_CAPTURE_WINDOW_MS = 10 * 60 * 1000;
-
 export async function saveWalkthroughClip(
   sessionId: string,
   clip: {
@@ -774,6 +878,9 @@ export async function saveWalkthroughClip(
     lat: number | null;
     lng: number | null;
     fileLastModifiedMs: number;
+    /** When the app took hold of the file, by the device's clock. A clip that waited hours for
+     *  signal is still judged on when it was filmed. Defaults to arrival for older callers. */
+    filmedAtMs?: number;
   },
 ): Promise<{ success: boolean; error?: string }> {
   const session = await mySchoolSession(sessionId);
@@ -787,12 +894,13 @@ export async function saveWalkthroughClip(
   }
   if (!clip.taskLabel.trim() || !clip.blobUrl) return { success: false, error: 'Clip incomplete.' };
 
-  // The strongest pre-recording check a browser allows: the file's own modification time.
-  // A clip recorded in the app moments ago carries a timestamp moments old; a gallery file
-  // carries its original one. Recorded as a flag the verifier sees rather than a hard
-  // refusal, because clocks on cheap devices are wrong often enough to make a hard refusal
-  // eat honest clips.
-  const freshCapture = Math.abs(Date.now() - clip.fileLastModifiedMs) < FRESH_CAPTURE_WINDOW_MS;
+  // The strongest pre-recording check a browser allows: the file's own modification time,
+  // against the moment the app took it. A clip recorded in the app moments ago carries a
+  // timestamp moments old; a gallery file carries its original one. Recorded as a flag the
+  // verifier sees rather than a hard refusal, because clocks on cheap devices are wrong often
+  // enough to make a hard refusal eat honest clips.
+  const now = Date.now();
+  const filmedAtMs = clip.filmedAtMs ?? now;
 
   await prisma.walkthroughClip.create({
     data: {
@@ -802,7 +910,8 @@ export async function saveWalkthroughClip(
       blobUrl: clip.blobUrl,
       lat: clip.lat,
       lng: clip.lng,
-      freshCapture,
+      freshCapture: isFreshCapture(clip.fileLastModifiedMs, filmedAtMs),
+      capturedAt: clipCapturedAt(filmedAtMs, session.createdAt.getTime(), now),
     },
   });
 

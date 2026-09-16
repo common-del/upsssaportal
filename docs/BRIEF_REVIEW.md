@@ -797,3 +797,64 @@ Still open, and unchanged from section 26: whether a window that lapses with cli
 should route the case to a field visit automatically or wait for the verifier. The page now
 makes the lapse visible, which is the part that was missing; who performs the routing is still
 SSSA's to decide.
+
+## 29. The school's recording screen, rebuilt 16 September 2026
+
+Every other screen in this portal is a desk screen. This one is held by a head teacher walking
+a campus with an Android phone, and it was built as though it were not.
+
+Four things were wrong, and one of them was doing real harm.
+
+The framework's title was the whole instruction. "4.1 Separate functional toilets for girls" is
+a name, not a brief, and a verifier then sets a level from whatever the clip happens to show. A
+school that films the door but never the tap has sent a clip that settles nothing, and the case
+goes to a physical visit. Both sides lose to a missing sentence.
+
+The fix needed no new content. Parameter already carries evidenceChecklistEn and
+evidenceChecklistHi, transcribed from SCERT UP's own SQAAF Checklist of 8 June 2026, and the
+self assessment form has been showing them for months. The recording screen now shows the same
+list under "What the verifier needs to see". It is headed that way and not as a shot list
+because the checklist was authored for evidence uploads: some of its items are UDISE+ entries,
+which cannot be filmed and which the verifier already holds. Indicators with no published
+checklist say so and fall back to the claimed level.
+
+The school never saw its own claim. The clip exists to demonstrate a level the school itself
+answered, and it could not read that answer on this screen. It now sits above the checklist, in
+both languages.
+
+A sent clip vanished behind the word "Recorded". No playback, no replacement, no way to find
+out what had been sent. Filming again now simply adds another clip for the same indicator: the
+latest stands as the answer, earlier attempts stay on the record and the school is told they
+do, and the verifier's console already renders every clip an indicator has.
+
+The gallery mark was applied in silence. The portal flags a video whose own timestamp says it
+was not filmed just now, and the school was told this once in passing and never learned whether
+its own clip had been flagged. That is a penalty nobody can answer. The mark is now on the clip,
+with the one fix that helps.
+
+Two changes behind the screen.
+
+Freshness is judged against the moment the app took the file, not against the server's clock.
+The old comparison would have marked an honest school down for having no signal: a clip filmed
+at noon and sent at seven, because that is when the network came back, is not a gallery file. It
+is no more trusting than the check it replaces, which already believed the file's own timestamp.
+capturedAt now records when the clip was filmed, clamped so it cannot be later than arrival or
+earlier than the session, and the 48 hour window is still enforced on arrival.
+
+And there is an outbox. A head teacher walks to the far end of a campus, films a toilet block and
+walks back into a dead spot; the old code threw the recording away and told them to check their
+signal. The file is now written to IndexedDB before anything is attempted and removed only once
+the server has it, retried when the signal returns and every half minute besides, keyed by task
+so a second take replaces the first rather than queueing behind it. The queue rules are pure and
+tested, following the field interface's sync queue; persistence fails soft, and where the browser
+will not keep a file the screen says to stay on the page rather than promising otherwise.
+
+Unchanged and still open, from section 26: the 48 hours runs through nights and weekends, so a
+call that drops at four on a Friday gives a school about one working day. That is a rule for
+SSSA, not a screen.
+
+Departure from the mock-up, recorded because it was shown: the mock promised that a clip filmed
+in time but arriving late would still count. It does not. The deadline is enforced on arrival,
+because accepting a school-reported filming time would make the window enforceable only against
+schools that do not know to lie about it. The screen says plainly that a clip which missed the
+window cannot be counted.

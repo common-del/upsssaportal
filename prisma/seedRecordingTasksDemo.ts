@@ -65,10 +65,30 @@ const CASES = [
   },
 ];
 
+/**
+ * Which schools are recording right now, printed on every build.
+ *
+ * The screen is only demonstrable if someone can sign in as one of these schools, and the
+ * username is the UDISE. Without this the seed does its work and nobody can reach it: the
+ * demo school account has its own run in another state and cannot be in two at once.
+ */
+async function announceLogins() {
+  const sessions = await prisma.walkthroughSession.findMany({
+    where: { mode: 'GUIDED_CAPTURE', endedAt: null, recusedAt: null },
+    select: { run: { select: { schoolUdise: true, school: { select: { nameEn: true } } } } },
+  });
+  if (sessions.length === 0) return;
+  console.log('recording tasks demo: sign in as any of these schools to see the recording screen');
+  for (const s of sessions) {
+    console.log(`  username ${s.run.schoolUdise}  (${s.run.school.nameEn})`);
+  }
+}
+
 async function main() {
   const marker = await prisma.cycleTransition.findFirst({ where: { systemReason: MARKER } });
   if (marker) {
     console.log('recording tasks demo: already seeded, leaving it alone');
+    await announceLogins();
     return;
   }
 
@@ -196,6 +216,7 @@ async function main() {
   console.log(
     `recording tasks demo: ${Math.min(CASES.length, candidates.length)} cases, ${clipsWritten} clips`,
   );
+  await announceLogins();
 }
 
 main()

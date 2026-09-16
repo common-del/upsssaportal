@@ -98,3 +98,37 @@ export function canResolve(
   }
   return { ok: true, reason: null };
 }
+
+/** How stale a file's own timestamp may be, against the moment the app took it, before the
+ *  upload is marked as not filmed just now. */
+export const FRESH_CAPTURE_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Whether a clip counts as filmed in the app rather than picked from the gallery.
+ *
+ * Both timestamps come from the school's device: when the file says it was written, and when
+ * the app took hold of it. Comparing the two is what "filmed just now" actually means, and it
+ * is the only comparison that survives a queued upload. Comparing the file's timestamp to the
+ * server's clock instead would mark an honest school down for having no signal: a clip filmed
+ * at noon and sent at seven, because that is when the network came back, is not a gallery file.
+ *
+ * It is no more trusting than the check it replaces. That one already believed the file's own
+ * timestamp; this one believes two device-side numbers instead of one, and both are equally
+ * open to a device with a wrong clock. It is a mark the verifier reads, never a refusal.
+ */
+export function isFreshCapture(fileLastModifiedMs: number, filmedAtMs: number): boolean {
+  if (!Number.isFinite(fileLastModifiedMs) || !Number.isFinite(filmedAtMs)) return false;
+  return Math.abs(filmedAtMs - fileLastModifiedMs) < FRESH_CAPTURE_WINDOW_MS;
+}
+
+/**
+ * When a clip was filmed, for the record.
+ *
+ * The device reports it, so it is clamped: never later than arrival, and never before the
+ * session that asked for it. A school cannot post-date a clip into a window it missed, because
+ * the window is enforced on arrival regardless of this value.
+ */
+export function clipCapturedAt(filmedAtMs: number, sessionStartedMs: number, nowMs: number): Date {
+  if (!Number.isFinite(filmedAtMs)) return new Date(nowMs);
+  return new Date(Math.min(nowMs, Math.max(sessionStartedMs, filmedAtMs)));
+}

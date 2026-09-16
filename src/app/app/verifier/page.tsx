@@ -6,6 +6,7 @@ import { CheckCircle2, Clock, Circle } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getVerifierAssignments } from '@/lib/actions/verification';
 import { getAppealsOnMyInspections } from '@/lib/verification/inspectionAppeals';
+import { maskedCodeFor } from '@/lib/verification/masking';
 import { brandHrefForRole } from '@/lib/appNavConfig';
 
 const VERIFIER_PORTAL_ROLES = new Set(['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER']);
@@ -118,17 +119,70 @@ async function OnlineOverview({
   userName: string;
   blocked: boolean;
 }) {
-  const [deskOpen, escalated, walkthroughRuns, config] = await Promise.all([
-    prisma.assessmentCycleRun.count({ where: { deskAssigneeProfileId: profileId, state: 'DESK_SCREENING' } }),
-    prisma.deskScreeningDecision.count({ where: { profileId, escalated: true } }),
-    prisma.assessmentCycleRun.findMany({
-      where: { deskAssigneeProfileId: profileId, state: 'VIDEO_WALKTHROUGH' },
-      select: { enteredStateAt: true },
+  const [cycle, config, manualTotal, frozenCount, ruledCount] = await Promise.all([
+    prisma.cycle.findFirst({ where: { isActive: true }, select: { id: true, name: true } }),
+    prisma.programmeConfig.findUnique({
+      where: { id: 'current' },
+      select: { videoWalkthroughTurnaroundDays: true },
     }),
-    prisma.programmeConfig.findUnique({ where: { id: 'current' }, select: { videoWalkthroughTurnaroundDays: true } }),
+    prisma.parameter.count({ where: { checkMethod: 'MANUAL', isActive: true } }),
+    prisma.deskScreeningDecision.count({ where: { profileId, escalated: true } }),
+    // Escalated once, no longer frozen: the SSSA ruled and the ruling sits on the decision.
+    prisma.deskScreeningDecision.count({
+      where: { profileId, escalated: false, escalatedAt: { not: null } },
+    }),
   ]);
+
+  const runs = await prisma.assessmentCycleRun.findMany({
+    where: { deskAssigneeProfileId: profileId, ...(cycle ? { cycleId: cycle.id } : {}) },
+    select: {
+      id: true,
+      state: true,
+      enteredStateAt: true,
+      // Only what the mask needs: the udise feeds the HMAC and is never rendered; the category
+      // is the one non-identifying school fact a screener may see. No name, place or contact
+      // is fetched anywhere on this screen.
+      school: { select: { udise: true, category: true } },
+      deskDecisions: { select: { decision: true, escalated: true } },
+      _count: { select: { autoChecks: true } },
+    },
+    orderBy: { enteredStateAt: 'asc' },
+  });
+
+  const assigned = runs.length;
+  const deskRuns = runs.filter((r) => r.state === 'DESK_SCREENING');
+  const walkthroughRuns = runs.filter((r) => r.state === 'VIDEO_WALKTHROUGH');
+  // Everything whose state moved past desk screening: walkthrough, census queue, the field
+  // stages or published. Against Assigned this is "how far through am I".
+  const cleared = assigned - deskRuns.length;
+
   const turnaroundMs = (config?.videoWalkthroughTurnaroundDays ?? 7) * 86_400_000;
-  const overdue = walkthroughRuns.filter((r) => r.enteredStateAt.getTime() + turnaroundMs < Date.now()).length;
+  const overdue = walkthroughRuns.filter(
+    (r) => r.enteredStateAt.getTime() + turnaroundMs < Date.now(),
+  ).length;
+
+  const cases = deskRuns.map((r) => ({
+    runId: r.id,
+    code: maskedCodeFor(r.school.udise),
+    decided: r.deskDecisions.length,
+    flagged: r.deskDecisions.filter((d) => d.decision !== 'EVIDENCE_SUPPORTS_LEVEL').length,
+    frozen: r.deskDecisions.filter((d) => d.escalated).length,
+    autoChecked: r._count.autoChecks > 0,
+  }));
+  // Working order: frozen cases first, then in progress by how close they are to done, then
+  // the untouched pile.
+  const caseWeight = (c: (typeof cases)[number]) => (c.frozen > 0 ? 0 : c.decided > 0 ? 1 : 2);
+  cases.sort((a, b) => caseWeight(a) - caseWeight(b) || b.decided - a.decided);
+
+  const pendingCount = cases.filter((c) => c.decided === 0).length;
+  const inProgressCount = deskRuns.length - pendingCount;
+  const frozenCases = cases.filter((c) => c.frozen > 0);
+  const frozenHref =
+    frozenCases.length === 1 ? `/app/verifier/desk/${frozenCases[0]!.runId}` : '/app/verifier/desk';
+
+  const LEDGER_LIMIT = 6;
+  const shownCases = cases.slice(0, LEDGER_LIMIT);
+  const moreCases = cases.length - shownCases.length;
 
   return (
     <div className="space-y-5">
@@ -137,53 +191,157 @@ async function OnlineOverview({
           Welcome, {userName}
         </h1>
         <p className="mt-1 text-sm" style={{ color: INK_MUTED }}>
-          Online cell. Your batch is anonymous: you screen schools as masked codes, and identity
-          is disclosed only inside a walkthrough, on the record.
+          Online cell
+          {cycle?.name ? ` · ${cycle.name} cycle` : ''}
+          {assigned > 0
+            ? ` · ${assigned.toLocaleString('en-IN')} masked ${assigned === 1 ? 'case' : 'cases'} assigned`
+            : ''}
         </p>
       </div>
 
       {blocked && <BlockedBanner />}
 
+      {/* Six tiles, each a door, mirroring the field cell's Overview. */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Tile
-          value={deskOpen}
-          label="Desk screening queue"
-          detail="Cases in your batch waiting for indicator decisions."
+          value={assigned}
+          label="Assigned"
+          detail="This cycle, masked cases"
           href="/app/verifier/desk"
-          colour={NAVY}
+          colour={NAVY_DEEP}
+        />
+        <Tile
+          value={pendingCount}
+          label="Pending"
+          detail="Not started"
+          href="/app/verifier/desk"
+          colour={pendingCount > 0 ? NAVY : INK_MUTED}
+        />
+        <Tile
+          value={inProgressCount}
+          label="In progress"
+          detail="Decisions under way"
+          href="/app/verifier/desk"
+          colour={inProgressCount > 0 ? NAVY : INK_MUTED}
+        />
+        <Tile
+          value={cleared}
+          label="Cleared"
+          detail="Screening complete"
+          href="/app/verifier/desk"
+          colour={GREEN}
         />
         <Tile
           value={walkthroughRuns.length}
-          label="Video walkthroughs"
-          detail={overdue > 0 ? `${overdue} past the turnaround. Start with those.` : 'Flagged cases needing a live look.'}
+          label="Walkthroughs"
+          detail={
+            overdue > 0
+              ? `${overdue} past the turnaround. Start there.`
+              : 'Flagged cases needing a live look'
+          }
           href="/app/verifier/walkthroughs"
-          colour={overdue > 0 ? RED : NAVY}
+          colour={overdue > 0 ? RED : walkthroughRuns.length > 0 ? NAVY : INK_MUTED}
         />
         <Tile
-          value={escalated}
+          value={frozenCount}
           label="Frozen by escalation"
-          detail="Indicators you sent up. A supervisor rules and unfreezes them."
-          href="/app/verifier/desk"
-          colour={escalated > 0 ? GOLD_DARK : GREEN}
+          detail={
+            frozenCount > 0
+              ? `Waiting on SSSA${ruledCount > 0 ? ` · ${ruledCount} ruled` : ''}`
+              : ruledCount > 0
+                ? `${ruledCount} ruled by SSSA`
+                : 'Nothing waiting on SSSA'
+          }
+          href={frozenHref}
+          colour={frozenCount > 0 ? GOLD_DARK : INK_MUTED}
         />
       </div>
 
-      <p className="text-sm" style={{ color: INK_MUTED }}>
-        Start in{' '}
-        <Link href="/app/verifier/desk" className="font-bold underline" style={{ color: NAVY }}>
-          Desk Screening
-        </Link>
-        {overdue > 0 && (
-          <>
-            {' '}
-            or clear the overdue{' '}
-            <Link href="/app/verifier/walkthroughs" className="font-bold underline" style={{ color: RED }}>
-              walkthroughs
+      {cases.length > 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: NAVY_DEEP }}>
+              Your cases · {cases.length.toLocaleString('en-IN')} open
+            </h2>
+            <p className="mt-0.5 text-sm" style={{ color: INK_MUTED }}>
+              Masked until a walkthrough discloses identity, on the record. Tap a case to
+              continue screening.
+            </p>
+          </div>
+          {shownCases.map((c) => (
+            <Link
+              key={c.runId}
+              href={`/app/verifier/desk/${c.runId}`}
+              className="flex items-center gap-3 rounded-xl border-2 bg-white px-4 py-3 hover:border-gray-300"
+              style={{ borderColor: c.frozen > 0 ? RED : '#E5E7EB' }}
+            >
+              <span
+                className="flex-none rounded-lg border-2 px-2.5 py-1.5 font-mono text-xs font-bold"
+                style={{ borderColor: '#D5DEED', backgroundColor: '#EEF2F9', color: NAVY_DEEP }}
+              >
+                {c.code}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold" style={{ color: NAVY_DEEP }}>
+                  {c.decided > 0 ? 'In progress' : 'Not started'}
+                </span>
+                <span className="mt-0.5 block text-xs" style={{ color: INK_MUTED }}>
+                  {c.decided > 0
+                    ? `${c.decided} of ${manualTotal} decided${c.flagged > 0 ? ` · ${c.flagged} flagged by you` : ''}`
+                    : c.autoChecked
+                      ? `Auto checks done · ${manualTotal} manual waiting`
+                      : `${manualTotal} manual indicators waiting`}
+                </span>
+              </span>
+              <span className="hidden w-20 flex-none overflow-hidden rounded-full bg-[#EDEFF3] sm:block" style={{ height: 8 }}>
+                <span
+                  className="block h-full rounded-full"
+                  style={{
+                    backgroundColor: NAVY,
+                    width: `${manualTotal === 0 ? 0 : Math.round((c.decided / manualTotal) * 100)}%`,
+                  }}
+                />
+              </span>
+              {c.frozen > 0 && (
+                <span className="flex-none rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ backgroundColor: RED }}>
+                  {c.frozen} frozen
+                </span>
+              )}
+              <span aria-hidden className="flex-none text-lg font-bold" style={{ color: INK_MUTED }}>
+                ›
+              </span>
             </Link>
-          </>
-        )}
-        .
-      </p>
+          ))}
+          {moreCases > 0 && (
+            <Link
+              href="/app/verifier/desk"
+              className="flex items-center justify-between gap-3 rounded-xl border-2 border-dashed border-gray-300 bg-white px-4 py-3 text-sm font-semibold hover:border-gray-400"
+              style={{ color: INK_MUTED }}
+            >
+              <span>
+                {moreCases.toLocaleString('en-IN')} more in Desk Screening
+              </span>
+              <span aria-hidden className="text-lg font-bold">›</span>
+            </Link>
+          )}
+        </section>
+      )}
+
+      {cleared > 0 && (
+        <div
+          className="flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 text-[13px] font-bold"
+          style={{ borderColor: '#BFE0CF', backgroundColor: '#E7F5EE', color: GREEN }}
+        >
+          <span aria-hidden>✓</span>
+          <span>
+            {cleared.toLocaleString('en-IN')} {cleared === 1 ? 'case' : 'cases'} cleared this
+            cycle
+            {walkthroughRuns.length > 0
+              ? `. ${walkthroughRuns.length.toLocaleString('en-IN')} went on to a walkthrough.`
+              : '.'}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

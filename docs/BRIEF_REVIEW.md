@@ -562,3 +562,25 @@ by online verifier", the navy note block is headed "Online verifier · <decision
 SSSA", and the sealed row's teaser and fact tile say the same. The internal pipeline keeps
 its names; only the copy changed, because a person who has never heard the phrase "desk
 screening" should still know exactly who flagged the indicator in front of them.
+
+## 21. The online verifier's Overview becomes the same tracking page, decided 16 September 2026
+
+Option A of three mock-ups, chosen with one wording correction: the first tile says
+"Assigned", not "Batch", deliberately the same word the field cell's first tile uses, so
+both cells' front doors read identically. Six door tiles: Assigned (masked cases allocated
+this cycle), Pending (no decisions yet), In progress (decisions under way), Cleared (state
+moved past desk screening), Walkthroughs (with the turnaround clock, red past due, from
+enteredStateAt plus the configured turnaround days) and Frozen by escalation (with how many
+of this verifier's escalations the SSSA has ruled). Under them, "Your cases": one row per
+open case with its masked code, progress through the manual indicators, what the verifier
+has flagged, a red chip where an indicator is frozen, frozen cases sorted first; a dashed
+row carries the overflow into Desk Screening. A green line closes the page with the
+cleared count.
+
+Anonymity is carried the same way the desk queue carries it: the query selects only the
+school's udise (which feeds the keyed mask and is never rendered) and its category; no
+name, place, management or contact is fetched anywhere on the screen, and the codes are
+the same SC codes the desk queue already shows. Every number is a live read from
+AssessmentCycleRun, DeskScreeningDecision, ProgrammeConfig and the parameter register;
+nothing new is recorded. The old three-tile Overview and its "start in Desk Screening"
+footer are gone.

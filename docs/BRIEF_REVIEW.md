@@ -594,3 +594,29 @@ sidebar now highlights the entry you are working under even on detail pages that
 different path segment: nav entries carry alias prefixes, so the walkthrough console
 (/walkthrough/[id]) lights Walkthroughs and the visit workspace (/visit/[id]) lights Field
 Assignments. Before this, a verifier deep in the work saw no highlight at all.
+
+## 23. Desk Screening becomes a deadline board, and "frozen" is renamed, decided 16 September 2026
+
+SSSA asked what "frozen by SSSA" meant, which was itself the finding: nothing is frozen by
+the SSSA. An online verifier who cannot cleanly judge an indicator escalates it; that
+indicator locks and the case is held at the finish line, unable to be completed or scored
+until the SSSA rules, though the verifier may keep deciding its other indicators. The case
+is frozen by the verifier's own escalation, waiting on the SSSA. So the word is gone from
+every verifier-facing screen: the Overview tile reads "Sent to SSSA · held until it rules",
+queue and ledger rows read "N with SSSA", the case workspace reads "With the SSSA · the
+case is held until it rules", and the held-case error says the same.
+
+The queue page is Option B of three mock-ups: a deadline board. Every case is one row and
+rows run in turnaround order, most overdue first, because the turnaround is the promise the
+page keeps. Each row carries a due tile (red past due, amber within two days or held, navy
+otherwise), the masked code and stage, a progress meter over the manual indicators, and a
+meta line that turns the old bare mismatch count into the advice it always was ("start at
+the 7 automated mismatches"). A case held with the SSSA shows days held rather than its
+turnaround, since that clock is not the verifier's to keep while the SSSA has it. The whole
+row is the door; the old five-column table and its small "Open case" link are gone.
+
+SSSA chose this shape knowing its trade-off, recorded here: pure deadline order means a
+nearly-finished case with days in hand sits below an untouched one due sooner, so "finish
+what you started" loses to the clock. Option A's zoned work order remains the alternative
+if that grates in use. The queue query now also returns decided counts, the SSSA-held count
+and days held, and hoists the manual-indicator count out of its per-row loop.

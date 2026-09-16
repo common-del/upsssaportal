@@ -155,7 +155,7 @@ function IndicatorRow({
           <AutoPanel indicator={indicator} />
         ) : indicator.escalated ? (
           <div className="rounded-lg bg-[#FBE9E7] p-3">
-            <p className="text-xs font-bold text-[#96271E]">Escalated to a supervisor</p>
+            <p className="text-xs font-bold text-[#7A5209]">With the SSSA · the case is held until it rules</p>
             <p className="mt-1 text-sm text-[#96271E]">{indicator.rationale}</p>
           </div>
         ) : (

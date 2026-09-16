@@ -100,11 +100,17 @@ export type DeskQueueRow = {
   category: string;
   /** Manual indicators still needing a decision. */
   remaining: number;
+  /** Manual indicators already decided, so a meter can show progress rather than shortfall. */
+  decided: number;
   total: number;
   automatedMismatches: number;
   /** Days left against the turnaround window, negative when overdue. */
   daysLeft: number | null;
   escalated: boolean;
+  /** How many of this case's indicators are with the SSSA awaiting a ruling. */
+  withSssa: number;
+  /** Days since the oldest of those was sent up, for the "days held" tile. */
+  heldDays: number | null;
 };
 
 /** The verifier's own batch, and nothing else. */
@@ -126,29 +132,44 @@ export async function getDeskQueue(): Promise<DeskQueueRow[]> {
       // Only the two fields the mask needs. The name is not selected.
       school: { select: { udise: true, category: true } },
       autoChecks: { select: { outcome: true } },
-      deskDecisions: { select: { parameterId: true, escalated: true } },
+      deskDecisions: { select: { parameterId: true, escalated: true, escalatedAt: true } },
     },
     orderBy: { enteredStateAt: 'asc' },
   });
 
+  // One count for the whole queue: the manual indicator total does not vary by run, and asking
+  // per row cost a query each.
+  const manual = await prisma.parameter.count({
+    where: { checkMethod: 'MANUAL', isActive: true },
+  });
+
   const rows: DeskQueueRow[] = [];
   for (const run of runs) {
-    const manual = await prisma.parameter.count({
-      where: { checkMethod: 'MANUAL', isActive: true },
-    });
     const decided = run.deskDecisions.length;
     const due = new Date(run.enteredStateAt.getTime() + turnaroundDays * 86_400_000);
+    const sentUp = run.deskDecisions.filter((d) => d.escalated);
+    const oldestSentAt = sentUp.reduce<Date | null>(
+      (oldest, d) => (d.escalatedAt && (!oldest || d.escalatedAt < oldest) ? d.escalatedAt : oldest),
+      null,
+    );
     rows.push({
       runId: run.id,
       ...maskSchool(run.school),
       remaining: Math.max(0, manual - decided),
+      decided,
       total: manual,
       automatedMismatches: run.autoChecks.filter((a) => a.outcome === 'MISMATCH').length,
       daysLeft: Math.ceil((due.getTime() - Date.now()) / 86_400_000),
-      escalated: run.deskDecisions.some((d) => d.escalated),
+      escalated: sentUp.length > 0,
+      withSssa: sentUp.length,
+      heldDays: oldestSentAt
+        ? Math.max(0, Math.floor((Date.now() - oldestSentAt.getTime()) / 86_400_000))
+        : null,
     });
   }
-  return rows;
+  // Deadline order, the promise this page keeps: the most overdue case is always the top row.
+  // A case with no window sinks to the bottom rather than jumping the queue.
+  return rows.sort((a, b) => (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999));
 }
 
 /** One case, with the school masked and the score withheld until the work is done. */
@@ -386,7 +407,7 @@ export async function completeDeskScreening(
   if (deskCase.frozen) {
     return {
       success: false,
-      error: 'This case is escalated and frozen until a supervisor resolves it.',
+      error: 'An indicator on this case is with the SSSA. The case is held until it rules.',
     };
   }
   if (!deskCase.score) return { success: false, error: 'No active risk rubric.' };

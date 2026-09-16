@@ -244,13 +244,13 @@ async function OnlineOverview({
         />
         <Tile
           value={frozenCount}
-          label="Frozen by escalation"
+          label="Sent to SSSA"
           detail={
             frozenCount > 0
-              ? `Waiting on SSSA${ruledCount > 0 ? ` · ${ruledCount} ruled` : ''}`
+              ? `Held until it rules${ruledCount > 0 ? ` · ${ruledCount} ruled so far` : ''}`
               : ruledCount > 0
-                ? `${ruledCount} ruled by SSSA`
-                : 'Nothing waiting on SSSA'
+                ? `${ruledCount} ruled so far, none waiting`
+                : 'Nothing sent up'
           }
           href={frozenHref}
           colour={frozenCount > 0 ? GOLD_DARK : INK_MUTED}
@@ -303,8 +303,8 @@ async function OnlineOverview({
                 />
               </span>
               {c.frozen > 0 && (
-                <span className="flex-none rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ backgroundColor: RED }}>
-                  {c.frozen} frozen
+                <span className="flex-none rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ backgroundColor: GOLD_DARK }}>
+                  {c.frozen} with SSSA
                 </span>
               )}
               <span aria-hidden className="flex-none text-lg font-bold" style={{ color: INK_MUTED }}>

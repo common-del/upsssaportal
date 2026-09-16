@@ -895,3 +895,50 @@ on the table was a tabbed page, which would have kept the count; SSSA chose the 
 in production and a bookmark should land on the work rather than on a 404. The Overview's
 Walkthroughs tile now counts the whole queue, and a second tile names the subset waiting on
 schools, which is the one number on that row a verifier can do nothing about.
+
+## 31. Filters on the walkthrough queue, and two defects a screenshot showed, 16 September 2026
+
+Filters first, because they were what was asked for. They are deliberately orthogonal to the
+zones: filtering by "what can I act on" would only reproduce the Do now heading two inches
+lower. What a zone cannot answer is where the case somebody just emailed about has got to, show
+me only the recordings, and what is late. So a find bar on the masked code, a route filter of
+All / Calls / Recordings, and a turnaround toggle, all with counts, and a match line so a
+filtered page never masquerades as the whole queue. They appear at six cases and above; below
+that a filter bar is furniture. The list became a client component to make the find bar answer
+as it is typed, which is the same shape as the field cell's Appeals list.
+
+Then two defects the screenshot made obvious.
+
+A live call printed 37,308 minutes in. The demo's live session was seeded weeks ago and never
+closed, and the tile did the arithmetic without asking whether the answer was still a sentence a
+person could read. It now steps minutes to hours to days, and past four hours the chip stops
+saying "Live now" and says "Call left open", because a walkthrough call does not run for a
+day and the thing that has actually happened is that nobody closed the session. The action reads
+"Open and close it". A scheduled time in the past now reads "Missed" rather than "Scheduled",
+for the same reason: the row should say what is true.
+
+And the category on each row printed GOVT_AIDED, a raw enum. The underscores are gone, which is
+the display half of the problem. The other half is not a display problem and is recorded below
+rather than fixed, because fixing it is a data decision.
+
+### The category column carries two different things, and one of them is on the forbidden list
+
+School.category holds the grade stage for hand-seeded schools and an ownership type for the bulk
+register: GOVT, GOVT_AIDED, PRIVATE_AIDED, PRIVATE. seedMockPerformanceSchools.ts already notes
+the collision in a comment. Two consequences follow, and neither is cosmetic.
+
+The masking contract is broken in spirit. maskSchool documents category as "the school's stage
+... not identifying", and justifies showing it because 18 of the 89 indicators do not apply to
+every stage. For most schools the value is not the stage, so the justification does not hold,
+and management is explicitly on IDENTIFYING_FIELDS as a field that must never reach an online
+verifier. Ownership does not name a school on its own, but the project's own rule says it should
+not be there, and it is there on every row of two verifier screens.
+
+Worse, indicator applicability is being computed from it. CATEGORY_TO_CODE maps only Primary,
+Upper Primary and Secondary, and every call site falls back to PRIMARY. A secondary school whose
+category reads GOVT is therefore screened against the primary indicator set. That is a
+correctness defect in what gets verified, not a labelling one.
+
+The fix is a schema change rather than a patch: a stage field separate from management,
+backfilled from whatever source the register has, with applicability reading the stage and the
+verifier screens showing the stage alone. It is left for SSSA to schedule.

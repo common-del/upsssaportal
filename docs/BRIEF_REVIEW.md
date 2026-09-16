@@ -759,3 +759,41 @@ And "guided capture" is renamed "Recording tasks" on every screen. The brief's p
 explained nothing, and the portal was already inconsistent, with the school's own screen
 saying "Recording task" while every verifier screen said guided capture. Both sides now use
 the school's word. The internal names, the enum and the rules module keep the brief's term.
+
+## 28. Recording tasks becomes a page of its own, built 16 September 2026
+
+Conducting a call and reviewing clips two days later are different jobs, and they were sharing
+a queue. A case whose call dropped twice sat in Video Walkthroughs behind a gold chip, next to
+cases waiting for a verifier to pick up the phone. The two are not comparable work: one is an
+appointment, the other is homework that arrives on someone else's schedule. They also keep
+different clocks, the walkthrough turnaround against the school's 48 hour recording window, so
+a single deadline column was lying about one of them.
+
+Recording tasks is now its own page, and a case appears in exactly one of the two queues.
+The walkthrough queue filters recording cases out and says where they went, in its empty state
+and beneath the list, because a case a verifier remembers must not simply vanish.
+
+Three zones, in the order they need attention. Ready to review is every pile whose clips are
+all in: the only work that can be settled now. Waiting on the school needs nothing from the
+verifier and says so. Window closed short is the 48 hours passing with clips missing, which
+cannot be settled from a screen. The left tile changes meaning by zone: hours left while the
+school records, clips in once they are complete, clips in against tasks sent once the window
+has closed.
+
+The sidebar badge counts only the ready piles. Counting open cases would put a number there
+that never moves while a school records, and a badge that does not mean "work waiting" is
+noise within a week. The Overview gains a sixth tile on the same split, so the walkthrough
+tile stops counting cases that are not walkthroughs.
+
+The console adapts rather than forking. In recording mode there is no call pane, no fence and
+no connectivity pill, because there is no call: the page becomes a single column with the
+window's state at the top, and each clip sits under the indicator it answers, using the
+parameter the recording task now carries. Clips from before tasks named their indicator are
+listed together at the foot rather than filed under a guess. The fourth option is reworded
+from "Could not check on the call" to "The clip does not show this", with the same
+consequence: the indicator stays unsettled and the case goes for a physical inspection.
+
+Still open, and unchanged from section 26: whether a window that lapses with clips missing
+should route the case to a field visit automatically or wait for the verifier. The page now
+makes the lapse visible, which is the part that was missing; who performs the routing is still
+SSSA's to decide.

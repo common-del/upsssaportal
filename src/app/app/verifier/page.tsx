@@ -140,13 +140,25 @@ async function OnlineOverview({
       school: { select: { udise: true, category: true } },
       deskDecisions: { select: { decision: true } },
       _count: { select: { autoChecks: true } },
+      // Only to tell a case waiting on a call from one waiting on the school's recordings:
+      // they are separate queues and must not be counted twice on the same row of tiles.
+      walkthroughs: {
+        where: { recusedAt: null },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { mode: true, endedAt: true },
+      },
     },
     orderBy: { enteredStateAt: 'asc' },
   });
 
   const assigned = runs.length;
   const deskRuns = runs.filter((r) => r.state === 'DESK_SCREENING');
-  const walkthroughRuns = runs.filter((r) => r.state === 'VIDEO_WALKTHROUGH');
+  const inWalkthroughState = runs.filter((r) => r.state === 'VIDEO_WALKTHROUGH');
+  const isRecording = (r: (typeof runs)[number]) =>
+    r.walkthroughs[0]?.mode === 'GUIDED_CAPTURE' && r.walkthroughs[0]?.endedAt === null;
+  const recordingRuns = inWalkthroughState.filter(isRecording);
+  const walkthroughRuns = inWalkthroughState.filter((r) => !isRecording(r));
   // Everything whose state moved past desk screening: walkthrough, census queue, the field
   // stages or published. Against Assigned this is "how far through am I".
   const cleared = assigned - deskRuns.length;
@@ -230,6 +242,17 @@ async function OnlineOverview({
           }
           href="/app/verifier/walkthroughs"
           colour={overdue > 0 ? RED : walkthroughRuns.length > 0 ? NAVY : INK_MUTED}
+        />
+        <Tile
+          value={recordingRuns.length}
+          label="Recording tasks"
+          detail={
+            recordingRuns.length === 0
+              ? 'No school is recording for you'
+              : 'Calls that dropped. The school records instead.'
+          }
+          href="/app/verifier/recording-tasks"
+          colour={recordingRuns.length > 0 ? NAVY : INK_MUTED}
         />
       </div>
 

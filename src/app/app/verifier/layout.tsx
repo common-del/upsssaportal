@@ -4,6 +4,7 @@ import { VerifierAppLayout } from '@/components/verifier/VerifierLayout';
 import { brandHrefForRole } from '@/lib/appNavConfig';
 import { unreadNotificationCount } from '@/lib/unreadNotifications';
 import { countWaitingAppealsOnMyInspections } from '@/lib/verification/inspectionAppeals';
+import { countRecordingTasksReady } from '@/lib/actions/walkthrough';
 import { prisma } from '@/lib/db';
 
 /** The three verifier roles. SUPERVISOR and AUDIT_CELL have their own areas and are sent
@@ -31,8 +32,18 @@ export default async function VerifierRouteLayout({ children }: { children: Reac
     if (profile) appealsBadge = await countWaitingAppealsOnMyInspections(profile.id);
   }
 
+  // The Recording tasks badge, online only: piles whose clips are all in. A school still
+  // recording is not work, so counting open cases would put a number there that never moves.
+  const recordingBadge = role === 'ONLINE_VERIFIER' ? await countRecordingTasksReady() : 0;
+
   return (
-    <VerifierAppLayout role={role} userName={userName} unreadCount={unreadCount} appealsBadge={appealsBadge}>
+    <VerifierAppLayout
+      role={role}
+      userName={userName}
+      unreadCount={unreadCount}
+      appealsBadge={appealsBadge}
+      recordingBadge={recordingBadge}
+    >
       {children}
     </VerifierAppLayout>
   );

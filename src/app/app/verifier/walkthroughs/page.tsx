@@ -222,7 +222,11 @@ export default async function WalkthroughsPage() {
 
       {rows.length === 0 ? (
         <p className="rounded-xl border-2 border-gray-200 bg-white p-5 text-sm" style={{ color: INK_MUTED }}>
-          Nothing is waiting for a walkthrough.
+          Nothing is waiting for a walkthrough. A case whose call could not hold is on{' '}
+          <Link href="/app/verifier/recording-tasks" className="font-bold underline" style={{ color: NAVY }}>
+            Recording tasks
+          </Link>
+          .
         </p>
       ) : (
         <>
@@ -258,7 +262,12 @@ export default async function WalkthroughsPage() {
 
           <p className="text-xs" style={{ color: INK_MUTED }}>
             Cases waiting since {dayMonth(rows[rows.length - 1]!.enteredStateAt)} at the oldest.
-            The school is named only inside a console, at a recorded moment.
+            The school is named only inside a console, at a recorded moment. A case whose call
+            could not hold leaves this queue for{' '}
+            <Link href="/app/verifier/recording-tasks" className="font-bold underline" style={{ color: NAVY }}>
+              Recording tasks
+            </Link>
+            .
           </p>
         </>
       )}

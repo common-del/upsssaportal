@@ -146,6 +146,10 @@ function Console({ data }: { data: ConsoleData }) {
 
   const ended = data.endedAt !== null;
   const started = data.startedAt !== null;
+  // Reviewing recordings is a different job from conducting a call: no video pane, no fence,
+  // no connection to lose. The page becomes a single column of indicators, each with the clip
+  // the school sent for it.
+  const recording = data.mode === 'GUIDED_CAPTURE';
   // Settled, not merely answered: an indicator the call could not check is on the record but
   // does not count towards a resolution, which is what the resolve rule then refuses.
   const observed = data.indicators.filter((i) => i.observedLevel !== null).length;
@@ -153,6 +157,18 @@ function Console({ data }: { data: ConsoleData }) {
   const elapsedMinutes = data.startedAt
     ? Math.max(0, Math.floor((Date.now() - new Date(data.startedAt).getTime()) / 60_000))
     : 0;
+
+  // A clip belongs beside the indicator it was recorded for. Clips from before the tasks
+  // carried a parameter are listed on their own at the foot rather than dropped.
+  const clipsFor = new Map<string, ConsoleData['clips']>();
+  for (const clip of data.clips) {
+    if (!clip.parameterId) continue;
+    clipsFor.set(clip.parameterId, [...(clipsFor.get(clip.parameterId) ?? []), clip]);
+  }
+  const looseClips = data.clips.filter((c) => c.parameterId === null);
+  const deadline = data.guidedCaptureDeadline ? new Date(data.guidedCaptureDeadline) : null;
+  const hoursLeft = deadline ? Math.ceil((deadline.getTime() - Date.now()) / 3_600_000) : null;
+  const windowClosed = hoursLeft !== null && hoursLeft <= 0;
 
   function run(fn: () => Promise<{ success: boolean; error?: string }>) {
     setError('');
@@ -194,7 +210,7 @@ function Console({ data }: { data: ConsoleData }) {
               outline
             />
           </div>
-          {!ended && !started && (
+          {!ended && !started && !recording && (
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type="datetime-local"
@@ -230,11 +246,39 @@ function Console({ data }: { data: ConsoleData }) {
         )}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+      {/* Recording review: the window this pile is running against, in place of the call pane.
+          Nobody is on a line, so the only clock that matters is the school's 48 hours. */}
+      {recording && (
+        <div
+          className="rounded-xl border-2 p-4"
+          style={{ borderColor: windowClosed ? RED : '#D0AD42', backgroundColor: windowClosed ? '#FBE9E7' : GOLD_WASH }}
+        >
+          <p className="text-sm font-bold" style={{ color: windowClosed ? RED : GOLD_DARK }}>
+            {windowClosed
+              ? 'The recording window has closed'
+              : hoursLeft !== null
+                ? `The school may keep recording for ${hoursLeft.toLocaleString('en-IN')} more ${hoursLeft === 1 ? 'hour' : 'hours'}`
+                : 'The school is recording clips'}
+            <span className="ml-2 font-semibold">
+              · {data.clips.length.toLocaleString('en-IN')} of {data.indicators.length.toLocaleString('en-IN')} clips in
+            </span>
+          </p>
+          <p className="mt-1 text-xs" style={{ color: windowClosed ? RED : GOLD_DARK }}>
+            {windowClosed
+              ? 'Settle what the clips do show. Anything still missing cannot be settled from a screen, so send the case to the field.'
+              : 'You can settle an indicator as soon as its clip arrives; the rest will follow. Nothing is lost by coming back to this page later.'}{' '}
+            Each clip carries its capture time and place, and a clip that carried an old file
+            timestamp at upload is flagged.
+          </p>
+        </div>
+      )}
+
+      <div className={recording ? 'space-y-5' : 'grid gap-5 lg:grid-cols-[1fr_380px]'}>
         {/* Left: the call pane and its status. Sticky on wide screens so the video stays put
             while the checklist scrolls: a verifier reading indicator 8 of 10 is still on the
             call. self-start is what makes sticky work inside a grid; a stretched item is as
             tall as the row and has nowhere to stick to. top-20 clears the 64px portal header. */}
+        {!recording && (
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <div className="overflow-hidden rounded-xl border-2 border-gray-200 bg-white">
             <div
@@ -297,6 +341,7 @@ function Console({ data }: { data: ConsoleData }) {
             </div>
           </div>
         </div>
+        )}
 
         {/* Right: checklist, clips, verdict */}
         <div className="space-y-4">
@@ -368,6 +413,23 @@ function Console({ data }: { data: ConsoleData }) {
                       {i.disputeSources.join(' · ')}
                     </p>
 
+                    {/* The clip the school recorded for this indicator, on the card it answers.
+                        Every card carries its own, current or not: reviewing recordings means
+                        watching each one, and hiding them behind a click would be a click per
+                        indicator for no gain. */}
+                    {recording &&
+                      (clipsFor.get(i.parameterId) ?? []).map((clip) => <Clip key={clip.id} clip={clip} />)}
+                    {recording && !clipsFor.has(i.parameterId) && (
+                      <p
+                        className="mt-2 rounded-lg border-2 border-dashed p-2 text-[11.5px] font-semibold"
+                        style={{ borderColor: windowClosed ? RED : '#D0AD42', color: windowClosed ? RED : GOLD_DARK }}
+                      >
+                        {windowClosed
+                          ? 'No clip was ever sent for this indicator.'
+                          : 'No clip yet for this indicator.'}
+                      </p>
+                    )}
+
                     {/* The framework's own words for each level, the same instrument the
                         on-ground verifier uses on site: the verifier reads the rubric rather
                         than recalling it. Only the current card opens them, so a long list of
@@ -417,11 +479,12 @@ function Console({ data }: { data: ConsoleData }) {
                           }}
                         >
                           <span className="block text-xs font-extrabold" style={{ color: GOLD_DARK }}>
-                            Could not check on the call
+                            {recording ? 'The clip does not show this' : 'Could not check on the call'}
                           </span>
                           <span className="mt-0.5 block text-[11.5px] leading-snug" style={{ color: GOLD_DARK }}>
-                            The camera never showed this, or the connection would not carry it. This
-                            indicator stays unsettled and the case goes for a physical inspection.
+                            {recording
+                              ? 'Nothing arrived for this indicator, or what arrived points elsewhere. This indicator stays unsettled and the case goes for a physical inspection.'
+                              : 'The camera never showed this, or the connection would not carry it. This indicator stays unsettled and the case goes for a physical inspection.'}
                           </span>
                         </button>
                       </div>
@@ -440,38 +503,22 @@ function Console({ data }: { data: ConsoleData }) {
             </div>
           </div>
 
-          {data.mode === 'GUIDED_CAPTURE' && (
+          {/* Clips from before a task carried the indicator it answers. Kept visible rather
+              than filed under a guess, so an old pile stays reviewable. */}
+          {recording && looseClips.length > 0 && (
             <div className="rounded-xl border-2 p-4" style={{ borderColor: '#D0AD42', backgroundColor: GOLD_WASH }}>
               <h2 className="text-base font-bold" style={{ color: GOLD_DARK }}>
-                Recording tasks · {data.clips.length} returned
+                Clips not matched to an indicator · {looseClips.length.toLocaleString('en-IN')}
               </h2>
               <p className="mt-1 text-xs" style={{ color: GOLD_DARK }}>
-                {data.guidedCaptureDeadline
-                  ? `The school may record until ${new Date(data.guidedCaptureDeadline).toLocaleString('en-IN')}.`
-                  : ''}{' '}
-                Each clip is stamped with its capture time and location. A clip flagged as not
-                freshly captured carried an old file timestamp at upload.
+                These were recorded before the tasks named the indicator they answer. Read the
+                task label to see what was asked for.
               </p>
-              <ul className="mt-2 space-y-2">
-                {data.clips.map((c) => (
-                  <li key={c.id} className="rounded-lg bg-white p-2.5 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold text-gray-900">{c.taskLabel}</span>
-                      {!c.freshCapture && <Badge label="Not freshly captured" colour={RED} />}
-                    </div>
-                    <p className="mt-0.5 text-xs" style={{ color: INK_MUTED }}>
-                      {new Date(c.capturedAt).toLocaleString('en-IN')}
-                      {c.lat !== null && c.lng !== null ? ` · ${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}` : ' · no location'}
-                    </p>
-                    <video src={c.blobUrl} controls preload="metadata" className="mt-2 w-full rounded-lg" />
-                  </li>
+              <div className="mt-2">
+                {looseClips.map((clip) => (
+                  <Clip key={clip.id} clip={clip} label={clip.taskLabel} />
                 ))}
-                {data.clips.length === 0 && (
-                  <li className="text-sm" style={{ color: GOLD_DARK }}>
-                    Nothing recorded yet.
-                  </li>
-                )}
-              </ul>
+              </div>
             </div>
           )}
 
@@ -483,6 +530,7 @@ function Console({ data }: { data: ConsoleData }) {
               <p className="mt-1 text-xs" style={{ color: INK_MUTED }}>
                 Resolved sends the school to the census queue for its normal turn. Unresolved
                 fast-tracks it into this year&apos;s field cohort.
+                {recording && ' An indicator with no clip cannot be settled from a screen.'}
               </p>
               <textarea
                 value={outcomeNote}
@@ -494,7 +542,7 @@ function Console({ data }: { data: ConsoleData }) {
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  disabled={pending || !started}
+                  disabled={pending || (!started && !recording)}
                   onClick={() =>
                     run(async () => {
                       const res = await resolveWalkthrough(data.runId, 'RESOLVED', outcomeNote);
@@ -509,7 +557,7 @@ function Console({ data }: { data: ConsoleData }) {
                 </button>
                 <button
                   type="button"
-                  disabled={pending || !started}
+                  disabled={pending || (!started && !recording)}
                   onClick={() =>
                     run(async () => {
                       const res = await resolveWalkthrough(data.runId, 'UNRESOLVED', outcomeNote);
@@ -523,7 +571,7 @@ function Console({ data }: { data: ConsoleData }) {
                   Unresolved, send a field team
                 </button>
               </div>
-              {!started && (
+              {!started && !recording && (
                 <p className="mt-2 text-xs" style={{ color: INK_MUTED }}>
                   Start the session before recording a verdict.
                 </p>
@@ -538,6 +586,47 @@ function Console({ data }: { data: ConsoleData }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One returned clip: the video, and the facts that say whether to trust it.
+ *
+ * `label` is passed only where the clip stands alone. Under its own indicator the card above
+ * already carries the code and title, and repeating them is a line of noise per clip.
+ *
+ * A blobUrl that is not a real address belongs to a demonstration case: the upload path is
+ * wired, but nothing was stored in this environment, so the pane says so rather than showing
+ * a player that will not play.
+ */
+function Clip({ clip, label }: { clip: ConsoleData['clips'][number]; label?: string }) {
+  const playable = clip.blobUrl.startsWith('http') || clip.blobUrl.startsWith('/');
+  return (
+    <div className="mt-2 rounded-lg border-2 p-2" style={{ borderColor: '#D0AD42', backgroundColor: GOLD_WASH }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-bold" style={{ color: GOLD_DARK }}>
+          {label ?? 'Clip returned'}
+        </span>
+        {!clip.freshCapture && <Badge label="Not freshly captured" colour={RED} />}
+      </div>
+      {playable ? (
+        <video src={clip.blobUrl} controls preload="metadata" className="mt-1.5 w-full rounded-lg bg-black" />
+      ) : (
+        <p
+          className="mt-1.5 flex aspect-video items-center justify-center rounded-lg p-4 text-center text-xs text-white"
+          style={{ backgroundColor: '#101826' }}
+        >
+          A demonstration clip. The school&apos;s upload path is wired, but no video file is
+          stored in this environment.
+        </p>
+      )}
+      <p className="mt-1 text-[11px]" style={{ color: GOLD_DARK }}>
+        Recorded {new Date(clip.capturedAt).toLocaleString('en-IN')}
+        {clip.lat !== null && clip.lng !== null
+          ? ` · ${clip.lat.toFixed(4)}, ${clip.lng.toFixed(4)}`
+          : ' · no location recorded'}
+      </p>
     </div>
   );
 }

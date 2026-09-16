@@ -620,3 +620,26 @@ nearly-finished case with days in hand sits below an untouched one due sooner, s
 what you started" loses to the clock. Option A's zoned work order remains the alternative
 if that grates in use. The queue query now also returns decided counts, the SSSA-held count
 and days held, and hoists the manual-indicator count out of its per-row loop.
+
+## 24. Risk rests on the flags, not on escalations, decided 16 September 2026
+
+SSSA's ruling while reviewing the escalation path: "the risk score will be calculated based
+on the discrepancies marked by the online verifier, not by how many escalations there are."
+
+The score was already computed almost entirely from the verdicts, each flag and automated
+mismatch carrying its own weight; escalation added one flat run-level bump, ESCALATED_RUN,
+on top. That bump is gone. It scored the rubric's own ambiguity as though it were the
+school's risk: an indicator whose level descriptions did not cover a school's case made that
+school look riskier, which is a statement about the framework, not the school. An
+escalated indicator now counts exactly like any other, through whatever decision the
+verifier recorded against it.
+
+Removed with it: ESCALATED_RUN from the rubric weights type, from the weights an admin can
+tune on the programme configuration screen (a lever that changed nothing would be a lie),
+and from the seeded version 1 rubric. Weights are stored as JSON, so no migration was
+needed. The PER_DOMAIN_WORST basis loses its escalation bump too, and the test that pinned
+the old behaviour is replaced by one pinning the new rule: the score is the verdicts and
+nothing else.
+
+Note this changes scores already on the record: a case that carried an escalation scores
+lower than it did before, which is the intended correction rather than a side effect.

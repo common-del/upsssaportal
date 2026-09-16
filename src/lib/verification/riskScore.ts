@@ -32,8 +32,6 @@ export type RubricWeights = {
   EVIDENCE_INSUFFICIENT: number;
   EVIDENCE_MISSING: number;
   EVIDENCE_CONTRADICTS_LEVEL: number;
-  /** Applied once per run, not per indicator. */
-  ESCALATED_RUN: number;
 };
 
 export type Rubric = {
@@ -59,8 +57,6 @@ export type RiskInputs = {
   verdicts: IndicatorVerdict[];
   /** Applicable indicators for this school, including ones with no verdict yet. */
   applicableCount: number;
-  /** True when the verifier could not apply the rubric anywhere on this run. */
-  escalated: boolean;
 };
 
 export type RiskBand = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -127,9 +123,11 @@ export function computeRisk(inputs: RiskInputs, rubric: Rubric): RiskResult {
   const autoCheckedCount = judged.filter((v) => v.deskDecision === undefined).length;
   const manualDecidedCount = judged.filter((v) => v.deskDecision !== undefined).length;
 
-  const points =
-    judged.reduce((sum, v) => sum + weightForVerdict(v, weights), 0) +
-    (inputs.escalated ? weights.ESCALATED_RUN : 0);
+  // Risk rests on the evidence verdicts alone: the flags the verifier raised and the automated
+  // mismatches. An escalation used to add a flat bump on top, which scored the rubric's own
+  // ambiguity as if it were the school's risk; a school is not riskier because an indicator's
+  // level descriptions did not cover its case.
+  const points = judged.reduce((sum, v) => sum + weightForVerdict(v, weights), 0);
 
   // Requested basis, and the fallback when it would be measuring too little to mean anything.
   let basisUsed = rubric.thresholdBasis;
@@ -157,14 +155,9 @@ export function computeRisk(inputs: RiskInputs, rubric: Rubric): RiskResult {
       byDomain.set(v.domainCode, d);
     }
     // The escalation penalty is per run, so it cannot be attributed to one domain. Applied to
-    // the worst domain's points rather than spread, because an escalation is a statement about
-    // the case as a whole and diluting it across domains would let it disappear.
     const perDomain = [...byDomain.values()].map((d) => percent(d.points, d.ceiling));
     const worst = perDomain.length > 0 ? Math.max(...perDomain) : 0;
-    const escalationBump = inputs.escalated
-      ? percent(weights.ESCALATED_RUN, Math.max(1, weights.EVIDENCE_CONTRADICTS_LEVEL))
-      : 0;
-    score = Math.min(100, Math.round((worst + escalationBump) * 10) / 10);
+    score = Math.min(100, Math.round(worst * 10) / 10);
   } else if (basisUsed === 'MATCHED_INDICATORS_ONLY') {
     const ceiling = judged.reduce((sum, v) => sum + maxForVerdict(v, weights), 0);
     score = Math.min(100, percent(points, ceiling));

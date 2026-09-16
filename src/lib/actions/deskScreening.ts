@@ -265,10 +265,7 @@ export async function getDeskCase(runId: string): Promise<DeskCase | null> {
           ? { autoOutcome: (i.autoOutcome ?? undefined) as IndicatorVerdict['autoOutcome'] }
           : { deskDecision: i.decision ?? undefined }),
       }));
-      const r = computeRisk(
-        { verdicts, applicableCount: indicators.length, escalated: frozen },
-        rubric,
-      );
+      const r = computeRisk({ verdicts, applicableCount: indicators.length }, rubric);
       score = {
         value: r.score,
         band: r.band,

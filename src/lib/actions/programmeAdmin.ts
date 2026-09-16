@@ -219,7 +219,6 @@ const WEIGHT_KEYS = [
   'EVIDENCE_INSUFFICIENT',
   'EVIDENCE_MISSING',
   'EVIDENCE_CONTRADICTS_LEVEL',
-  'ESCALATED_RUN',
 ] as const;
 
 export type NewRubricInput = {

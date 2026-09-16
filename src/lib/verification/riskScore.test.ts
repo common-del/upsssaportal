@@ -17,7 +17,6 @@ const RUBRIC: Rubric = {
     EVIDENCE_INSUFFICIENT: 2,
     EVIDENCE_MISSING: 3,
     EVIDENCE_CONTRADICTS_LEVEL: 4,
-    ESCALATED_RUN: 5,
   },
   thresholdBasis: 'MATCHED_INDICATORS_ONLY',
   thresholdValue: 20,
@@ -42,7 +41,7 @@ const fiveClean = [1, 2, 3, 4, 5].map((n) => auto(`1.1.${n}`, 'MATCH'));
 describe('what does and does not count as risk', () => {
   it('scores a clean school at zero', () => {
     const r = computeRisk(
-      { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_SUPPORTS_LEVEL')], applicableCount: 6, escalated: false },
+      { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_SUPPORTS_LEVEL')], applicableCount: 6 },
       RUBRIC,
     );
     expect(r.score).toBe(0);
@@ -55,7 +54,7 @@ describe('what does and does not count as risk', () => {
   // own record keeping.
   it('never treats an unanswerable check as risk', () => {
     const allUnanswerable = [1, 2, 3, 4, 5, 6].map((n) => auto(`1.1.${n}`, 'NOT_CHECKABLE'));
-    const r = computeRisk({ verdicts: allUnanswerable, applicableCount: 6, escalated: false }, RUBRIC);
+    const r = computeRisk({ verdicts: allUnanswerable, applicableCount: 6 }, RUBRIC);
     expect(r.score).toBe(0);
     expect(r.aboveThreshold).toBe(false);
     // And it is not counted as a check that happened, either.
@@ -64,7 +63,7 @@ describe('what does and does not count as risk', () => {
 
   it('counts an automated mismatch', () => {
     const r = computeRisk(
-      { verdicts: [...fiveClean.slice(1), auto('1.1.1', 'MISMATCH')], applicableCount: 5, escalated: false },
+      { verdicts: [...fiveClean.slice(1), auto('1.1.1', 'MISMATCH')], applicableCount: 5 },
       RUBRIC,
     );
     // One mismatch worth 2, over five automated verdicts with a ceiling of 2 each.
@@ -73,11 +72,11 @@ describe('what does and does not count as risk', () => {
 
   it('weights a verifier contradicting the claim above an automated mismatch', () => {
     const withAuto = computeRisk(
-      { verdicts: [...fiveClean.slice(1), auto('1.1.1', 'MISMATCH'), desk('3.1.1', 'EVIDENCE_SUPPORTS_LEVEL')], applicableCount: 6, escalated: false },
+      { verdicts: [...fiveClean.slice(1), auto('1.1.1', 'MISMATCH'), desk('3.1.1', 'EVIDENCE_SUPPORTS_LEVEL')], applicableCount: 6 },
       RUBRIC,
     );
     const withDesk = computeRisk(
-      { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_CONTRADICTS_LEVEL')], applicableCount: 6, escalated: false },
+      { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_CONTRADICTS_LEVEL')], applicableCount: 6 },
       RUBRIC,
     );
     expect(withDesk.score).toBeGreaterThan(withAuto.score);
@@ -85,7 +84,7 @@ describe('what does and does not count as risk', () => {
 
   it('ranks the four desk decisions in the intended order', () => {
     const scoreFor = (d: IndicatorVerdict['deskDecision']) =>
-      computeRisk({ verdicts: [...fiveClean, desk('3.1.1', d)], applicableCount: 6, escalated: false }, RUBRIC).score;
+      computeRisk({ verdicts: [...fiveClean, desk('3.1.1', d)], applicableCount: 6 }, RUBRIC).score;
 
     expect(scoreFor('EVIDENCE_SUPPORTS_LEVEL')).toBe(0);
     expect(scoreFor('EVIDENCE_INSUFFICIENT')).toBeGreaterThan(scoreFor('EVIDENCE_SUPPORTS_LEVEL'));
@@ -93,16 +92,31 @@ describe('what does and does not count as risk', () => {
     expect(scoreFor('EVIDENCE_CONTRADICTS_LEVEL')).toBeGreaterThan(scoreFor('EVIDENCE_MISSING'));
   });
 
-  it('applies the escalation penalty once per run, not per indicator', () => {
-    const base = { verdicts: fiveClean, applicableCount: 5 };
-    const clean = computeRisk({ ...base, escalated: false }, RUBRIC);
-    const escalated = computeRisk({ ...base, escalated: true }, RUBRIC);
-    expect(escalated.score).toBeGreaterThan(clean.score);
+  // Risk is what the evidence said, and nothing else. An indicator the verifier could not
+  // cleanly judge used to add a flat run-level penalty, which scored the rubric's own
+  // ambiguity as if it were the school's risk. It now counts only through the decision the
+  // verifier recorded against it, like every other indicator.
+  it('adds nothing at run level: the score is the verdicts and nothing else', () => {
+    const clean = computeRisk(
+      { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_SUPPORTS_LEVEL')], applicableCount: 6 },
+      RUBRIC,
+    );
+    const unjudgeable = computeRisk(
+      { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_INSUFFICIENT')], applicableCount: 6 },
+      RUBRIC,
+    );
+    expect(clean.score).toBe(0);
+    // The whole of the score is that one indicator's own weight over the ceiling, and nothing
+    // is added for the run: 2 of (5 automated at 2, plus one manual at its worst of 4) = 14.3%.
+    const ceiling = 5 * RUBRIC.weights.AUTO_MISMATCH + RUBRIC.weights.EVIDENCE_CONTRADICTS_LEVEL;
+    expect(unjudgeable.score).toBe(
+      Math.round((RUBRIC.weights.EVIDENCE_INSUFFICIENT / ceiling) * 1000) / 10,
+    );
   });
 
   it('never exceeds 100', () => {
     const allBad = Array.from({ length: 8 }, (_, i) => desk(`3.1.${i}`, 'EVIDENCE_CONTRADICTS_LEVEL'));
-    const r = computeRisk({ verdicts: allBad, applicableCount: 8, escalated: true }, RUBRIC);
+    const r = computeRisk({ verdicts: allBad, applicableCount: 8 }, RUBRIC);
     expect(r.score).toBeLessThanOrEqual(100);
   });
 });
@@ -115,7 +129,6 @@ describe('the threshold basis, which the source documents leave unspecified', ()
       {
         verdicts: [auto('1.1.1', 'MISMATCH'), auto('1.1.2', 'MATCH')],
         applicableCount: 80,
-        escalated: false,
       },
       RUBRIC,
     );
@@ -128,7 +141,7 @@ describe('the threshold basis, which the source documents leave unspecified', ()
 
   it('keeps MATCHED_INDICATORS_ONLY once enough automated checks have landed', () => {
     const r = computeRisk(
-      { verdicts: [...fiveClean, auto('1.1.6', 'MISMATCH')], applicableCount: 80, escalated: false },
+      { verdicts: [...fiveClean, auto('1.1.6', 'MISMATCH')], applicableCount: 80 },
       RUBRIC,
     );
     expect(r.basisUsed).toBe('MATCHED_INDICATORS_ONLY');
@@ -137,8 +150,8 @@ describe('the threshold basis, which the source documents leave unspecified', ()
 
   it('dilutes findings across all applicable indicators under TOTAL_SCORE', () => {
     const verdicts = [...fiveClean, desk('3.1.1', 'EVIDENCE_CONTRADICTS_LEVEL')];
-    const matched = computeRisk({ verdicts, applicableCount: 80, escalated: false }, RUBRIC);
-    const total = computeRisk({ verdicts, applicableCount: 80, escalated: false }, { ...RUBRIC, thresholdBasis: 'TOTAL_SCORE' });
+    const matched = computeRisk({ verdicts, applicableCount: 80 }, RUBRIC);
+    const total = computeRisk({ verdicts, applicableCount: 80 }, { ...RUBRIC, thresholdBasis: 'TOTAL_SCORE' });
     expect(total.score).toBeLessThan(matched.score);
   });
 
@@ -148,15 +161,15 @@ describe('the threshold basis, which the source documents leave unspecified', ()
       ...[1, 2, 3, 4, 5].map((n) => auto(`1.1.${n}`, 'MATCH', 'D1')),
       desk('4.1.1', 'EVIDENCE_CONTRADICTS_LEVEL', 'D4'),
     ];
-    const worst = computeRisk({ verdicts, applicableCount: 6, escalated: false }, { ...RUBRIC, thresholdBasis: 'PER_DOMAIN_WORST' });
-    const matched = computeRisk({ verdicts, applicableCount: 6, escalated: false }, RUBRIC);
+    const worst = computeRisk({ verdicts, applicableCount: 6 }, { ...RUBRIC, thresholdBasis: 'PER_DOMAIN_WORST' });
+    const matched = computeRisk({ verdicts, applicableCount: 6 }, RUBRIC);
     // D4 is entirely bad, so the worst-domain figure is 100 while the pooled figure is not.
     expect(worst.score).toBe(100);
     expect(worst.score).toBeGreaterThan(matched.score);
   });
 
   it('reports zero rather than dividing by nothing when no verdict exists', () => {
-    const r = computeRisk({ verdicts: [], applicableCount: 0, escalated: false }, RUBRIC);
+    const r = computeRisk({ verdicts: [], applicableCount: 0 }, RUBRIC);
     expect(r.score).toBe(0);
     expect(Number.isFinite(r.score)).toBe(true);
   });
@@ -166,7 +179,7 @@ describe('reproducibility and coverage', () => {
   // Without this a score cannot be re-derived after SSSA edits the rubric, which is the whole
   // reason RiskScore stores a version.
   it('stamps every result with the rubric version', () => {
-    const r = computeRisk({ verdicts: fiveClean, applicableCount: 5, escalated: false }, { ...RUBRIC, version: 7 });
+    const r = computeRisk({ verdicts: fiveClean, applicableCount: 5 }, { ...RUBRIC, version: 7 });
     expect(r.rubricVersion).toBe(7);
   });
 
@@ -174,7 +187,7 @@ describe('reproducibility and coverage', () => {
   // claim, and a reader has to be able to tell them apart.
   it('reports the three coverage counts', () => {
     const r = computeRisk(
-      { verdicts: [...fiveClean, auto('1.1.9', 'NOT_CHECKABLE'), desk('3.1.1', 'EVIDENCE_INSUFFICIENT')], applicableCount: 80, escalated: false },
+      { verdicts: [...fiveClean, auto('1.1.9', 'NOT_CHECKABLE'), desk('3.1.1', 'EVIDENCE_INSUFFICIENT')], applicableCount: 80 },
       RUBRIC,
     );
     expect(r.autoCheckedCount).toBe(5);
@@ -183,7 +196,7 @@ describe('reproducibility and coverage', () => {
   });
 
   it('is deterministic', () => {
-    const inputs = { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_MISSING')], applicableCount: 12, escalated: false };
+    const inputs = { verdicts: [...fiveClean, desk('3.1.1', 'EVIDENCE_MISSING')], applicableCount: 12 };
     expect(computeRisk(inputs, RUBRIC)).toEqual(computeRisk(inputs, RUBRIC));
   });
 });
@@ -208,7 +221,7 @@ describe('bands track the threshold rather than fixed numbers', () => {
   // Strictly above, so a school exactly on the threshold is not sent to a video call. The
   // flowchart says "deviation greater than 20%".
   it('treats the threshold as exclusive', () => {
-    const on = computeRisk({ verdicts: [...fiveClean.slice(1), auto('1.1.1', 'MISMATCH')], applicableCount: 5, escalated: false }, RUBRIC);
+    const on = computeRisk({ verdicts: [...fiveClean.slice(1), auto('1.1.1', 'MISMATCH')], applicableCount: 5 }, RUBRIC);
     expect(on.score).toBe(20);
     expect(on.aboveThreshold).toBe(false);
   });

@@ -6,6 +6,12 @@ export type NavItem = {
   /** A live count shown beside the label, e.g. rulings waiting on Decisions.
    *  Injected per-request by the layout, never stored in this static config. */
   badge?: number;
+  /** Additional path prefixes that count as this entry being active. For detail pages that
+   *  live under a different segment than their queue: the walkthrough console sits at
+   *  /walkthrough/[id] while its entry is /walkthroughs, and the visit workspace sits at
+   *  /visit/[id] under Field Assignments. Without these, a person deep in the work sees no
+   *  highlight at all and loses their place in the sidebar. */
+  also?: string[];
 };
 
 export type NavSection = { label?: string; items: NavItem[] };
@@ -185,7 +191,7 @@ export function verifierSidebarSections(role: string, appealsBadge = 0): NavSect
         items: [
           { href: '/app/verifier', label: 'Overview', exact: true },
           { href: '/app/verifier/desk', label: 'Desk Screening' },
-          { href: '/app/verifier/walkthroughs', label: 'Walkthroughs' },
+          { href: '/app/verifier/walkthroughs', label: 'Walkthroughs', also: ['/app/verifier/walkthrough'] },
         ],
       },
       VERIFIER_REFERENCE_SECTION,
@@ -196,7 +202,7 @@ export function verifierSidebarSections(role: string, appealsBadge = 0): NavSect
       {
         items: [
           { href: '/app/verifier', label: 'Overview', exact: true },
-          { href: '/app/verifier/assignments', label: 'Field Assignments' },
+          { href: '/app/verifier/assignments', label: 'Field Assignments', also: ['/app/verifier/visit'] },
           {
             href: '/app/verifier/appeals',
             label: 'Appeals',

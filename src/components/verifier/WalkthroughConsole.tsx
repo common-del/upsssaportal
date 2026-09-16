@@ -223,8 +223,11 @@ function Console({ data }: { data: ConsoleData }) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
-        {/* Left: the call pane and its status */}
-        <div className="space-y-4">
+        {/* Left: the call pane and its status. Sticky on wide screens so the video stays put
+            while the checklist scrolls: a verifier reading indicator 8 of 10 is still on the
+            call. self-start is what makes sticky work inside a grid; a stretched item is as
+            tall as the row and has nowhere to stick to. top-20 clears the 64px portal header. */}
+        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <div className="overflow-hidden rounded-xl border-2 border-gray-200 bg-white">
             <div
               className="flex aspect-video items-center justify-center"

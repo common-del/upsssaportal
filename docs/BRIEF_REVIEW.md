@@ -584,3 +584,13 @@ the same SC codes the desk queue already shows. Every number is a live read from
 AssessmentCycleRun, DeskScreeningDecision, ProgrammeConfig and the parameter register;
 nothing new is recorded. The old three-tile Overview and its "start in Desk Screening"
 footer are gone.
+
+## 22. The walkthrough console holds the call still, decided 16 September 2026
+
+Two usability fixes from SSSA's review of the console. The call pane is now sticky on wide
+screens: scrolling the disputed indicator checklist no longer scrolls the video away, since
+a verifier writing an observation on the eighth indicator is still on the call. And the
+sidebar now highlights the entry you are working under even on detail pages that live at a
+different path segment: nav entries carry alias prefixes, so the walkthrough console
+(/walkthrough/[id]) lights Walkthroughs and the visit workspace (/visit/[id]) lights Field
+Assignments. Before this, a verifier deep in the work saw no highlight at all.

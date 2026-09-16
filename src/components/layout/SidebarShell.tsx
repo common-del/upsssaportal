@@ -27,9 +27,10 @@ const NAVY = '#1B2A6B';
 const NAVY_INK = '#131f52';
 const GOLD = '#F5B731';
 
-function isActive(pathname: string, href: string, exact?: boolean) {
-  if (exact) return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname: string, item: { href: string; exact?: boolean; also?: string[] }) {
+  if (item.exact) return pathname === item.href;
+  const hit = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  return hit(item.href) || (item.also ?? []).some(hit);
 }
 
 export function SidebarShell({
@@ -70,7 +71,7 @@ export function SidebarShell({
             </p>
           )}
           {section.items.map((item) => {
-            const active = isActive(pathname, item.href, item.exact);
+            const active = isActive(pathname, item);
             return (
               <Link
                 key={item.href}

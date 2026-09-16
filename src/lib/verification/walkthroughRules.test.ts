@@ -68,7 +68,7 @@ describe('resolve preconditions', () => {
   it('refuses RESOLVED while any disputed indicator lacks an observation', () => {
     const r = canResolve('RESOLVED', disputed, ['p1', 'p3'], '');
     expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/no observation/);
+    expect(r.reason).toMatch(/unsettled/);
   });
 
   it('allows RESOLVED once every dispute has been looked at', () => {

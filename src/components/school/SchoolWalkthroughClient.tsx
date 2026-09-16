@@ -176,7 +176,7 @@ export function SchoolWalkthroughClient({ view }: { view: SchoolWalkthroughView 
       <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: view.mode === 'LIVE' ? NAVY : GOLD }}>
-            {view.mode === 'LIVE' ? (live ? 'Live session' : 'Awaiting start') : 'Guided capture task'}
+            {view.mode === 'LIVE' ? (live ? 'Live session' : 'Awaiting start') : 'Recording tasks'}
           </span>
           <span className="rounded-full border-2 px-3 py-1 text-xs font-bold" style={{ borderColor: INK_MUTED, color: INK_MUTED }}>
             Verifier: {view.verifierId}

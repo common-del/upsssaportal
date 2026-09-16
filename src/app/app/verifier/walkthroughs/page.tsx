@@ -115,7 +115,7 @@ function StateChip({ row }: { row: WalkthroughQueueRow }) {
         className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold"
         style={{ backgroundColor: GOLD_WASH, color: GOLD_DARK }}
       >
-        Guided capture
+        Recording tasks
       </span>
     );
   }

@@ -137,19 +137,19 @@ function Console({ data }: { data: ConsoleData }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [scheduleAt, setScheduleAt] = useState('');
-  const [notes, setNotes] = useState<Record<string, string>>(() =>
-    Object.fromEntries(data.indicators.map((i) => [i.parameterId, i.observationNote ?? ''])),
-  );
   const [outcomeNote, setOutcomeNote] = useState(data.outcomeNote ?? '');
   // The indicator the verifier is asking about right now. Starts on the first one still
   // unobserved, because that is where a resumed call picks up.
   const [currentId, setCurrentId] = useState<string | null>(
-    () => data.indicators.find((i) => !(i.observationNote ?? '').trim())?.parameterId ?? null,
+    () => data.indicators.find((i) => i.observedLevel === null && !i.couldNotCheck)?.parameterId ?? null,
   );
 
   const ended = data.endedAt !== null;
   const started = data.startedAt !== null;
-  const observed = data.indicators.filter((i) => (notes[i.parameterId] ?? '').trim().length > 0).length;
+  // Settled, not merely answered: an indicator the call could not check is on the record but
+  // does not count towards a resolution, which is what the resolve rule then refuses.
+  const observed = data.indicators.filter((i) => i.observedLevel !== null).length;
+  const unchecked = data.indicators.filter((i) => i.couldNotCheck).length;
   const elapsedMinutes = data.startedAt
     ? Math.max(0, Math.floor((Date.now() - new Date(data.startedAt).getTime()) / 60_000))
     : 0;
@@ -174,7 +174,7 @@ function Console({ data }: { data: ConsoleData }) {
                 ended
                   ? `Ended, ${data.outcome === 'RESOLVED' ? 'resolved' : 'unresolved'}`
                   : data.mode === 'GUIDED_CAPTURE'
-                    ? 'Guided capture'
+                    ? 'Recording tasks'
                     : started
                       ? 'Live session'
                       : data.scheduledFor
@@ -244,7 +244,7 @@ function Console({ data }: { data: ConsoleData }) {
               <div className="max-w-md p-6 text-center">
                 <p className="text-sm font-bold text-white">
                   {data.mode === 'GUIDED_CAPTURE'
-                    ? 'This case moved to guided capture. Review the clips on the right.'
+                    ? 'The call could not hold, so the school is recording clips instead. Review them on the right.'
                     : started && !ended
                       ? 'Live call: the school\'s video, and voice both ways'
                       : 'The school\'s video and the voice call appear here when the session starts'}
@@ -306,7 +306,10 @@ function Console({ data }: { data: ConsoleData }) {
                 Disputed indicators
               </h2>
               <span className="text-xs font-bold tabular-nums" style={{ color: INK_MUTED }}>
-                {observed} of {data.indicators.length} observed
+                {observed} of {data.indicators.length} settled
+                {unchecked > 0 && (
+                  <span style={{ color: GOLD_DARK }}> · {unchecked} not checkable</span>
+                )}
               </span>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#EDEFF3]">
@@ -323,50 +326,113 @@ function Console({ data }: { data: ConsoleData }) {
                 school on a call jumps about and the verifier has to follow. */}
             <div className="mt-3 space-y-3">
               {data.indicators.map((i) => {
-                const done = (i.observationNote ?? '').trim().length > 0;
+                const answered = i.observedLevel !== null || i.couldNotCheck;
                 const current = i.parameterId === currentId;
+                const settled = i.observedLevel !== null;
                 return (
                   <div
                     key={i.parameterId}
                     onClick={() => setCurrentId(i.parameterId)}
                     className="rounded-lg border-2 p-3"
                     style={{
-                      borderColor: current ? NAVY : done ? '#BFE0CF' : '#E5E7EB',
-                      backgroundColor: done && !current ? '#F4FAF6' : 'white',
-                      opacity: current || done ? 1 : 0.62,
+                      borderColor: current
+                        ? NAVY
+                        : i.couldNotCheck
+                          ? '#D0AD42'
+                          : settled
+                            ? '#BFE0CF'
+                            : '#E5E7EB',
+                      backgroundColor: !current && settled ? '#F4FAF6' : !current && i.couldNotCheck ? GOLD_WASH : 'white',
+                      opacity: current || answered ? 1 : 0.62,
                     }}
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="font-mono text-xs font-bold" style={{ color: NAVY }}>
                         {i.code}
                       </p>
-                      {done && (
+                      {settled && (
                         <span className="text-[10.5px] font-extrabold" style={{ color: GREEN }}>
-                          Observed
+                          Level {i.observedLevel}
+                          {i.claimedLevel === i.observedLevel ? ', as claimed' : ''}
+                        </span>
+                      )}
+                      {i.couldNotCheck && (
+                        <span className="text-[10.5px] font-extrabold" style={{ color: GOLD_DARK }}>
+                          Could not check
                         </span>
                       )}
                     </div>
                     <p className="text-sm font-bold text-gray-900">{i.titleEn}</p>
                     <p className="text-xs" style={{ color: INK_MUTED }}>
-                      {i.claimedLevel !== null ? `Claimed Level ${i.claimedLevel} · ` : ''}
+                      {i.claimedLevel !== null ? `School claimed Level ${i.claimedLevel} · ` : ''}
                       {i.disputeSources.join(' · ')}
                     </p>
-                    {(current || done) && (
-                      <textarea
-                        value={notes[i.parameterId] ?? ''}
-                        onChange={(e) => setNotes((n) => ({ ...n, [i.parameterId]: e.target.value }))}
-                        onFocus={() => setCurrentId(i.parameterId)}
-                        onBlur={() => {
-                          const note = (notes[i.parameterId] ?? '').trim();
-                          if (note && note !== (i.observationNote ?? '')) {
-                            run(() => saveObservation(data.runId, i.parameterId, note));
+
+                    {/* The framework's own words for each level, the same instrument the
+                        on-ground verifier uses on site: the verifier reads the rubric rather
+                        than recalling it. Only the current card opens them, so a long list of
+                        indicators does not become a wall of rubric text. */}
+                    {current && !ended && (
+                      <div className="mt-2 space-y-1.5">
+                        {i.levels.map((level) => {
+                          const on = i.observedLevel === level.order;
+                          return (
+                            <button
+                              key={level.order}
+                              type="button"
+                              disabled={pending}
+                              onClick={() =>
+                                run(() =>
+                                  saveObservation(data.runId, i.parameterId, {
+                                    kind: 'LEVEL',
+                                    level: level.order,
+                                  }),
+                                )
+                              }
+                              className="block w-full rounded-lg border-2 p-2.5 text-left disabled:opacity-60"
+                              style={{
+                                borderColor: on ? NAVY : '#D1D5DB',
+                                backgroundColor: on ? NAVY : 'white',
+                              }}
+                            >
+                              <span className="block text-xs font-extrabold" style={{ color: on ? 'white' : NAVY_DEEP }}>
+                                Level {level.order}
+                              </span>
+                              <span className="mt-0.5 block text-[11.5px] leading-snug" style={{ color: on ? 'white' : '#374151' }}>
+                                {level.labelEn}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() =>
+                            run(() => saveObservation(data.runId, i.parameterId, { kind: 'COULD_NOT_CHECK' }))
                           }
-                        }}
-                        disabled={ended}
-                        rows={2}
-                        placeholder="What the walkthrough showed for this indicator."
-                        className="mt-2 w-full rounded-lg border-2 border-gray-300 p-2 text-sm disabled:bg-gray-50"
-                      />
+                          className="block w-full rounded-lg border-2 border-dashed p-2.5 text-left disabled:opacity-60"
+                          style={{
+                            borderColor: '#D0AD42',
+                            backgroundColor: i.couldNotCheck ? '#F5E6BF' : GOLD_WASH,
+                          }}
+                        >
+                          <span className="block text-xs font-extrabold" style={{ color: GOLD_DARK }}>
+                            Could not check on the call
+                          </span>
+                          <span className="mt-0.5 block text-[11.5px] leading-snug" style={{ color: GOLD_DARK }}>
+                            The camera never showed this, or the connection would not carry it. This
+                            indicator stays unsettled and the case goes for a physical inspection.
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Older sessions recorded a paragraph instead of a level. Shown, never
+                        edited: the picker replaced it and the record stays readable. */}
+                    {i.observationNote && (
+                      <p className="mt-2 rounded-lg bg-gray-50 p-2 text-[11.5px]" style={{ color: INK_MUTED }}>
+                        Recorded before the level picker: {i.observationNote}
+                      </p>
                     )}
                   </div>
                 );
@@ -377,7 +443,7 @@ function Console({ data }: { data: ConsoleData }) {
           {data.mode === 'GUIDED_CAPTURE' && (
             <div className="rounded-xl border-2 p-4" style={{ borderColor: '#D0AD42', backgroundColor: GOLD_WASH }}>
               <h2 className="text-base font-bold" style={{ color: GOLD_DARK }}>
-                Guided capture clips ({data.clips.length})
+                Recording tasks · {data.clips.length} returned
               </h2>
               <p className="mt-1 text-xs" style={{ color: GOLD_DARK }}>
                 {data.guidedCaptureDeadline

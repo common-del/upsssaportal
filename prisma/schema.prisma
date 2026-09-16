@@ -1192,11 +1192,19 @@ model WalkthroughClip {
 }
 
 model WalkthroughObservation {
-  id          String             @id @default(cuid())
-  sessionId   String
-  parameterId String
-  note        String
-  createdAt   DateTime           @default(now())
+  id            String           @id @default(cuid())
+  sessionId     String
+  parameterId   String
+  /// The level the walkthrough settled on, taken from the framework's own descriptors for
+  /// this indicator. Null when the call could not check it.
+  observedLevel Int?
+  /// Set when the call could not settle the indicator: the camera never showed it, or the
+  /// connection would not carry it. The case then cannot be resolved and goes to the field.
+  couldNotCheck Boolean          @default(false)
+  /// Free text, from before the level picker replaced it. Kept nullable so older records
+  /// stay readable; nothing writes it now.
+  note          String?
+  createdAt     DateTime         @default(now())
   session     WalkthroughSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   parameter   Parameter          @relation(fields: [parameterId], references: [id])
 

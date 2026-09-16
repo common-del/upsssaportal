@@ -725,3 +725,37 @@ Left open deliberately, and not built: whether a guided capture window that laps
 missing should route the case to a field visit automatically or wait for the verifier. The
 resolve rules already refuse a resolution while any disputed indicator lacks an observation,
 so the outcome is the same either way; the question is who performs it.
+
+## 27. The walkthrough answers in levels, and guided capture is renamed, decided 16 September 2026
+
+Two changes SSSA directed after reading the walkthrough console.
+
+The free text box is gone. Each disputed indicator now offers the framework's own three
+descriptors plus a fourth option, "Could not check on the call". This is the instrument the
+on-ground verifier already uses on site, so one indicator is judged the same way wherever it
+is judged, and the walkthrough answers in the same currency as the school's claim and the
+field visit rather than in a paragraph nothing downstream can compare. The verifier reads the
+rubric instead of recalling it, exactly as in the field workspace.
+
+"Could not check" is a real answer with a consequence. It records that the camera never
+showed the indicator or the connection would not carry it, and it does not count as settled,
+so the resolve rule refuses RESOLVED and the case goes UNRESOLVED into this year's field
+cohort for a physical inspection. That behaviour is not new machinery: the rule already
+refused to resolve a case while any dispute was unobserved, and this simply gives the
+unobserved case an honest name.
+
+WalkthroughObservation gains observedLevel and couldNotCheck; its note column becomes
+optional and is no longer written, but old records keep their text and the console shows it
+read-only beneath the picker, marked as recorded before the level picker. Legacy notes still
+count as settled, so a session begun under the old design can still be resolved.
+
+One consequence SSSA accepted knowingly, recorded because it may be revisited: with no note,
+a level that differs from the school's claim carries no written reason. If that school
+appeals, the walkthrough's contribution to the file is a number. Desk screening requires a
+rationale for exactly this reason. The proposal on the table was one optional line shown only
+where the chosen level differs from the claim; SSSA chose to build without it.
+
+And "guided capture" is renamed "Recording tasks" on every screen. The brief's phrase
+explained nothing, and the portal was already inconsistent, with the school's own screen
+saying "Recording task" while every verifier screen said guided capture. Both sides now use
+the school's word. The internal names, the enum and the rules module keep the brief's term.

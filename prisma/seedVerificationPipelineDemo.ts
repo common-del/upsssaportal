@@ -354,11 +354,14 @@ async function main() {
     select: { parameterId: true },
     take: 2,
   });
+  // One settled on a level, one the call could not check: the second is what holds the case
+  // back from being resolved and sends it for a physical visit.
   await prisma.walkthroughObservation.createMany({
     data: liveDisputed.map((d, i) => ({
       sessionId: live.id,
       parameterId: d.parameterId,
-      note: i === 0 ? 'Seen on camera; the room exists and matches the claim.' : 'Shown only from the doorway; could not confirm the equipment claimed.',
+      observedLevel: i === 0 ? 2 : null,
+      couldNotCheck: i !== 0,
     })),
   });
   await prisma.walkthroughSession.create({

@@ -214,6 +214,14 @@ export type DisputedIndicator = {
   claimedLabelEn: string | null;
   /** Why it is disputed: the desk decision, the auto mismatch, or both. */
   disputeSources: string[];
+  /** The framework's own text for each level, so the verifier reads the rubric on the call
+   *  rather than recalling it. The same descriptors the field workspace shows on site. */
+  levels: { order: number; labelEn: string; labelHi: string }[];
+  /** The level this walkthrough settled on, when it settled one. */
+  observedLevel: number | null;
+  /** The call could not check this indicator, so it stays unsettled. */
+  couldNotCheck: boolean;
+  /** Free text from before the level picker replaced it, shown read-only where it exists. */
   observationNote: string | null;
 };
 
@@ -309,7 +317,7 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
   const decisionBy = new Map(decisions.map((d) => [d.parameterId, d.decision as string]));
   const mismatchBy = new Map(mismatches.map((m) => [m.parameterId, m.source as string | null]));
   const claimBy = new Map((submission?.responses ?? []).map((r) => [r.parameterId, r.selectedOptionKey]));
-  const observationBy = new Map(observations.map((o) => [o.parameterId, o.note]));
+  const observationBy = new Map(observations.map((o) => [o.parameterId, o]));
 
   const indicators: DisputedIndicator[] = parameters
     .map((p) => {
@@ -328,7 +336,10 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
         claimedLevel: claimed?.order ?? null,
         claimedLabelEn: claimed?.labelEn ?? null,
         disputeSources: sources,
-        observationNote: observationBy.get(p.id) ?? null,
+        levels: p.options.map((o) => ({ order: o.order, labelEn: o.labelEn, labelHi: o.labelHi })),
+        observedLevel: observationBy.get(p.id)?.observedLevel ?? null,
+        couldNotCheck: observationBy.get(p.id)?.couldNotCheck ?? false,
+        observationNote: observationBy.get(p.id)?.note ?? null,
       };
     })
     .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
@@ -436,22 +447,51 @@ export async function startWalkthrough(runId: string): Promise<{ success: boolea
   return { success: true };
 }
 
+/** What the walkthrough concluded about one disputed indicator. */
+export type ObservationAnswer =
+  | { kind: 'LEVEL'; level: number }
+  | { kind: 'COULD_NOT_CHECK' };
+
+/**
+ * Record the walkthrough's answer on one indicator.
+ *
+ * A level rather than a paragraph, drawn from the framework's own descriptors, so the
+ * walkthrough answers in the same currency as the school's claim and the field visit and the
+ * three can be set side by side. "Could not check" is a real answer with a consequence: it
+ * leaves the indicator unsettled, which the resolve rule then refuses to call resolved.
+ */
 export async function saveObservation(
   runId: string,
   parameterId: string,
-  note: string,
+  answer: ObservationAnswer,
 ): Promise<{ success: boolean; error?: string }> {
   const mine = await mySession(runId);
   if (!mine) return { success: false, error: 'Case not available.' };
   if (mine.session.endedAt) return { success: false, error: 'This session has ended.' };
   if (!mine.session.conflictDeclaredAt) return { success: false, error: 'Declare conflicts first.' };
-  const trimmed = note.trim();
-  if (!trimmed) return { success: false, error: 'Write what you observed.' };
+
+  if (answer.kind === 'LEVEL') {
+    // The level has to be one this indicator actually defines: the framework carries three,
+    // and a number from anywhere else would be a level nobody can read back.
+    const param = await prisma.parameter.findUnique({
+      where: { id: parameterId },
+      select: { options: { where: { isActive: true }, select: { order: true } } },
+    });
+    if (!param) return { success: false, error: 'Indicator not found.' };
+    if (!param.options.some((o) => o.order === answer.level)) {
+      return { success: false, error: `Level ${answer.level} is not defined for this indicator.` };
+    }
+  }
+
+  const data =
+    answer.kind === 'LEVEL'
+      ? { observedLevel: answer.level, couldNotCheck: false }
+      : { observedLevel: null, couldNotCheck: true };
 
   await prisma.walkthroughObservation.upsert({
     where: { sessionId_parameterId: { sessionId: mine.session.id, parameterId } },
-    create: { sessionId: mine.session.id, parameterId, note: trimmed },
-    update: { note: trimmed },
+    create: { sessionId: mine.session.id, parameterId, ...data },
+    update: data,
   });
   revalidatePath(`/app/verifier/walkthrough/${runId}`);
   return { success: true };
@@ -476,16 +516,19 @@ export async function resolveWalkthrough(
     disputedParameterIds(runId),
     prisma.walkthroughObservation.findMany({
       where: { sessionId: mine.session.id },
-      select: { parameterId: true },
+      select: { parameterId: true, observedLevel: true, couldNotCheck: true, note: true },
     }),
   ]);
 
-  const check = canResolve(
-    outcome,
-    disputed,
-    observations.map((o) => o.parameterId),
-    outcomeNote,
-  );
+  // An indicator the call could not check is answered but not settled, so it does not count
+  // as observed: RESOLVED asserts every dispute was actually looked at, and this one was not.
+  // The verifier is left with UNRESOLVED, which fast-tracks the case to a physical visit.
+  // A legacy record carrying only free text still counts, so old sessions stay resolvable.
+  const settled = observations
+    .filter((o) => !o.couldNotCheck && (o.observedLevel !== null || (o.note ?? '').trim().length > 0))
+    .map((o) => o.parameterId);
+
+  const check = canResolve(outcome, disputed, settled, outcomeNote);
   if (!check.ok) return { success: false, error: check.reason ?? 'Cannot resolve yet.' };
 
   await prisma.walkthroughSession.update({

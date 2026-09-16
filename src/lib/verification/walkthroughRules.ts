@@ -85,7 +85,7 @@ export function canResolve(
     if (missing.length > 0) {
       return {
         ok: false,
-        reason: `${missing.length} disputed indicator${missing.length === 1 ? ' has' : 's have'} no observation. Resolved asserts each dispute was looked at.`,
+        reason: `${missing.length} disputed indicator${missing.length === 1 ? ' is' : 's are'} unsettled, either unanswered or marked as not checkable on the call. Resolved asserts every dispute was looked at, so this case has to go to a physical visit.`,
       };
     }
     return { ok: true, reason: null };

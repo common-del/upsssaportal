@@ -3,13 +3,11 @@
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { resolveEscalation } from '@/lib/actions/supervisor';
 import type { DeskDecision } from '@prisma/client';
 import type {
   DecisionRow,
   DecisionsInboxData,
   DiscrepancyDecision,
-  EscalationDecision,
 } from '@/lib/sssa/decisionsInbox';
 
 /**
@@ -23,13 +21,12 @@ import type {
  * never replied), one button. "Rule oldest first" in the header deals the same
  * cards one at a time, worst first, across every kind.
  *
- * Attribution language is SSSA's: escalations are "raised by an online verifier",
+ * Attribution language is SSSA's:
  * discrepancy cases are "from the on-ground verifier", whose signed-off findings
  * the portal compared against the school's claim to open the case automatically.
  */
 
 const APPEAL = '#B3271D';
-const ESCALATION = '#1F3864';
 const DISCREPANCY = '#B8791A';
 const DISCREPANCY_INK = '#9A6410';
 const NAVY_DEEP = '#073763';
@@ -41,102 +38,19 @@ const days = (n: number) => `${n} day${n === 1 ? '' : 's'}`;
 const waitClass = (d: number) => (d >= 14 ? 'text-[#B3271D]' : d >= 7 ? 'text-[#9A6410]' : 'text-gray-500');
 
 export type DecisionsTab = 'overview' | 'appeals' | 'issues';
-export type IssuesWho = 'all' | 'verifier' | 'field';
-
-function writeUrl(tab: DecisionsTab, who: IssuesWho, focus: boolean) {
+function writeUrl(tab: DecisionsTab, focus: boolean) {
   // Kept in the URL so Back, reload and shared links land on the same slice.
   if (typeof window === 'undefined') return;
   const params = new URLSearchParams();
   if (focus) params.set('view', 'focus');
   else {
     if (tab !== 'overview') params.set('tab', tab);
-    if (tab === 'issues' && who !== 'all') params.set('who', who);
   }
   const qs = params.toString();
   window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The inline four-option ruling for escalations
-// ─────────────────────────────────────────────────────────────────────────────
-
-const RULINGS: { value: DeskDecision; label: string }[] = [
-  { value: 'EVIDENCE_SUPPORTS_LEVEL', label: 'Evidence supports the claimed level' },
-  { value: 'EVIDENCE_INSUFFICIENT', label: 'Evidence insufficient' },
-  { value: 'EVIDENCE_CONTRADICTS_LEVEL', label: 'Evidence contradicts the claim' },
-  { value: 'EVIDENCE_MISSING', label: 'Evidence missing' },
-];
-
-function EscalationRulingForm({ row }: { row: EscalationDecision }) {
-  const router = useRouter();
-  const [decision, setDecision] = useState<DeskDecision>('EVIDENCE_INSUFFICIENT');
-  const [note, setNote] = useState('');
-  const [error, setError] = useState('');
-  const [pending, startTransition] = useTransition();
-
-  function rule() {
-    setError('');
-    startTransition(async () => {
-      const res = await resolveEscalation(row.runId, row.parameterId, decision, note);
-      if (res.success) router.refresh();
-      else setError(res.error ?? 'Could not record the ruling.');
-    });
-  }
-
-  return (
-    <div className="mt-3 border-t border-gray-100 pt-3">
-      <div className="grid gap-2 sm:grid-cols-2">
-        {RULINGS.map((d) => (
-          <label
-            key={d.value}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border-2 p-2.5 text-[12px] font-semibold"
-            style={{
-              borderColor: decision === d.value ? ESCALATION : '#E5E7EB',
-              backgroundColor: decision === d.value ? '#EEF2F9' : 'white',
-              color: NAVY_DEEP,
-            }}
-          >
-            <input
-              type="radio"
-              name={`ruling-${row.runId}-${row.parameterId}`}
-              checked={decision === d.value}
-              onChange={() => setDecision(d.value)}
-            />
-            {d.label}
-          </label>
-        ))}
-      </div>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={2}
-        placeholder="Your ruling, in words the verifier can apply next time this comes up."
-        className="mt-3 w-full rounded-lg border-2 border-gray-300 p-3 text-[12.5px]"
-      />
-      <div className="mt-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={rule}
-          disabled={pending}
-          className="rounded-lg px-5 py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
-          style={{ backgroundColor: ESCALATION }}
-        >
-          {pending ? 'Recording...' : 'Rule and unfreeze the case'}
-        </button>
-        {error && (
-          <p role="alert" className="text-[12.5px] font-semibold" style={{ color: APPEAL }}>
-            {error}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// The one card: six slots, whatever the kind
-// ─────────────────────────────────────────────────────────────────────────────
-
 function discrepancyResponseLine(row: DiscrepancyDecision): string {
   if (row.response === 'RESPONDED') {
     return row.respondedDaysAgo === 0
@@ -170,8 +84,6 @@ function DecisionCard({ row, showWait = true }: { row: DecisionRow; showWait?: b
   const spec =
     row.kind === 'APPEAL'
       ? { edge: APPEAL, ink: APPEAL, kind: 'Filed by the school · an upheld appeal changes the published score' }
-      : row.kind === 'ESCALATION'
-        ? { edge: ESCALATION, ink: ESCALATION, kind: 'Raised by an online verifier · freezes its case until you rule' }
         : { edge: DISCREPANCY, ink: DISCREPANCY_INK, kind: 'From the on-ground verifier · field visit differs from the claim · blocks publication' };
 
   return (
@@ -218,39 +130,6 @@ function DecisionCard({ row, showWait = true }: { row: DecisionRow; showWait?: b
         </>
       )}
 
-      {row.kind === 'ESCALATION' && (
-        <>
-          <p className="mt-1.5 text-[17px] font-extrabold text-gray-900">
-            <span className="mr-2 font-mono text-[13px]" style={{ color: ESCALATION }}>
-              {row.parameterCode}
-            </span>
-            {row.parameterTitle}
-          </p>
-          <p className="mt-1 text-[12.5px] text-gray-500">
-            Screening {row.school} · {row.district} · raised by {row.verifierName}, Online Verifier
-            {row.claimedLevel !== null ? ` · claimed Level ${row.claimedLevel}` : ''}
-          </p>
-          <blockquote className="mt-3 rounded-lg bg-gray-50 p-3 text-[12.5px] text-gray-800">
-            <span className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
-              The verifier&apos;s reason
-            </span>
-            {row.rationale ?? 'No written reason was recorded with the escalation.'}
-          </blockquote>
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={() => setRuling((r) => !r)}
-              aria-expanded={ruling}
-              className="rounded-lg px-5 py-2 text-[12.5px] font-bold text-white"
-              style={{ backgroundColor: NAVY }}
-            >
-              {ruling ? 'Close the form' : 'Rule this indicator'}
-            </button>
-          </div>
-          {ruling && <EscalationRulingForm row={row} />}
-        </>
-      )}
-
       {row.kind === 'DISCREPANCY' && (
         <>
           <p className="mt-1.5 text-[18px] font-extrabold tabular-nums text-gray-900">
@@ -292,8 +171,7 @@ function DecisionCard({ row, showWait = true }: { row: DecisionRow; showWait?: b
 
 function shortLabel(row: DecisionRow): string {
   if (row.kind === 'APPEAL') return `${row.school} appeal`;
-  if (row.kind === 'DISCREPANCY') return `${row.school} case`;
-  return `indicator ${row.parameterCode} escalation`;
+  return `${row.school} case`;
 }
 
 function FocusMode({ rows, onExit }: { rows: DecisionRow[]; onExit: () => void }) {
@@ -373,29 +251,20 @@ function Panel({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: DecisionsTab, who: IssuesWho) => void }) {
+function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: DecisionsTab) => void }) {
   const { counts, overview, rows } = data;
   const oldestOf = (kind: DecisionRow['kind']) => rows.find((r) => r.kind === kind)?.waitingDays ?? 0;
   const total = Math.max(1, counts.total);
   const maxDistrict = Math.max(1, overview.districts[0]?.count ?? 1);
   const decidedTotal = Math.max(1, overview.appealsDecided.decided);
 
-  const tiles: { count: number; label: string; sub: string; colour: string; tab: DecisionsTab; who: IssuesWho }[] = [
+  const tiles: { count: number; label: string; sub: string; colour: string; tab: DecisionsTab }[] = [
     {
       count: counts.appeals,
       label: 'Appeals',
       sub: `filed by schools · oldest ${days(oldestOf('APPEAL'))}`,
       colour: APPEAL,
       tab: 'appeals',
-      who: 'all',
-    },
-    {
-      count: counts.escalations,
-      label: 'From online verifiers',
-      sub: `frozen cases · oldest ${days(oldestOf('ESCALATION'))}`,
-      colour: ESCALATION,
-      tab: 'issues',
-      who: 'verifier',
     },
     {
       count: counts.discrepancies,
@@ -403,7 +272,6 @@ function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: 
       sub: `field visit differs from the claim · oldest ${days(oldestOf('DISCREPANCY'))}`,
       colour: DISCREPANCY,
       tab: 'issues',
-      who: 'field',
     },
   ];
 
@@ -425,7 +293,7 @@ function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: 
             {t.count > 0 && (
               <button
                 type="button"
-                onClick={() => openTab(t.tab, t.who)}
+                onClick={() => openTab(t.tab)}
                 className="mt-1.5 text-[11.5px] font-bold"
                 style={{ color: NAVY_DEEP }}
               >
@@ -531,21 +399,6 @@ function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: 
             </>
           )}
         </Panel>
-        <Panel label="Most escalated indicator">
-          {overview.mostEscalated == null ? (
-            <p className="mt-1.5 text-[12.5px] text-gray-500">Nothing has been escalated this cycle.</p>
-          ) : (
-            <>
-              <p className="mt-1 text-[14px] font-bold tabular-nums text-gray-900">
-                <span className="mr-1.5 font-mono text-[12.5px]" style={{ color: ESCALATION }}>
-                  {overview.mostEscalated.code}
-                </span>
-                escalated {inr(overview.mostEscalated.times)} time{overview.mostEscalated.times === 1 ? '' : 's'} this cycle
-              </p>
-              <p className="mt-1 text-[12px] text-gray-500">{overview.mostEscalated.title}. A rubric worth clarifying.</p>
-            </>
-          )}
-        </Panel>
       </div>
     </div>
   );
@@ -558,40 +411,28 @@ function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: 
 export function DecisionsInbox({
   data,
   initialTab = 'overview',
-  initialWho = 'all',
   initialFocus = false,
 }: {
   data: DecisionsInboxData;
   initialTab?: DecisionsTab;
-  initialWho?: IssuesWho;
   initialFocus?: boolean;
 }) {
   const [tab, setTab] = useState<DecisionsTab>(initialTab);
-  const [who, setWho] = useState<IssuesWho>(initialWho);
   const [focus, setFocus] = useState(initialFocus && data.counts.total > 0);
 
   const appealRows = useMemo(() => data.rows.filter((r) => r.kind === 'APPEAL'), [data.rows]);
-  const issueRows = useMemo(
-    () =>
-      data.rows.filter(
-        (r) =>
-          (r.kind === 'ESCALATION' || r.kind === 'DISCREPANCY') &&
-          (who === 'all' || (who === 'verifier' ? r.kind === 'ESCALATION' : r.kind === 'DISCREPANCY')),
-      ),
-    [data.rows, who],
-  );
+  const issueRows = useMemo(() => data.rows.filter((r) => r.kind === 'DISCREPANCY'), [data.rows]);
 
-  function go(nextTab: DecisionsTab, nextWho: IssuesWho) {
+  function go(nextTab: DecisionsTab) {
     setTab(nextTab);
-    setWho(nextWho);
     setFocus(false);
-    writeUrl(nextTab, nextWho, false);
+    writeUrl(nextTab, false);
   }
 
   const tabs: { id: DecisionsTab; label: string; count: number | null }[] = [
     { id: 'overview', label: 'Overview', count: null },
     { id: 'appeals', label: 'Appeals', count: data.counts.appeals },
-    { id: 'issues', label: 'Verification issues', count: data.counts.escalations + data.counts.discrepancies },
+    { id: 'issues', label: 'Verification issues', count: data.counts.discrepancies },
   ];
 
   return (
@@ -613,7 +454,7 @@ export function DecisionsInbox({
             type="button"
             onClick={() => {
               setFocus(true);
-              writeUrl(tab, who, true);
+              writeUrl(tab, true);
             }}
             className="rounded-lg px-4 py-2 text-[12.5px] font-bold text-white"
             style={{ backgroundColor: NAVY }}
@@ -628,7 +469,7 @@ export function DecisionsInbox({
           rows={data.rows}
           onExit={() => {
             setFocus(false);
-            writeUrl(tab, who, false);
+            writeUrl(tab, false);
           }}
         />
       ) : (
@@ -640,7 +481,7 @@ export function DecisionsInbox({
                 type="button"
                 role="tab"
                 aria-selected={t.id === tab}
-                onClick={() => go(t.id, t.id === 'issues' ? who : 'all')}
+                onClick={() => go(t.id)}
                 className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-[13.5px] font-semibold ${
                   t.id === tab ? 'border-[#1B2A6B] text-[#1B2A6B]' : 'border-transparent text-gray-500 hover:text-gray-900'
                 }`}
@@ -676,31 +517,6 @@ export function DecisionsInbox({
 
           {tab === 'issues' && (
             <>
-              <div className="flex flex-wrap items-center gap-2">
-                {(
-                  [
-                    { id: 'all', label: 'All', count: data.counts.escalations + data.counts.discrepancies },
-                    { id: 'verifier', label: 'Raised by online verifiers', count: data.counts.escalations, colour: ESCALATION },
-                    { id: 'field', label: 'From on-ground verifiers', count: data.counts.discrepancies, colour: DISCREPANCY_INK },
-                  ] as const
-                ).map((c) => {
-                  const on = who === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => go('issues', c.id)}
-                      className={`rounded-full border-2 px-3.5 py-1 text-[12px] font-bold ${
-                        on ? 'border-[#1B2A6B] bg-[#1B2A6B] text-white' : 'border-gray-300 bg-white hover:bg-gray-50'
-                      }`}
-                      style={!on && 'colour' in c && c.colour ? { color: c.colour } : undefined}
-                    >
-                      {c.label} <span className="tabular-nums opacity-75">{inr(c.count)}</span>
-                    </button>
-                  );
-                })}
-              </div>
               {issueRows.length === 0 ? (
                 <p className="rounded-xl border border-gray-200 bg-white px-4 py-7 text-center text-[13px] text-gray-500">
                   Nothing of this kind is waiting.

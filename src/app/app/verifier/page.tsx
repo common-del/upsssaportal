@@ -119,18 +119,13 @@ async function OnlineOverview({
   userName: string;
   blocked: boolean;
 }) {
-  const [cycle, config, manualTotal, frozenCount, ruledCount] = await Promise.all([
+  const [cycle, config, manualTotal] = await Promise.all([
     prisma.cycle.findFirst({ where: { isActive: true }, select: { id: true, name: true } }),
     prisma.programmeConfig.findUnique({
       where: { id: 'current' },
       select: { videoWalkthroughTurnaroundDays: true },
     }),
     prisma.parameter.count({ where: { checkMethod: 'MANUAL', isActive: true } }),
-    prisma.deskScreeningDecision.count({ where: { profileId, escalated: true } }),
-    // Escalated once, no longer frozen: the SSSA ruled and the ruling sits on the decision.
-    prisma.deskScreeningDecision.count({
-      where: { profileId, escalated: false, escalatedAt: { not: null } },
-    }),
   ]);
 
   const runs = await prisma.assessmentCycleRun.findMany({
@@ -143,7 +138,7 @@ async function OnlineOverview({
       // is the one non-identifying school fact a screener may see. No name, place or contact
       // is fetched anywhere on this screen.
       school: { select: { udise: true, category: true } },
-      deskDecisions: { select: { decision: true, escalated: true } },
+      deskDecisions: { select: { decision: true } },
       _count: { select: { autoChecks: true } },
     },
     orderBy: { enteredStateAt: 'asc' },
@@ -166,19 +161,13 @@ async function OnlineOverview({
     code: maskedCodeFor(r.school.udise),
     decided: r.deskDecisions.length,
     flagged: r.deskDecisions.filter((d) => d.decision !== 'EVIDENCE_SUPPORTS_LEVEL').length,
-    frozen: r.deskDecisions.filter((d) => d.escalated).length,
     autoChecked: r._count.autoChecks > 0,
   }));
-  // Working order: frozen cases first, then in progress by how close they are to done, then
-  // the untouched pile.
-  const caseWeight = (c: (typeof cases)[number]) => (c.frozen > 0 ? 0 : c.decided > 0 ? 1 : 2);
-  cases.sort((a, b) => caseWeight(a) - caseWeight(b) || b.decided - a.decided);
+  // Working order: cases under way first, closest to done at the top, then the untouched pile.
+  cases.sort((a, b) => (b.decided > 0 ? 1 : 0) - (a.decided > 0 ? 1 : 0) || b.decided - a.decided);
 
   const pendingCount = cases.filter((c) => c.decided === 0).length;
   const inProgressCount = deskRuns.length - pendingCount;
-  const frozenCases = cases.filter((c) => c.frozen > 0);
-  const frozenHref =
-    frozenCases.length === 1 ? `/app/verifier/desk/${frozenCases[0]!.runId}` : '/app/verifier/desk';
 
   const LEDGER_LIMIT = 6;
   const shownCases = cases.slice(0, LEDGER_LIMIT);
@@ -242,19 +231,6 @@ async function OnlineOverview({
           href="/app/verifier/walkthroughs"
           colour={overdue > 0 ? RED : walkthroughRuns.length > 0 ? NAVY : INK_MUTED}
         />
-        <Tile
-          value={frozenCount}
-          label="Sent to SSSA"
-          detail={
-            frozenCount > 0
-              ? `Held until it rules${ruledCount > 0 ? ` · ${ruledCount} ruled so far` : ''}`
-              : ruledCount > 0
-                ? `${ruledCount} ruled so far, none waiting`
-                : 'Nothing sent up'
-          }
-          href={frozenHref}
-          colour={frozenCount > 0 ? GOLD_DARK : INK_MUTED}
-        />
       </div>
 
       {cases.length > 0 && (
@@ -273,7 +249,7 @@ async function OnlineOverview({
               key={c.runId}
               href={`/app/verifier/desk/${c.runId}`}
               className="flex items-center gap-3 rounded-xl border-2 bg-white px-4 py-3 hover:border-gray-300"
-              style={{ borderColor: c.frozen > 0 ? RED : '#E5E7EB' }}
+              style={{ borderColor: '#E5E7EB' }}
             >
               <span
                 className="flex-none rounded-lg border-2 px-2.5 py-1.5 font-mono text-xs font-bold"
@@ -302,11 +278,6 @@ async function OnlineOverview({
                   }}
                 />
               </span>
-              {c.frozen > 0 && (
-                <span className="flex-none rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ backgroundColor: GOLD_DARK }}>
-                  {c.frozen} with SSSA
-                </span>
-              )}
               <span aria-hidden className="flex-none text-lg font-bold" style={{ color: INK_MUTED }}>
                 ›
               </span>

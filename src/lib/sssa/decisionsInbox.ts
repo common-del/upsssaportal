@@ -1,19 +1,20 @@
 import { prisma } from '@/lib/db';
 import { bandForScore } from './bands';
-import { getEscalationInbox } from '@/lib/actions/supervisor';
 
 /**
  * The Decisions inbox: every ruling waiting on the admin, in one list.
  *
- * Three kinds of pending decision used to live on three sidebar pages that looked
+ * Kinds of pending decision used to live on separate sidebar pages that looked
  * identical because they are identical in shape — a heading over a list of things
- * one person must rule on. This assembles all three, worst first:
+ * one person must rule on. This assembles them, worst first:
  *
  * - APPEAL: a school contests its verified result, after publication.
- * - ESCALATION: an online verifier cannot judge one indicator against the rubric,
- *   mid desk screening; the case is frozen until the ruling.
  * - DISCREPANCY: the pipeline found a signed-off field visit differing from the
  *   school's claim, before publication; the run cannot publish until ruled.
+ *
+ * A third kind, ESCALATION, was retired on 16 September 2026 when SSSA removed the
+ * escalation path: an online verifier no longer sends an indicator up, so no ruling
+ * of that sort can arrive here.
  *
  * Audit is deliberately absent: it is a blind re-check of finished work, and mixing
  * it in would put the primary findings a click away from the person meant not to
@@ -41,21 +42,6 @@ export type AppealDecision = {
   waitingDays: number;
 };
 
-export type EscalationDecision = {
-  kind: 'ESCALATION';
-  key: string;
-  runId: string;
-  parameterId: string;
-  parameterCode: string;
-  parameterTitle: string;
-  school: string;
-  district: string;
-  verifierName: string;
-  rationale: string | null;
-  claimedLevel: number | null;
-  waitingDays: number;
-};
-
 export type DiscrepancyResponseState = 'RESPONDED' | 'WINDOW_OPEN' | 'WINDOW_CLOSED' | 'NOT_OPENED';
 
 export type DiscrepancyDecision = {
@@ -79,7 +65,7 @@ export type DiscrepancyDecision = {
   waitingDays: number;
 };
 
-export type DecisionRow = AppealDecision | EscalationDecision | DiscrepancyDecision;
+export type DecisionRow = AppealDecision | DiscrepancyDecision;
 
 /** The Overview tab's standing signals, all derived or counted cheaply. */
 export type DecisionsOverview = {
@@ -91,7 +77,6 @@ export type DecisionsOverview = {
   appealsDecided: { decided: number; upheld: number; dismissed: number };
   /** Median days from submission to decision across this cycle's decided appeals. */
   medianDaysToDecideAppeal: number | null;
-  mostEscalated: { code: string; title: string; times: number } | null;
 };
 
 export type DecisionsInboxData = {
@@ -100,7 +85,6 @@ export type DecisionsInboxData = {
   counts: {
     total: number;
     appeals: number;
-    escalations: number;
     discrepancies: number;
     /** Discrepancies block publication; the summary line names them separately. */
     blocking: number;
@@ -123,12 +107,11 @@ const EMPTY_OVERVIEW: DecisionsOverview = {
   otherDistrictsCount: 0,
   appealsDecided: { decided: 0, upheld: 0, dismissed: 0 },
   medianDaysToDecideAppeal: null,
-  mostEscalated: null,
 };
 
 const EMPTY: DecisionsInboxData = {
   rows: [],
-  counts: { total: 0, appeals: 0, escalations: 0, discrepancies: 0, blocking: 0, oldestDays: 0 },
+  counts: { total: 0, appeals: 0, discrepancies: 0, blocking: 0, oldestDays: 0 },
   overview: EMPTY_OVERVIEW,
 };
 
@@ -137,7 +120,7 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
   if (!cycle) return EMPTY;
   const now = Date.now();
 
-  const [appealRows, escalationRows, discrepancyRuns, config] = await Promise.all([
+  const [appealRows, discrepancyRuns, config] = await Promise.all([
     // Pending means a decision is owed: mirrors the old Appeals tab exactly — an
     // appeal past DRAFT with at least one undecided item.
     prisma.appeal.findMany({
@@ -157,7 +140,6 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
       },
       take: 300,
     }),
-    getEscalationInbox(),
     prisma.assessmentCycleRun.findMany({
       where: { state: { in: ['DISCREPANCY_REVIEW', 'SCHOOL_RESPONSE_WINDOW'] } },
       select: {
@@ -229,21 +211,6 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
     };
   });
 
-  const escalations: EscalationDecision[] = escalationRows.map((e) => ({
-    kind: 'ESCALATION',
-    key: `escalation:${e.runId}:${e.parameterId}`,
-    runId: e.runId,
-    parameterId: e.parameterId,
-    parameterCode: e.parameterCode,
-    parameterTitle: e.parameterTitle,
-    school: e.schoolName,
-    district: e.districtName,
-    verifierName: e.verifierName,
-    rationale: e.rationale,
-    claimedLevel: e.claimedLevel,
-    waitingDays: daysSince(e.escalatedAt, now),
-  }));
-
   const windowDays = config?.schoolResponseWindowDays ?? 7;
   const discrepancies: DiscrepancyDecision[] = discrepancyRuns.map((r) => {
     const visit = r.fieldVisits[0];
@@ -288,33 +255,22 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
     } satisfies DiscrepancyDecision;
   });
 
-  const rows: DecisionRow[] = [...appeals, ...escalations, ...discrepancies].sort(
+  const rows: DecisionRow[] = [...appeals, ...discrepancies].sort(
     (a, b) => b.waitingDays - a.waitingDays || a.school.localeCompare(b.school),
   );
 
   // ── The Overview's standing signals ────────────────────────────────────────
   const weekAgo = new Date(now - 7 * 86_400_000);
-  const [decidedAppeals, ruledEscalationsThisWeek, ruledDiscrepancyRuns, escalationHistory] =
-    await Promise.all([
+  const [decidedAppeals, ruledDiscrepancyRuns] = await Promise.all([
       prisma.appeal.findMany({
         where: { cycleId: cycle.id, status: 'DECIDED', decidedAt: { not: null } },
         select: { decidedAt: true, submittedAt: true, items: { select: { decision: true } } },
         take: 1000,
       }),
-      // A resolved escalation keeps its escalatedAt and loses its flag; updatedAt is when
-      // the ruling landed.
-      prisma.deskScreeningDecision.count({
-        where: { escalated: false, escalatedAt: { not: null }, updatedAt: { gte: weekAgo } },
-      }),
       prisma.discrepancy.findMany({
         where: { upheldAt: { gte: weekAgo } },
         select: { runId: true },
         distinct: ['runId'],
-      }),
-      prisma.deskScreeningDecision.findMany({
-        where: { escalatedAt: { not: null }, run: { cycleId: cycle.id } },
-        select: { parameterId: true, parameter: { select: { code: true, titleEn: true } } },
-        take: 500,
       }),
     ]);
 
@@ -351,25 +307,10 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
         ? decideDurations[(mid - 1) / 2]!
         : Math.round((decideDurations[mid / 2 - 1]! + decideDurations[mid / 2]!) / 2);
 
-  const escCounts = new Map<string, { code: string; title: string; times: number }>();
-  for (const e of escalationHistory) {
-    const cur = escCounts.get(e.parameterId) ?? {
-      code: e.parameter.code,
-      title: e.parameter.titleEn,
-      times: 0,
-    };
-    cur.times += 1;
-    escCounts.set(e.parameterId, cur);
-  }
-  const mostEscalated =
-    [...escCounts.values()].sort((a, b) => b.times - a.times || a.code.localeCompare(b.code))[0] ??
-    null;
-
   const overview: DecisionsOverview = {
     ageBands,
     ruledThisWeek:
       decidedAppeals.filter((a) => a.decidedAt && a.decidedAt >= weekAgo).length +
-      ruledEscalationsThisWeek +
       ruledDiscrepancyRuns.length,
     districts: districtsSorted.slice(0, 3).map(([name, count]) => ({ name, count })),
     otherDistrictsCount: districtsSorted.slice(3).reduce((sum, [, count]) => sum + count, 0),
@@ -379,7 +320,6 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
       dismissed: decidedAppeals.length - upheld,
     },
     medianDaysToDecideAppeal,
-    mostEscalated,
   };
 
   return {
@@ -387,7 +327,6 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
     counts: {
       total: rows.length,
       appeals: appeals.length,
-      escalations: escalations.length,
       discrepancies: discrepancies.length,
       blocking: discrepancies.length,
       oldestDays: rows[0]?.waitingDays ?? 0,
@@ -401,14 +340,13 @@ export async function buildDecisionsInbox(): Promise<DecisionsInboxData> {
 export async function countDecisions(): Promise<number> {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true }, select: { id: true } });
   if (!cycle) return 0;
-  const [appeals, escalations, discrepancies] = await Promise.all([
+  const [appeals, discrepancies] = await Promise.all([
     prisma.appeal.count({
       where: { cycleId: cycle.id, status: { notIn: ['DRAFT'] }, items: { some: { decision: 'PENDING' } } },
     }),
-    prisma.deskScreeningDecision.count({ where: { escalated: true } }),
     prisma.assessmentCycleRun.count({
       where: { state: { in: ['DISCREPANCY_REVIEW', 'SCHOOL_RESPONSE_WINDOW'] } },
     }),
   ]);
-  return appeals + escalations + discrepancies;
+  return appeals + discrepancies;
 }

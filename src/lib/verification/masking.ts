@@ -98,7 +98,7 @@ export function maskSchool(school: { udise: string; category: string }): MaskedS
 /**
  * True when this role must only ever see the masked view during desk screening.
  *
- * Supervisors and SSSA PMU are excluded: a supervisor handling an escalation has to be able to
+ * Supervisors and SSSA PMU are excluded: an official ruling on a case has to be able to
  * identify the school to act on it, and the audit trail records that they did. On-Ground
  * Verifiers are excluded too, because their anonymity works the other way round, by time gate
  * at reveal rather than by masking.

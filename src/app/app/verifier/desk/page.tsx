@@ -28,31 +28,20 @@ const GOLD_WASH = '#FDF8EC';
 const RED = '#96271E';
 const RED_WASH = '#FBE9E7';
 
-/**
- * The left-hand tile: the clock, or the wait.
- *
- * A case with an indicator at the SSSA shows how long it has been held instead of its
- * turnaround, because its turnaround is not the verifier's to keep while the SSSA has it.
- */
+/** The left-hand tile: the turnaround clock, which is the promise this page keeps. */
 function DueTile({ row }: { row: DeskQueueRow }) {
-  const held = row.withSssa > 0;
-  const overdue = !held && row.daysLeft !== null && row.daysLeft < 0;
-  const urgent = !held && row.daysLeft !== null && row.daysLeft >= 0 && row.daysLeft <= 2;
+  const overdue = row.daysLeft !== null && row.daysLeft < 0;
+  const urgent = row.daysLeft !== null && row.daysLeft >= 0 && row.daysLeft <= 2;
 
-  const palette = held || urgent
+  const palette = urgent
     ? { borderColor: GOLD_TINT, backgroundColor: GOLD_WASH, color: GOLD_DARK }
     : overdue
       ? { borderColor: RED, backgroundColor: RED_WASH, color: RED }
       : { borderColor: '#C7D2E8', backgroundColor: NAVY_WASH, color: NAVY_DEEP };
 
-  const value = held
-    ? (row.heldDays ?? 0)
-    : row.daysLeft === null
-      ? null
-      : Math.abs(row.daysLeft);
-  const label = held
-    ? (row.heldDays === 1 ? 'day held' : 'days held')
-    : row.daysLeft === null
+  const value = row.daysLeft === null ? null : Math.abs(row.daysLeft);
+  const label =
+    row.daysLeft === null
       ? 'no window'
       : overdue
         ? (Math.abs(row.daysLeft) === 1 ? 'day over' : 'days over')
@@ -86,9 +75,7 @@ function metaFor(row: DeskQueueRow): string {
       ? `${row.decided.toLocaleString('en-IN')} of ${row.total.toLocaleString('en-IN')} decided`
       : `${row.total.toLocaleString('en-IN')} manual waiting`,
   );
-  if (row.withSssa > 0) {
-    bits.push(`${row.withSssa} ${row.withSssa === 1 ? 'indicator' : 'indicators'} with SSSA`);
-  } else if (row.automatedMismatches > 0) {
+  if (row.automatedMismatches > 0) {
     // The mismatch count was always advice in disguise: it is where to start reading.
     bits.push(
       row.decided > 0
@@ -105,8 +92,7 @@ export default async function DeskQueuePage() {
   if (!actor) redirect((await currentActor()) ? '/app/verifier' : '/login?tab=verifier');
 
   const queue = await getDeskQueue();
-  const overdue = queue.filter((r) => r.withSssa === 0 && r.daysLeft !== null && r.daysLeft < 0).length;
-  const withSssa = queue.filter((r) => r.withSssa > 0).length;
+  const overdue = queue.filter((r) => r.daysLeft !== null && r.daysLeft < 0).length;
 
   return (
     <div className="space-y-5">
@@ -133,19 +119,17 @@ export default async function DeskQueuePage() {
           <p className="text-sm font-semibold" style={{ color: overdue > 0 ? RED : INK_MUTED }}>
             {queue.length.toLocaleString('en-IN')} open {queue.length === 1 ? 'case' : 'cases'}
             {overdue > 0 && ` · ${overdue.toLocaleString('en-IN')} past the turnaround`}
-            {withSssa > 0 && ` · ${withSssa.toLocaleString('en-IN')} held with the SSSA`}
           </p>
 
           <div className="space-y-3">
             {queue.map((row) => {
-              const held = row.withSssa > 0;
-              const isOverdue = !held && row.daysLeft !== null && row.daysLeft < 0;
+              const isOverdue = row.daysLeft !== null && row.daysLeft < 0;
               return (
                 <Link
                   key={row.runId}
                   href={`/app/verifier/desk/${row.runId}`}
                   className="flex items-center gap-3 rounded-xl border-2 bg-white px-3 py-2.5 hover:border-gray-300"
-                  style={{ borderColor: isOverdue ? RED : held ? GOLD_TINT : '#E5E7EB' }}
+                  style={{ borderColor: isOverdue ? RED : '#E5E7EB' }}
                 >
                   <DueTile row={row} />
                   <span className="min-w-0 flex-1">
@@ -173,14 +157,6 @@ export default async function DeskQueuePage() {
                       }}
                     />
                   </span>
-                  {held && (
-                    <span
-                      className="flex-none whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white"
-                      style={{ backgroundColor: GOLD_DARK }}
-                    >
-                      {row.withSssa} with SSSA
-                    </span>
-                  )}
                   <span aria-hidden className="flex-none text-lg font-bold" style={{ color: INK_MUTED }}>
                     ›
                   </span>
@@ -189,14 +165,6 @@ export default async function DeskQueuePage() {
             })}
           </div>
         </>
-      )}
-
-      {withSssa > 0 && (
-        <p className="rounded-xl border-2 px-4 py-3 text-xs" style={{ borderColor: GOLD_TINT, backgroundColor: GOLD_WASH, color: GOLD_DARK }}>
-          A case marked &quot;with SSSA&quot; carries an indicator you sent up because it could not
-          be cleanly judged. The case is held until the SSSA rules on it; you can still decide its
-          other indicators meanwhile.
-        </p>
       )}
 
       <p className="text-xs" style={{ color: INK_MUTED }}>

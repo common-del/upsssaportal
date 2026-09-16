@@ -154,7 +154,6 @@ export function computeRisk(inputs: RiskInputs, rubric: Rubric): RiskResult {
       d.ceiling += maxForVerdict(v, weights);
       byDomain.set(v.domainCode, d);
     }
-    // The escalation penalty is per run, so it cannot be attributed to one domain. Applied to
     const perDomain = [...byDomain.values()].map((d) => percent(d.points, d.ceiling));
     const worst = perDomain.length > 0 ? Math.max(...perDomain) : 0;
     score = Math.min(100, Math.round(worst * 10) / 10);

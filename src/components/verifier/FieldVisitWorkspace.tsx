@@ -802,7 +802,6 @@ function IndicatorCard({
         <div className="mt-3 rounded-lg border-l-4 p-3" style={{ borderColor: NAVY_DEEP, backgroundColor: NAVY_WASH }}>
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: NAVY_DEEP }}>
             Online verifier · {DESK_FLAG_LABELS[indicator.deskFlag.decision] ?? indicator.deskFlag.decision}
-            {indicator.deskFlag.ruledBySssa && ' · ruled by SSSA'}
           </p>
           {indicator.deskFlag.note && (
             <p className="mt-1 text-sm" style={{ color: NAVY_DEEP }}>

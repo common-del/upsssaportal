@@ -89,7 +89,7 @@ describe('who the masking applies to', () => {
     expect(mustSeeMaskedOnly('VERIFIER')).toBe(true);
   });
 
-  // A supervisor handling an escalation has to identify the school to act on it, and the audit
+  // An official ruling on a case has to identify the school to act on it, and the audit
   // trail records that they did. A field verifier's anonymity is a time gate, not a mask.
   it('does not apply to supervisors, SSSA or field verifiers', () => {
     expect(mustSeeMaskedOnly('SUPERVISOR')).toBe(false);

@@ -70,8 +70,6 @@ export type FieldIndicator = {
   deskFlag: {
     decision: 'EVIDENCE_INSUFFICIENT' | 'EVIDENCE_CONTRADICTS_LEVEL' | 'EVIDENCE_MISSING';
     note: string | null;
-    /** The flag was escalated and the SSSA has ruled on it; the ruling is in the note. */
-    ruledBySssa: boolean;
   } | null;
 };
 
@@ -159,7 +157,7 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
     // the non-supporting decisions travel: a clean desk decision is not a flag.
     prisma.deskScreeningDecision.findMany({
       where: { runId: visit.runId, decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' } },
-      select: { parameterId: true, decision: true, rationale: true, escalated: true, escalatedAt: true },
+      select: { parameterId: true, decision: true, rationale: true },
     }),
     prisma.studentSpotCheck.findMany({ where: { visitId }, orderBy: [{ classLevel: 'asc' }, { rollPosition: 'asc' }] }),
     prisma.programmeConfig.findUnique({
@@ -229,9 +227,6 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
                 | 'EVIDENCE_CONTRADICTS_LEVEL'
                 | 'EVIDENCE_MISSING',
               note: flag.rationale,
-              // Escalated once, no longer frozen: the supervisor's ruling was appended to the
-              // rationale when the escalation was resolved.
-              ruledBySssa: flag.escalatedAt !== null && !flag.escalated,
             }
           : null,
       };

@@ -64,9 +64,6 @@ async function main() {
         EVIDENCE_INSUFFICIENT: 2,
         EVIDENCE_MISSING: 3,
         EVIDENCE_CONTRADICTS_LEVEL: 4,
-        // Applied once per run, not per indicator, when a verifier could not apply the
-        // rubric at all. An escalated case should not read as low risk merely because
-        // fewer indicators were decided.
       },
       thresholdBasis: 'MATCHED_INDICATORS_ONLY',
       thresholdValue: 20,

@@ -23,7 +23,6 @@ const WEIGHT_FIELDS: { key: string; label: string; help: string }[] = [
   { key: 'EVIDENCE_INSUFFICIENT', label: 'Evidence insufficient', help: 'Uploaded, but does not establish the level.' },
   { key: 'EVIDENCE_MISSING', label: 'Evidence missing', help: 'Nothing uploaded at all.' },
   { key: 'EVIDENCE_CONTRADICTS_LEVEL', label: 'Evidence contradicts', help: 'The upload disproves the claim. The heaviest per-indicator input.' },
-  { key: 'ESCALATED_RUN', label: 'Escalated case', help: 'Applied once per case that needed a supervisor, not per indicator.' },
 ];
 
 const BASES: { value: RiskThresholdBasis; label: string; help: string }[] = [

@@ -34,14 +34,9 @@ export default async function SupervisorHomePage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Unassigned desk cases" value={overview.unassignedDeskCases} />
         <StatCard
-          label="Open escalations"
-          value={overview.escalationsOpen}
-          href="/app/sssa/decisions?tab=issues&who=verifier"
-        />
-        <StatCard
           label="Discrepancy cases"
           value={overview.discrepancyCases}
-          href="/app/sssa/decisions?tab=issues&who=field"
+          href="/app/sssa/decisions?tab=issues"
         />
       </div>
 
@@ -84,7 +79,6 @@ export default async function SupervisorHomePage() {
                       <th className="px-3 py-2 text-right font-bold">Open</th>
                       <th className="px-3 py-2 text-right font-bold">Completed</th>
                       <th className="px-3 py-2 text-right font-bold">Avg days</th>
-                      <th className="px-3 py-2 text-right font-bold">Escalations</th>
                       <th className="px-5 py-2 text-right font-bold">Quality flags</th>
                     </tr>
                   </thead>
@@ -119,7 +113,6 @@ export default async function SupervisorHomePage() {
                         <td className="px-3 py-2.5 text-right font-mono">
                           {r.avgTurnaroundDays === null ? 'n/a' : r.avgTurnaroundDays.toFixed(1)}
                         </td>
-                        <td className="px-3 py-2.5 text-right font-mono">{r.escalationsOpen}</td>
                         <td className="px-5 py-2.5 text-right font-mono">{r.qualityFlags}</td>
                       </tr>
                     ))}

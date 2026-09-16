@@ -10,12 +10,12 @@ const prisma = new PrismaClient();
  * AssessmentCycleRun and its satellites, and no seed ever created a run. This one lays out
  * the whole pipeline the way a mid-cycle day would look:
  *
- *   online1   a desk batch (some started, one frozen by escalation), four walkthroughs in
+ *   online1   a desk batch (some started), four walkthroughs in
  *             four states (undeclared, scheduled, live with prompts, guided capture)
- *   online2   a smaller desk batch and one escalation
+ *   online2   a smaller desk batch
  *   field1    two visits revealed today (one mid-visit) and two still sealed
  *   field2    two sealed visits, plus the audited history the de-empanelment board needs
- *   supervisors  escalations, discrepancy cases, a school response to rule on, turnaround
+ *   supervisors  discrepancy cases, a school response to rule on, turnaround
  *   audit1    unclaimed sample cases, one in progress, one awaiting the verdict, and
  *             candidates left for the draw button
  *   school    a response window with proposed corrections, and a walkthrough session
@@ -254,12 +254,12 @@ async function main() {
     'The document uploaded describes a different indicator entirely.',
   ];
 
-  const deskBatch: { school: (typeof pool)[number]; assignee: string | null; decide: number; escalate: boolean }[] = [
-    ...take(8).map((s, i) => ({ school: s, assignee: online1, decide: i < 3 ? 20 : 0, escalate: false })),
-    ...take(6).map((s, i) => ({ school: s, assignee: online2, decide: i < 2 ? 12 : 0, escalate: false })),
-    ...take(6).map((s) => ({ school: s, assignee: null, decide: 0, escalate: false })),
-    ...take(1).map((s) => ({ school: s, assignee: online1, decide: 8, escalate: true })),
-    ...take(1).map((s) => ({ school: s, assignee: online2, decide: 5, escalate: true })),
+  const deskBatch: { school: (typeof pool)[number]; assignee: string | null; decide: number }[] = [
+    ...take(8).map((s, i) => ({ school: s, assignee: online1, decide: i < 3 ? 20 : 0 })),
+    ...take(6).map((s, i) => ({ school: s, assignee: online2, decide: i < 2 ? 12 : 0 })),
+    ...take(6).map((s) => ({ school: s, assignee: null, decide: 0 })),
+    ...take(1).map((s) => ({ school: s, assignee: online1, decide: 8 })),
+    ...take(1).map((s) => ({ school: s, assignee: online2, decide: 5 })),
   ];
   for (const item of deskBatch) {
     const run = await createRun(item.school, 'DESK_SCREENING', {
@@ -271,24 +271,16 @@ async function main() {
       const manual = applicableFor(item.school.category).filter((p) => p.checkMethod === 'MANUAL');
       const chosen = manual.slice(0, item.decide);
       await prisma.deskScreeningDecision.createMany({
-        data: chosen.map((p, i) => {
+        data: chosen.map((p) => {
           const roll = hash(item.school.udise + p.code) % 10;
           const decision =
             roll < 7 ? 'EVIDENCE_SUPPORTS_LEVEL' : roll < 8 ? 'EVIDENCE_INSUFFICIENT' : roll < 9 ? 'EVIDENCE_MISSING' : 'EVIDENCE_CONTRADICTS_LEVEL';
-          const escalate = item.escalate && i === 0;
           return {
             runId: run.id,
             parameterId: p.id,
             profileId: item.assignee!,
-            decision: escalate ? 'EVIDENCE_INSUFFICIENT' : decision,
-            rationale:
-              decision === 'EVIDENCE_SUPPORTS_LEVEL' && !escalate
-                ? null
-                : escalate
-                  ? 'The evidence shows partial compliance and the rubric level descriptions do not cover a partial case. I cannot cleanly apply either level.'
-                  : RATIONALES[roll % RATIONALES.length],
-            escalated: escalate,
-            escalatedAt: escalate ? new Date(Date.now() - 1 * DAY) : null,
+            decision,
+            rationale: decision === 'EVIDENCE_SUPPORTS_LEVEL' ? null : RATIONALES[roll % RATIONALES.length],
           };
         }),
         skipDuplicates: true,

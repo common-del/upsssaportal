@@ -643,3 +643,33 @@ nothing else.
 
 Note this changes scores already on the record: a case that carried an escalation scores
 lower than it did before, which is the intended correction rather than a side effect.
+
+## 25. The escalation path is removed, decided 16 September 2026
+
+SSSA directed that the escalation path be removed in full. This is a deliberate departure
+from the build brief, which states it as a requirement ("The verifier can escalate any case
+where the rubric cannot be cleanly applied. Escalation routes to the Supervisor and freezes
+the case", plus "Escalate control on every indicator" and "Escalation inbox"). The departure
+was put to SSSA with that text and with the consequence that a verifier facing an indicator
+the rubric cannot judge must now record a decision they may not believe, most likely
+"evidence insufficient", which is the honest one available. SSSA confirmed. Recorded here so
+the brief and the build can be reconciled deliberately rather than read as drift.
+
+Gone from the verifier: the escalate control on every indicator, the escalateIndicator
+action, the hold that stopped a case being completed and scored, and every trace of the
+wait on the Overview and the Desk Screening queue.
+
+Gone from the admin: escalations as a kind of pending decision in the Decisions inbox, its
+card, the four-option inline ruling form, the "raised by online verifiers" filter on the
+Verification issues tab (which now has a single source, so the filter went with it), the
+"most escalated indicator" panel, the escalation share of the sidebar badge and of "ruled
+this week", the getEscalationInbox and resolveEscalation actions, and the open-escalations
+counters on the Workforce roster.
+
+Gone from the field: the "ruled by SSSA" mark on a flagged indicator in the visit briefing,
+which could only be produced by a resolved escalation.
+
+Two deliberate choices in how it was removed. No data was destroyed: DeskScreeningDecision
+keeps its escalated and escalatedAt columns and the rows that carry them, but nothing reads
+them, so no case is stuck and no migration was needed. And the old /app/sssa/escalations
+URL still redirects to Decisions, so links in existing notifications do not break.

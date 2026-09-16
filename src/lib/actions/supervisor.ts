@@ -16,7 +16,7 @@ import { transitionRun } from '@/lib/verification/stateMachine';
  * The supervisor's remit: their own cell's verifiers, per the roles table in the brief.
  *
  * School identity is not masked here. masking.ts states the reason: a supervisor handling an
- * escalation has to be able to identify the school to act on it, and the audit trail records
+ * discrepancy has to be able to identify the school to act on it, and the audit trail records
  * that they did. The anonymity promise is between Online Verifiers and schools, not between
  * the oversight chain and schools.
  */
@@ -54,7 +54,6 @@ export type RosterRow = {
   completedCount: number;
   /** Mean days from entering desk screening to routing, over recent completed cases. */
   avgTurnaroundDays: number | null;
-  escalationsOpen: number;
   qualityFlags: number;
 };
 
@@ -62,7 +61,6 @@ export type SupervisorOverview = {
   cells: VerifierCell[];
   roster: RosterRow[];
   unassignedDeskCases: number;
-  escalationsOpen: number;
   discrepancyCases: number;
 };
 
@@ -84,7 +82,7 @@ export async function getSupervisorOverview(): Promise<SupervisorOverview | null
   });
   const profileIds = profiles.map((p) => p.id);
 
-  const [openDesk, movedOnDesk, recentCompleted, visits, escalations, qualityFlags, unassigned, discrepancyCases] =
+  const [openDesk, movedOnDesk, recentCompleted, visits, qualityFlags, unassigned, discrepancyCases] =
     await Promise.all([
       prisma.assessmentCycleRun.groupBy({
         by: ['deskAssigneeProfileId'],
@@ -109,11 +107,6 @@ export async function getSupervisorOverview(): Promise<SupervisorOverview | null
         select: { profileId: true, revealAt: true, signedOffAt: true },
         orderBy: { notifiedDate: 'desc' },
         take: 2000,
-      }),
-      prisma.deskScreeningDecision.groupBy({
-        by: ['profileId'],
-        where: { profileId: { in: profileIds }, escalated: true },
-        _count: { _all: true },
       }),
       prisma.qualityCheck.groupBy({
         by: ['subjectProfileId'],
@@ -158,7 +151,6 @@ export async function getSupervisorOverview(): Promise<SupervisorOverview | null
 
   const openDeskBy = countBy(openDesk, (r) => r.deskAssigneeProfileId);
   const movedBy = countBy(movedOnDesk, (r) => r.deskAssigneeProfileId);
-  const escalationsBy = countBy(escalations, (r) => r.profileId);
   const flagsBy = countBy(qualityFlags, (r) => r.subjectProfileId);
 
   const visitsBy = new Map<string, { open: number; done: number; days: number[] }>();
@@ -188,7 +180,6 @@ export async function getSupervisorOverview(): Promise<SupervisorOverview | null
       openCount: p.cell === 'ONLINE' ? (openDeskBy.get(p.id) ?? 0) : (field?.open ?? 0),
       completedCount: p.cell === 'ONLINE' ? (movedBy.get(p.id) ?? 0) : (field?.done ?? 0),
       avgTurnaroundDays: p.cell === 'ONLINE' ? mean(deskDays) : mean(field?.days ?? []),
-      escalationsOpen: escalationsBy.get(p.id) ?? 0,
       qualityFlags: flagsBy.get(p.id) ?? 0,
     };
   });
@@ -197,7 +188,6 @@ export async function getSupervisorOverview(): Promise<SupervisorOverview | null
     cells: scope.cells,
     roster,
     unassignedDeskCases: unassigned,
-    escalationsOpen: [...escalationsBy.values()].reduce((s, n) => s + n, 0),
     discrepancyCases,
   };
 }
@@ -244,116 +234,6 @@ export async function allocateNextDeskCases(
   revalidatePath('/app/sssa/workforce');
   revalidatePath('/app/verifier/desk');
   return { success: true, allocated: result.count };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Escalations
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type EscalationRow = {
-  runId: string;
-  parameterId: string;
-  parameterCode: string;
-  parameterTitle: string;
-  schoolName: string;
-  schoolUdise: string;
-  districtName: string;
-  verifierName: string;
-  rationale: string | null;
-  escalatedAt: string | null;
-  claimedLevel: number | null;
-  levels: { order: number; labelEn: string }[];
-};
-
-export async function getEscalationInbox(): Promise<EscalationRow[]> {
-  const scope = await supervisorScope();
-  if (!scope) return [];
-
-  const rows = await prisma.deskScreeningDecision.findMany({
-    where: { escalated: true },
-    include: {
-      parameter: { include: { options: { orderBy: { order: 'asc' } } } },
-      profile: { include: { user: { select: { name: true, username: true } } } },
-      run: {
-        select: {
-          cycleId: true,
-          schoolUdise: true,
-          school: { select: { nameEn: true, udise: true, district: { select: { nameEn: true } } } },
-        },
-      },
-    },
-    orderBy: { escalatedAt: 'asc' },
-    take: 200,
-  });
-
-  // Prisma treats an empty OR as matching nothing, but an empty inbox should not query at all.
-  const claims = rows.length === 0 ? [] : await prisma.selfAssessmentResponse.findMany({
-    where: {
-      OR: rows.map((r) => ({
-        parameterId: r.parameterId,
-        submission: { cycleId: r.run.cycleId, schoolUdise: r.run.schoolUdise },
-      })),
-    },
-    select: { parameterId: true, selectedOptionKey: true, submission: { select: { schoolUdise: true } } },
-  });
-  const claimBy = new Map(claims.map((c) => [`${c.submission.schoolUdise}:${c.parameterId}`, c.selectedOptionKey]));
-
-  return rows.map((r) => {
-    const claimedKey = claimBy.get(`${r.run.schoolUdise}:${r.parameterId}`);
-    const claimed = r.parameter.options.find((o) => o.key === claimedKey);
-    return {
-      runId: r.runId,
-      parameterId: r.parameterId,
-      parameterCode: r.parameter.code,
-      parameterTitle: r.parameter.titleEn,
-      schoolName: r.run.school.nameEn,
-      schoolUdise: r.run.school.udise,
-      districtName: r.run.school.district.nameEn,
-      verifierName: r.profile.user.name ?? r.profile.user.username,
-      rationale: r.rationale,
-      escalatedAt: r.escalatedAt?.toISOString() ?? null,
-      claimedLevel: claimed?.order ?? null,
-      levels: r.parameter.options.map((o) => ({ order: o.order, labelEn: o.labelEn })),
-    };
-  });
-}
-
-/**
- * Rule on an escalated indicator. The verifier's escalation rationale is kept and the ruling
- * appended under the supervisor's name, so the decision record shows who could not decide,
- * why, and who then did.
- */
-export async function resolveEscalation(
-  runId: string,
-  parameterId: string,
-  decision: DeskDecision,
-  note: string,
-): Promise<{ success: boolean; error?: string }> {
-  const scope = await supervisorScope();
-  if (!scope) return { success: false, error: 'Not authorised.' };
-  const trimmed = note.trim();
-  if (!trimmed) return { success: false, error: 'A ruling needs a reason the verifier can read.' };
-
-  const existing = await prisma.deskScreeningDecision.findUnique({
-    where: { runId_parameterId: { runId, parameterId } },
-    select: { escalated: true, rationale: true },
-  });
-  if (!existing || !existing.escalated) {
-    return { success: false, error: 'This indicator is not escalated.' };
-  }
-
-  await prisma.deskScreeningDecision.update({
-    where: { runId_parameterId: { runId, parameterId } },
-    data: {
-      decision,
-      escalated: false,
-      rationale: `${existing.rationale ?? ''}\n\nSupervisor ruling (${scope.actor.username}): ${trimmed}`.trim(),
-    },
-  });
-
-  revalidatePath('/app/sssa/decisions');
-  revalidatePath(`/app/verifier/desk/${runId}`);
-  return { success: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

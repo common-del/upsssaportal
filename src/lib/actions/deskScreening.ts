@@ -49,7 +49,6 @@ export type DeskCaseIndicator = {
   /** The verifier's own decision, when they have made one. */
   decision: DeskDecision | null;
   rationale: string | null;
-  escalated: boolean;
   evidenceCount: number;
 };
 
@@ -62,7 +61,6 @@ export type DeskCase = {
   /** Null until every manual indicator has a decision. Deliberately absent, not hidden. */
   score: { value: number; band: string; aboveThreshold: boolean; basisUsed: string; basisFallbackReason: string | null } | null;
   remainingDecisions: number;
-  frozen: boolean;
 };
 
 async function activeRubric(): Promise<Rubric | null> {
@@ -106,11 +104,6 @@ export type DeskQueueRow = {
   automatedMismatches: number;
   /** Days left against the turnaround window, negative when overdue. */
   daysLeft: number | null;
-  escalated: boolean;
-  /** How many of this case's indicators are with the SSSA awaiting a ruling. */
-  withSssa: number;
-  /** Days since the oldest of those was sent up, for the "days held" tile. */
-  heldDays: number | null;
 };
 
 /** The verifier's own batch, and nothing else. */
@@ -132,7 +125,7 @@ export async function getDeskQueue(): Promise<DeskQueueRow[]> {
       // Only the two fields the mask needs. The name is not selected.
       school: { select: { udise: true, category: true } },
       autoChecks: { select: { outcome: true } },
-      deskDecisions: { select: { parameterId: true, escalated: true, escalatedAt: true } },
+      deskDecisions: { select: { parameterId: true } },
     },
     orderBy: { enteredStateAt: 'asc' },
   });
@@ -147,11 +140,6 @@ export async function getDeskQueue(): Promise<DeskQueueRow[]> {
   for (const run of runs) {
     const decided = run.deskDecisions.length;
     const due = new Date(run.enteredStateAt.getTime() + turnaroundDays * 86_400_000);
-    const sentUp = run.deskDecisions.filter((d) => d.escalated);
-    const oldestSentAt = sentUp.reduce<Date | null>(
-      (oldest, d) => (d.escalatedAt && (!oldest || d.escalatedAt < oldest) ? d.escalatedAt : oldest),
-      null,
-    );
     rows.push({
       runId: run.id,
       ...maskSchool(run.school),
@@ -160,11 +148,6 @@ export async function getDeskQueue(): Promise<DeskQueueRow[]> {
       total: manual,
       automatedMismatches: run.autoChecks.filter((a) => a.outcome === 'MISMATCH').length,
       daysLeft: Math.ceil((due.getTime() - Date.now()) / 86_400_000),
-      escalated: sentUp.length > 0,
-      withSssa: sentUp.length,
-      heldDays: oldestSentAt
-        ? Math.max(0, Math.floor((Date.now() - oldestSentAt.getTime()) / 86_400_000))
-        : null,
     });
   }
   // Deadline order, the promise this page keeps: the most overdue case is always the top row.
@@ -244,7 +227,6 @@ export async function getDeskCase(runId: string): Promise<DeskCase | null> {
       autoReadAt: a?.sourceReadAt?.toISOString() ?? null,
       decision: d?.decision ?? null,
       rationale: d?.rationale ?? null,
-      escalated: d?.escalated ?? false,
       evidenceCount: evidenceBy.get(p.id) ?? 0,
     };
   });
@@ -252,7 +234,6 @@ export async function getDeskCase(runId: string): Promise<DeskCase | null> {
   const manualCount = indicators.filter((i) => !i.isAuto).length;
   const manualDecided = indicators.filter((i) => !i.isAuto && i.decision !== null).length;
   const { ready, remaining } = readyToScore(manualCount, manualDecided);
-  const frozen = indicators.some((i) => i.escalated);
 
   let score: DeskCase['score'] = null;
   if (ready) {
@@ -284,7 +265,6 @@ export async function getDeskCase(runId: string): Promise<DeskCase | null> {
     manualDecided,
     score,
     remainingDecisions: remaining,
-    frozen,
   };
 }
 
@@ -316,8 +296,8 @@ export async function saveDeskDecision(
     select: { checkMethod: true },
   });
   if (!param) return { success: false, error: 'Indicator not found.' };
-  // AUTO results are the system's, and the brief says they are read-only to the verifier. A
-  // verifier who disagrees with a cross-match escalates instead.
+  // AUTO results are the system's, and the brief says they are read-only to the verifier: a
+  // cross-match against a government register is not overruled from this screen.
   if (param.checkMethod === 'AUTO') {
     return { success: false, error: 'This indicator is checked automatically and cannot be decided here.' };
   }
@@ -326,51 +306,6 @@ export async function saveDeskDecision(
     where: { runId_parameterId: { runId, parameterId } },
     create: { runId, parameterId, profileId, decision, rationale: trimmed || null },
     update: { decision, rationale: trimmed || null, profileId },
-  });
-
-  revalidatePath(`/app/verifier/desk/${runId}`);
-  return { success: true };
-}
-
-/**
- * Escalate one indicator, which freezes the whole case.
- *
- * Per-indicator rather than per-case so the supervisor sees which judgement could not be made,
- * and freezing the case rather than just flagging it because the brief is explicit: a verifier
- * who cannot apply the rubric should not go on to produce a score that implies they did.
- */
-export async function escalateIndicator(
-  runId: string,
-  parameterId: string,
-  reason: string,
-): Promise<{ success: boolean; error?: string }> {
-  const profileId = await myProfileId();
-  if (!profileId) return { success: false, error: 'Not authorised.' };
-
-  const trimmed = reason.trim();
-  if (trimmed.length === 0) return { success: false, error: 'Say what cannot be resolved.' };
-
-  const run = await prisma.assessmentCycleRun.findFirst({
-    where: { id: runId, deskAssigneeProfileId: profileId, state: 'DESK_SCREENING' },
-    select: { id: true },
-  });
-  if (!run) return { success: false, error: 'Case not found in your batch.' };
-
-  await prisma.deskScreeningDecision.upsert({
-    where: { runId_parameterId: { runId, parameterId } },
-    create: {
-      runId,
-      parameterId,
-      profileId,
-      // Recorded as insufficient rather than left null: an escalated indicator still needs a
-      // decision value for the rubric, and "the evidence did not let me decide" is the honest
-      // one. The escalated flag is what routes it.
-      decision: 'EVIDENCE_INSUFFICIENT',
-      rationale: trimmed,
-      escalated: true,
-      escalatedAt: new Date(),
-    },
-    update: { escalated: true, escalatedAt: new Date(), rationale: trimmed, profileId },
   });
 
   revalidatePath(`/app/verifier/desk/${runId}`);
@@ -399,12 +334,6 @@ export async function completeDeskScreening(
     return {
       success: false,
       error: `${deskCase.remainingDecisions} indicator(s) still need a decision.`,
-    };
-  }
-  if (deskCase.frozen) {
-    return {
-      success: false,
-      error: 'An indicator on this case is with the SSSA. The case is held until it rules.',
     };
   }
   if (!deskCase.score) return { success: false, error: 'No active risk rubric.' };

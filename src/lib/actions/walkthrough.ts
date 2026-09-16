@@ -81,6 +81,17 @@ export type WalkthroughQueueRow = {
   mine: boolean;
   sessionState: 'NOT_STARTED' | 'SCHEDULED' | 'LIVE' | 'GUIDED_CAPTURE' | 'ENDED';
   scheduledFor: string | null;
+  /** When a live session began, so a row can say how long the call has been running. */
+  startedAt: string | null;
+  /** The walkthrough's agenda: indicators desk screening left in dispute. */
+  disputed: number;
+  /** How many of those already carry an observation, so a row shows progress. */
+  observed: number;
+  /** Guided capture only: clips the school has returned, against tasks sent. */
+  clipsReturned: number | null;
+  /** The score that pushed this case over the threshold, for an unclaimed row to justify
+   *  itself. Null when no score was stored, which older demo rows can be. */
+  riskScore: number | null;
 };
 
 export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
@@ -98,11 +109,24 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
       enteredStateAt: true,
       deskAssigneeProfileId: true,
       school: { select: { udise: true, category: true } },
+      riskScores: { orderBy: { computedAt: 'desc' }, take: 1, select: { score: true } },
+      deskDecisions: {
+        where: { decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' } },
+        select: { parameterId: true },
+      },
+      autoChecks: { where: { outcome: 'MISMATCH' }, select: { parameterId: true } },
       walkthroughs: {
         where: { recusedAt: null },
         orderBy: { createdAt: 'desc' },
         take: 1,
-        select: { scheduledFor: true, startedAt: true, endedAt: true, mode: true },
+        select: {
+          scheduledFor: true,
+          startedAt: true,
+          endedAt: true,
+          mode: true,
+          observations: { select: { parameterId: true } },
+          clips: { select: { id: true } },
+        },
       },
     },
     orderBy: { enteredStateAt: 'asc' },
@@ -113,6 +137,16 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
   return runs.map((r) => {
     const session = r.walkthroughs[0];
     const dueBy = new Date(r.enteredStateAt.getTime() + turnaroundDays * 86_400_000);
+    // The agenda, counted the same way the console derives it: non-accepting desk decisions
+    // plus automated mismatches, deduplicated because one indicator can be both.
+    const disputed = new Set([
+      ...r.deskDecisions.map((d) => d.parameterId),
+      ...r.autoChecks.map((a) => a.parameterId),
+    ]);
+    const observed = new Set(
+      (session?.observations ?? []).map((o) => o.parameterId).filter((id) => disputed.has(id)),
+    );
+    const guided = session?.mode === 'GUIDED_CAPTURE';
     return {
       runId: r.id,
       ...maskSchool(r.school),
@@ -132,6 +166,11 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
                 ? 'SCHEDULED'
                 : 'NOT_STARTED',
       scheduledFor: session?.scheduledFor?.toISOString() ?? null,
+      startedAt: session?.startedAt?.toISOString() ?? null,
+      disputed: disputed.size,
+      observed: observed.size,
+      clipsReturned: guided ? (session?.clips.length ?? 0) : null,
+      riskScore: r.riskScores[0]?.score ?? null,
     };
   });
 }

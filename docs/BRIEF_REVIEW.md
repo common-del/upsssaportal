@@ -691,3 +691,37 @@ Two deliberate choices in how it was removed. No data was destroyed: DeskScreeni
 keeps its escalated and escalatedAt columns and the rows that carry them, but nothing reads
 them, so no case is stuck and no migration was needed. And the old /app/sssa/escalations
 URL still redirects to Decisions, so links in existing notifications do not break.
+
+## 26. The walkthrough queue and console, decided 16 September 2026
+
+Queue A and Console A of the mock-ups, with the console's four-step header dropped at SSSA's
+instruction. The strip had to be explained to be understood, which is the same failure as
+"flagged at desk" and "frozen by SSSA"; the console already blocks every control until the
+conflict declaration is answered, so the order enforces itself without being drawn.
+
+The queue is two zones rather than one list, because it answers two questions. "Yours" is
+what this verifier is committed to, with a live call pinned at the top: a green edge, minutes
+elapsed instead of a deadline (while a school is on the line the turnaround is not the thing
+that matters), and the only green button on the page, reading "Rejoin the call". "Unclaimed"
+is the pool any online verifier may take. Deadline order inside each zone, due tiles in the
+Desk Screening idiom, and every row says what the case involves: disputed indicators, or
+observations made, or clips returned when the session dropped to guided capture. Unclaimed
+rows also carry the risk score, which is the only thing that justifies a stranger's case
+being offered.
+
+The console keeps the pinned call pane from section 22 and rebuilds the indicator column.
+A progress line runs over the disputed indicators; the indicator being asked about is the
+only one at full strength, with observed ones marked and the rest stepped back, and clicking
+any of them makes it current, because a school on a call jumps about and the verifier has to
+follow. Each indicator says why it is disputed, the screener's verdict or the automated
+mismatch, beside the level claimed. The status pills stop counting at the reader: the
+connectivity pill reads "Connection steady", or names how many more drops end the call, and a
+live session shows minutes elapsed.
+
+The queue query now returns the disputed and observed counts, clips returned, the session
+start and the stored risk score. Nothing new is recorded; every figure already existed.
+
+Left open deliberately, and not built: whether a guided capture window that lapses with clips
+missing should route the case to a field visit automatically or wait for the verifier. The
+resolve rules already refuse a resolution while any disputed indicator lacks an observation,
+so the outcome is the same either way; the question is who performs it.

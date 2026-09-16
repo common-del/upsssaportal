@@ -141,10 +141,18 @@ function Console({ data }: { data: ConsoleData }) {
     Object.fromEntries(data.indicators.map((i) => [i.parameterId, i.observationNote ?? ''])),
   );
   const [outcomeNote, setOutcomeNote] = useState(data.outcomeNote ?? '');
+  // The indicator the verifier is asking about right now. Starts on the first one still
+  // unobserved, because that is where a resumed call picks up.
+  const [currentId, setCurrentId] = useState<string | null>(
+    () => data.indicators.find((i) => !(i.observationNote ?? '').trim())?.parameterId ?? null,
+  );
 
   const ended = data.endedAt !== null;
   const started = data.startedAt !== null;
   const observed = data.indicators.filter((i) => (notes[i.parameterId] ?? '').trim().length > 0).length;
+  const elapsedMinutes = data.startedAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(data.startedAt).getTime()) / 60_000))
+    : 0;
 
   function run(fn: () => Promise<{ success: boolean; error?: string }>) {
     setError('');
@@ -270,10 +278,17 @@ function Console({ data }: { data: ConsoleData }) {
               />
               {data.geofenceHeld === false && <Badge label="Left the fence during this session" colour={RED} />}
               <Badge
-                label={`Connectivity failures: ${data.connectivityFailures} of 2`}
-                colour={data.connectivityFailures > 0 ? GOLD_DARK : INK_MUTED}
+                label={
+                  data.connectivityFailures === 0
+                    ? 'Connection steady'
+                    : `Connection dropped once, ${2 - data.connectivityFailures} more ends the call`
+                }
+                colour={data.connectivityFailures > 0 ? GOLD_DARK : GREEN}
                 outline
               />
+              {started && !ended && data.startedAt && (
+                <Badge label={`${elapsedMinutes} min elapsed`} colour={INK_MUTED} outline />
+              )}
               <span className="text-xs" style={{ color: INK_MUTED }}>
                 You and the school speak on the call. Your camera stays off and cannot be
                 enabled: the school hears your voice and sees only your pseudonym. Put what
@@ -286,36 +301,76 @@ function Console({ data }: { data: ConsoleData }) {
         {/* Right: checklist, clips, verdict */}
         <div className="space-y-4">
           <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
-            <h2 className="text-base font-bold" style={{ color: NAVY_DEEP }}>
-              Disputed indicators ({observed} of {data.indicators.length} observed)
-            </h2>
-            <div className="mt-2 space-y-3">
-              {data.indicators.map((i) => (
-                <div key={i.parameterId} className="rounded-lg border border-gray-200 p-3">
-                  <p className="font-mono text-xs font-bold" style={{ color: NAVY }}>
-                    {i.code}
-                  </p>
-                  <p className="text-sm font-bold text-gray-900">{i.titleEn}</p>
-                  <p className="text-xs" style={{ color: INK_MUTED }}>
-                    {i.claimedLevel !== null ? `Claimed Level ${i.claimedLevel}. ` : ''}
-                    {i.disputeSources.join('; ')}
-                  </p>
-                  <textarea
-                    value={notes[i.parameterId] ?? ''}
-                    onChange={(e) => setNotes((n) => ({ ...n, [i.parameterId]: e.target.value }))}
-                    onBlur={() => {
-                      const note = (notes[i.parameterId] ?? '').trim();
-                      if (note && note !== (i.observationNote ?? '')) {
-                        run(() => saveObservation(data.runId, i.parameterId, note));
-                      }
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-bold" style={{ color: NAVY_DEEP }}>
+                Disputed indicators
+              </h2>
+              <span className="text-xs font-bold tabular-nums" style={{ color: INK_MUTED }}>
+                {observed} of {data.indicators.length} observed
+              </span>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#EDEFF3]">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  backgroundColor: NAVY,
+                  width: `${data.indicators.length === 0 ? 0 : Math.round((observed / data.indicators.length) * 100)}%`,
+                }}
+              />
+            </div>
+            {/* One indicator is the current question; the rest step back so ten boxes stop
+                competing for the eye. Clicking any of them makes it the current one, because a
+                school on a call jumps about and the verifier has to follow. */}
+            <div className="mt-3 space-y-3">
+              {data.indicators.map((i) => {
+                const done = (i.observationNote ?? '').trim().length > 0;
+                const current = i.parameterId === currentId;
+                return (
+                  <div
+                    key={i.parameterId}
+                    onClick={() => setCurrentId(i.parameterId)}
+                    className="rounded-lg border-2 p-3"
+                    style={{
+                      borderColor: current ? NAVY : done ? '#BFE0CF' : '#E5E7EB',
+                      backgroundColor: done && !current ? '#F4FAF6' : 'white',
+                      opacity: current || done ? 1 : 0.62,
                     }}
-                    disabled={ended}
-                    rows={2}
-                    placeholder="What the walkthrough showed for this indicator."
-                    className="mt-2 w-full rounded-lg border-2 border-gray-300 p-2 text-sm disabled:bg-gray-50"
-                  />
-                </div>
-              ))}
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-mono text-xs font-bold" style={{ color: NAVY }}>
+                        {i.code}
+                      </p>
+                      {done && (
+                        <span className="text-[10.5px] font-extrabold" style={{ color: GREEN }}>
+                          Observed
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">{i.titleEn}</p>
+                    <p className="text-xs" style={{ color: INK_MUTED }}>
+                      {i.claimedLevel !== null ? `Claimed Level ${i.claimedLevel} · ` : ''}
+                      {i.disputeSources.join(' · ')}
+                    </p>
+                    {(current || done) && (
+                      <textarea
+                        value={notes[i.parameterId] ?? ''}
+                        onChange={(e) => setNotes((n) => ({ ...n, [i.parameterId]: e.target.value }))}
+                        onFocus={() => setCurrentId(i.parameterId)}
+                        onBlur={() => {
+                          const note = (notes[i.parameterId] ?? '').trim();
+                          if (note && note !== (i.observationNote ?? '')) {
+                            run(() => saveObservation(data.runId, i.parameterId, note));
+                          }
+                        }}
+                        disabled={ended}
+                        rows={2}
+                        placeholder="What the walkthrough showed for this indicator."
+                        className="mt-2 w-full rounded-lg border-2 border-gray-300 p-2 text-sm disabled:bg-gray-50"
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

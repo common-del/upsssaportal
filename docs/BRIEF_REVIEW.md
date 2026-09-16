@@ -942,3 +942,30 @@ correctness defect in what gets verified, not a labelling one.
 The fix is a schema change rather than a patch: a stage field separate from management,
 backfilled from whatever source the register has, with applicability reading the stage and the
 verifier screens showing the stage alone. It is left for SSSA to schedule.
+
+## 32. Plainer words on the verifier and school screens, 16 September 2026
+
+A copy pass SSSA directed, five terms wide.
+
+  past the turnaround   →  past the deadline
+  2 of 9 observed       →  2 of 9 checked
+  Yours, not yet started →  Not started
+  Open console          →  Open
+  clip                  →  video
+
+The rest of the vocabulary on those screens stays as it was: Do now, Unclaimed, Waiting on a
+school, Call left open, Window closed short, Recording, Claim, disputed indicators.
+
+"Clip" is the one worth explaining. It is mild trade jargon, and the person reading it on the
+school side is a head teacher with a phone, not somebody who works in video. "Video" is the word
+they would use, and it costs the verifier nothing to use the same one. The rename is copy only:
+the outbox module, its types and the Prisma model keep clip in their names, because renaming
+internals to match a label is churn that touches everything and improves nothing a user sees.
+
+"Turnaround" went for the same reason. It is programme vocabulary, correct in a brief and empty
+on a queue row; the config field videoWalkthroughTurnaroundDays keeps its name.
+
+Four terms were proposed and refused, and the refusal is right. Walkthrough, indicator, desk
+screening and appeal appear in the SQAAF framework, the brief and the configuration, so renaming
+them in the interface alone would leave two names for one thing. Changing those is a programme
+decision, taken once and applied everywhere, not a copy pass.

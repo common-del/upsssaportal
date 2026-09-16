@@ -818,13 +818,13 @@ export async function saveWalkthroughClip(
   const session = await mySchoolSession(sessionId);
   if (!session) return { success: false, error: 'Session not available.' };
   if (session.mode !== 'GUIDED_CAPTURE') {
-    return { success: false, error: 'Clips belong to a guided capture task, not a live session.' };
+    return { success: false, error: 'Videos belong to a recording task, not a live session.' };
   }
   if (session.endedAt) return { success: false, error: 'This session has ended.' };
   if (session.guidedCaptureDeadline && Date.now() > session.guidedCaptureDeadline.getTime()) {
     return { success: false, error: 'The capture window has closed. The verifier decides on what was recorded in time.' };
   }
-  if (!clip.taskLabel.trim() || !clip.blobUrl) return { success: false, error: 'Clip incomplete.' };
+  if (!clip.taskLabel.trim() || !clip.blobUrl) return { success: false, error: 'Video incomplete.' };
 
   // The strongest pre-recording check a browser allows: the file's own modification time,
   // against the moment the app took it. A clip recorded in the app moments ago carries a

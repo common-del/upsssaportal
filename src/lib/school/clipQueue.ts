@@ -89,7 +89,7 @@ export function pendingFor(outbox: ClipOutbox, parameterId: string): PendingClip
  */
 export function pendingStatusLine(clip: PendingClip, windowClosed: boolean, online: boolean): string {
   if (windowClosed) {
-    return 'The window closed before this clip could be sent. It cannot be counted.';
+    return 'The window closed before this video could be sent. It cannot be counted.';
   }
   if (!online) return 'Saved on this phone. It will send when the signal returns.';
   if (clip.attempts === 0) return 'Sending now.';

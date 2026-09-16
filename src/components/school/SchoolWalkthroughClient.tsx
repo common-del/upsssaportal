@@ -361,7 +361,7 @@ function RecordingTasks({ view }: { view: SchoolWalkthroughView }) {
         </div>
         <p className="mt-2 text-sm" style={{ color: INK_MUTED }}>
           Your live check lost its connection twice, so there is no call to join. Film a short
-          clip for each item below instead. Nobody is waiting on the line: do them in any order,
+          video for each item below instead. Nobody is waiting on the line: do them in any order,
           and come back to this page as often as you need.
         </p>
       </div>
@@ -403,7 +403,7 @@ function RecordingTasks({ view }: { view: SchoolWalkthroughView }) {
       {closed && (
         <div className="rounded-xl p-4" style={{ backgroundColor: RED_WASH }}>
           <p className="text-sm font-bold" style={{ color: RED }}>
-            {sent.toLocaleString('en-IN')} of {total.toLocaleString('en-IN')} clips reached us
+            {sent.toLocaleString('en-IN')} of {total.toLocaleString('en-IN')} videos reached us
           </p>
           <p className="mt-1 text-sm" style={{ color: RED }}>
             The verifier will judge what you did send. Anything missing cannot be settled from a
@@ -486,9 +486,9 @@ function RecordingTasks({ view }: { view: SchoolWalkthroughView }) {
         <p className="text-xs leading-relaxed" style={{ color: INK_MUTED }}>
           Film inside this page. A video chosen from your gallery is sent with a mark saying{' '}
           <b style={{ color: GOLD_DARK }}>it was not filmed just now</b>, and the verifier sees
-          that mark. Every clip carries the time and the place it was taken.
+          that mark. Every video carries the time and the place it was taken.
           {!durable &&
-            ' This browser will not keep a clip if you close the page, so stay here until each one has sent.'}
+            ' This browser will not keep a video if you close the page, so stay here until each one has sent.'}
         </p>
       )}
     </div>
@@ -620,7 +620,7 @@ function TaskCard({
           <p className="mt-0.5 text-[11px]" style={{ color: GOLD_DARK }}>
             {pendingStatusLine(pending, closed, online)}
             {durable
-              ? ' Your clip is saved on this phone, so you can close this page.'
+              ? ' Your video is saved on this phone, so you can close this page.'
               : ' Keep this page open until it has sent.'}
           </p>
         </div>
@@ -631,9 +631,9 @@ function TaskCard({
         <div className="mt-2">
           {flagged && (
             <p className="mb-2 rounded-lg p-2.5 text-xs leading-relaxed" style={{ backgroundColor: RED_WASH, color: RED }}>
-              <b className="block">This clip is marked as not filmed just now</b>
+              <b className="block">This video is marked as not filmed just now</b>
               It was sent from your gallery, or this phone&apos;s clock is wrong. The verifier
-              sees the mark and may not accept the clip.{' '}
+              sees the mark and may not accept the video.{' '}
               {!closed && 'Filming it again in the app clears the mark on the new one.'}
             </p>
           )}
@@ -680,7 +680,7 @@ function TaskCard({
                 className="mt-2 flex aspect-video items-center justify-center rounded-lg p-4 text-center text-xs text-white"
                 style={{ backgroundColor: '#101826' }}
               >
-                A demonstration clip. No video file is stored in this environment.
+                A demonstration video. No file is stored in this environment.
               </p>
             ))}
           <div className="mt-2 flex flex-wrap gap-2">
@@ -690,7 +690,7 @@ function TaskCard({
               className="min-h-10 flex-1 rounded-lg border-2 px-3 py-2 text-xs font-bold"
               style={{ borderColor: '#D1D5DB', color: '#3C4A61' }}
             >
-              {watching ? 'Hide the clip' : 'Watch it back'}
+              {watching ? 'Hide the video' : 'Watch it back'}
             </button>
             {!closed && (
               <FilmButton

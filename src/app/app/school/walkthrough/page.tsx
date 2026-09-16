@@ -22,7 +22,7 @@ export default async function SchoolWalkthroughPage() {
         </h1>
         <p className="mt-1 text-sm" style={{ color: INK_MUTED }}>
           {recording
-            ? 'The live check could not hold its connection, so film a short clip for each item instead. There is nobody waiting on a call.'
+            ? 'The live check could not hold its connection, so film a short video for each item instead. There is nobody waiting on a call.'
             : 'When your self assessment is flagged for a live check, the session runs here: you and an anonymous verifier speak while your camera shows the school.'}
         </p>
       </div>

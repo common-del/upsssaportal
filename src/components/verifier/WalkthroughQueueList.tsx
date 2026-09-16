@@ -174,7 +174,7 @@ function StateChip({ row }: { row: WalkthroughQueueRow }) {
     if (clipsComplete(row)) {
       return (
         <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ backgroundColor: GREEN_WASH, color: GREEN }}>
-          All clips returned
+          All videos returned
         </span>
       );
     }
@@ -210,10 +210,10 @@ function metaFor(row: WalkthroughQueueRow): string {
     const returned = row.clipsReturned ?? 0;
     const missing = Math.max(0, row.disputed - returned);
     if (row.windowClosed) {
-      bits.push(`${returned.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} clips returned`);
+      bits.push(`${returned.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} videos returned`);
       if (missing > 0) bits.push(`${missing.toLocaleString('en-IN')} never sent`);
     } else if (clipsComplete(row)) {
-      bits.push(row.lastClipAt ? `last clip arrived ${hoursSince(row.lastClipAt)} hours ago` : 'every clip is in');
+      bits.push(row.lastClipAt ? `last video arrived ${hoursSince(row.lastClipAt)} hours ago` : 'every video is in');
       if (row.hoursLeft !== null) bits.push(`${row.hoursLeft} h of the window left`);
     } else {
       bits.push(
@@ -224,7 +224,7 @@ function metaFor(row: WalkthroughQueueRow): string {
       if (returned > 0 && row.lastClipAt) bits.push(`last arrived ${hoursSince(row.lastClipAt)} hours ago`);
     }
   } else if (row.observed > 0) {
-    bits.push(`${row.observed.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} observed`);
+    bits.push(`${row.observed.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} checked`);
   } else {
     bits.push(`${row.disputed.toLocaleString('en-IN')} disputed ${row.disputed === 1 ? 'indicator' : 'indicators'}`);
   }
@@ -239,11 +239,11 @@ function actionLabel(row: WalkthroughQueueRow): string {
   if (row.sessionState === 'LIVE') return staleCall(row) ? 'Open and close it' : 'Rejoin the call';
   if (recording(row)) {
     if (row.windowClosed) return 'Review and send to the field';
-    if (clipsComplete(row)) return 'Review the clips';
+    if (clipsComplete(row)) return 'Review the videos';
     const returned = row.clipsReturned ?? 0;
-    return returned > 0 ? `Review ${returned} so far` : 'Open case';
+    return returned > 0 ? `Review ${returned} so far` : 'Open';
   }
-  return 'Open console';
+  return 'Open';
 }
 
 function QueueRow({ row, quiet }: { row: WalkthroughQueueRow; quiet?: boolean }) {
@@ -406,7 +406,7 @@ export function WalkthroughQueueList({ rows }: { rows: WalkthroughQueueRow[] }) 
   const unclaimed = shown.filter((r) => !r.mine).sort(byUrgency);
 
   // Can this be finished now? A live call, a complete pile of clips, a window that shut with
-  // clips missing, or anything already past the turnaround.
+  // videos missing, or anything already past the deadline.
   const canAct = (r: WalkthroughQueueRow) =>
     r.sessionState === 'LIVE' || r.overdue || (recording(r) && (clipsComplete(r) || r.windowClosed));
 
@@ -421,7 +421,7 @@ export function WalkthroughQueueList({ rows }: { rows: WalkthroughQueueRow[] }) 
     <div className="space-y-5">
       <p className="text-sm font-semibold" style={{ color: counts.late > 0 ? RED : INK_MUTED }}>
         {counts.all.toLocaleString('en-IN')} open {counts.all === 1 ? 'case' : 'cases'}
-        {counts.late > 0 && ` · ${counts.late.toLocaleString('en-IN')} past the turnaround`}
+        {counts.late > 0 && ` · ${counts.late.toLocaleString('en-IN')} past the deadline`}
       </p>
 
       {rows.length >= FILTER_BAR_MIN && (
@@ -490,19 +490,19 @@ export function WalkthroughQueueList({ rows }: { rows: WalkthroughQueueRow[] }) 
         <>
           <Zone
             label="Do now"
-            explain="A call in progress, clip piles that are complete, and anything past the turnaround."
+            explain="A call in progress, videos that are all in, and anything past the deadline."
             colour={GREEN}
             rows={doNow}
           />
           <Zone
-            label="Yours, not yet started"
+            label="Not started"
             explain="Calls to place or keep. Deadline order."
             colour={NAVY}
             rows={yours}
           />
           <Zone
             label="Waiting on a school"
-            explain="Nothing is needed from you until the clips arrive. Listed so you know they exist, not so you act on them."
+            explain="Nothing is needed from you until the videos arrive. Listed so you know they exist, not so you act on them."
             colour={GOLD_DARK}
             rows={waiting}
             quiet

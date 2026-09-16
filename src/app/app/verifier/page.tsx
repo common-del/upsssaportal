@@ -237,7 +237,7 @@ async function OnlineOverview({
           label="Walkthroughs"
           detail={
             overdue > 0
-              ? `${overdue} past the turnaround. Start there.`
+              ? `${overdue} past the deadline. Start there.`
               : 'Flagged cases needing a live look'
           }
           href="/app/verifier/walkthroughs"
@@ -249,7 +249,7 @@ async function OnlineOverview({
           detail={
             recordingRuns.length === 0
               ? 'No school is recording for you'
-              : 'Filming clips after a dropped call. Counted above too.'
+              : 'Filming videos after a dropped call. Counted above too.'
           }
           href="/app/verifier/walkthroughs"
           colour={recordingRuns.length > 0 ? NAVY : INK_MUTED}

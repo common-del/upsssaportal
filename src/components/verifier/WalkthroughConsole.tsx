@@ -258,16 +258,16 @@ function Console({ data }: { data: ConsoleData }) {
               ? 'The recording window has closed'
               : hoursLeft !== null
                 ? `The school may keep recording for ${hoursLeft.toLocaleString('en-IN')} more ${hoursLeft === 1 ? 'hour' : 'hours'}`
-                : 'The school is recording clips'}
+                : 'The school is recording videos'}
             <span className="ml-2 font-semibold">
-              · {data.clips.length.toLocaleString('en-IN')} of {data.indicators.length.toLocaleString('en-IN')} clips in
+              · {data.clips.length.toLocaleString('en-IN')} of {data.indicators.length.toLocaleString('en-IN')} videos in
             </span>
           </p>
           <p className="mt-1 text-xs" style={{ color: windowClosed ? RED : GOLD_DARK }}>
             {windowClosed
-              ? 'Settle what the clips do show. Anything still missing cannot be settled from a screen, so send the case to the field.'
-              : 'You can settle an indicator as soon as its clip arrives; the rest will follow. Nothing is lost by coming back to this page later.'}{' '}
-            Each clip carries its capture time and place, and a clip that carried an old file
+              ? 'Settle what the videos do show. Anything still missing cannot be settled from a screen, so send the case to the field.'
+              : 'You can settle an indicator as soon as its video arrives; the rest will follow. Nothing is lost by coming back to this page later.'}{' '}
+            Each video carries its capture time and place, and one that carried an old file
             timestamp at upload is flagged.
           </p>
         </div>
@@ -288,7 +288,7 @@ function Console({ data }: { data: ConsoleData }) {
               <div className="max-w-md p-6 text-center">
                 <p className="text-sm font-bold text-white">
                   {data.mode === 'GUIDED_CAPTURE'
-                    ? 'The call could not hold, so the school is recording clips instead. Review them on the right.'
+                    ? 'The call could not hold, so the school is recording videos instead. Review them on the right.'
                     : started && !ended
                       ? 'Live call: the school\'s video, and voice both ways'
                       : 'The school\'s video and the voice call appear here when the session starts'}
@@ -425,8 +425,8 @@ function Console({ data }: { data: ConsoleData }) {
                         style={{ borderColor: windowClosed ? RED : '#D0AD42', color: windowClosed ? RED : GOLD_DARK }}
                       >
                         {windowClosed
-                          ? 'No clip was ever sent for this indicator.'
-                          : 'No clip yet for this indicator.'}
+                          ? 'No video was ever sent for this indicator.'
+                          : 'No video yet for this indicator.'}
                       </p>
                     )}
 
@@ -479,7 +479,7 @@ function Console({ data }: { data: ConsoleData }) {
                           }}
                         >
                           <span className="block text-xs font-extrabold" style={{ color: GOLD_DARK }}>
-                            {recording ? 'The clip does not show this' : 'Could not check on the call'}
+                            {recording ? 'The video does not show this' : 'Could not check on the call'}
                           </span>
                           <span className="mt-0.5 block text-[11.5px] leading-snug" style={{ color: GOLD_DARK }}>
                             {recording
@@ -508,7 +508,7 @@ function Console({ data }: { data: ConsoleData }) {
           {recording && looseClips.length > 0 && (
             <div className="rounded-xl border-2 p-4" style={{ borderColor: '#D0AD42', backgroundColor: GOLD_WASH }}>
               <h2 className="text-base font-bold" style={{ color: GOLD_DARK }}>
-                Clips not matched to an indicator · {looseClips.length.toLocaleString('en-IN')}
+                Videos not matched to an indicator · {looseClips.length.toLocaleString('en-IN')}
               </h2>
               <p className="mt-1 text-xs" style={{ color: GOLD_DARK }}>
                 These were recorded before the tasks named the indicator they answer. Read the
@@ -530,7 +530,7 @@ function Console({ data }: { data: ConsoleData }) {
               <p className="mt-1 text-xs" style={{ color: INK_MUTED }}>
                 Resolved sends the school to the census queue for its normal turn. Unresolved
                 fast-tracks it into this year&apos;s field cohort.
-                {recording && ' An indicator with no clip cannot be settled from a screen.'}
+                {recording && ' An indicator with no video cannot be settled from a screen.'}
               </p>
               <textarea
                 value={outcomeNote}
@@ -606,7 +606,7 @@ function Clip({ clip, label }: { clip: ConsoleData['clips'][number]; label?: str
     <div className="mt-2 rounded-lg border-2 p-2" style={{ borderColor: '#D0AD42', backgroundColor: GOLD_WASH }}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-bold" style={{ color: GOLD_DARK }}>
-          {label ?? 'Clip returned'}
+          {label ?? 'Video returned'}
         </span>
         {!clip.freshCapture && <Badge label="Not freshly captured" colour={RED} />}
       </div>
@@ -617,7 +617,7 @@ function Clip({ clip, label }: { clip: ConsoleData['clips'][number]; label?: str
           className="mt-1.5 flex aspect-video items-center justify-center rounded-lg p-4 text-center text-xs text-white"
           style={{ backgroundColor: '#101826' }}
         >
-          A demonstration clip. The school&apos;s upload path is wired, but no video file is
+          A demonstration video. The school&apos;s upload path is wired, but no file is
           stored in this environment.
         </p>
       )}

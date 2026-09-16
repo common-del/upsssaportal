@@ -118,7 +118,7 @@ export default async function DeskQueuePage() {
         <>
           <p className="text-sm font-semibold" style={{ color: overdue > 0 ? RED : INK_MUTED }}>
             {queue.length.toLocaleString('en-IN')} open {queue.length === 1 ? 'case' : 'cases'}
-            {overdue > 0 && ` · ${overdue.toLocaleString('en-IN')} past the turnaround`}
+            {overdue > 0 && ` · ${overdue.toLocaleString('en-IN')} past the deadline`}
           </p>
 
           <div className="space-y-3">

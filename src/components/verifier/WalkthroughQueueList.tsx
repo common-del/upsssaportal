@@ -236,7 +236,9 @@ function metaFor(row: WalkthroughQueueRow): string {
 
 /** The one thing this row is for. A recording case says how much there is to look at. */
 function actionLabel(row: WalkthroughQueueRow): string {
-  if (row.sessionState === 'LIVE') return staleCall(row) ? 'Open and close it' : 'Rejoin the call';
+  // A stale session opens like any other case. The chip beside the code already says the call
+  // was left open, so the button does not need to repeat it in different words.
+  if (row.sessionState === 'LIVE') return staleCall(row) ? 'Open' : 'Rejoin the call';
   if (recording(row)) {
     if (row.windowClosed) return 'Review and send to the field';
     if (clipsComplete(row)) return 'Review the videos';

@@ -969,3 +969,38 @@ Four terms were proposed and refused, and the refusal is right. Walkthrough, ind
 screening and appeal appear in the SQAAF framework, the brief and the configuration, so renaming
 them in the interface alone would leave two names for one thing. Changing those is a programme
 decision, taken once and applied everywhere, not a copy pass.
+
+## 33. The walkthrough queue becomes a focus panel on a rail, built 16 September 2026
+
+SSSA chose direction B after seeing the queue drawn three ways. The five faults named in that
+review were real: nine identical cards, ninety pixels a row for six facts, four colour systems
+per row, zones set smaller than the data they organise, and no way to see the week.
+
+The page now answers "what now" with an answer. One case fills the left with its clock, its
+code, a sentence saying why it is in front of you, and its agenda: the disputed indicators with
+the checked ones ticked. Everything else compresses into a rail that still shows the whole
+queue, grouped Do now, Not started, Waiting on a school, Unclaimed. The rail is clickable, so
+nothing is hidden and any case is one press away, and "Skip to the next case" walks the same
+order the rail reads in.
+
+The agenda cost one query, not one per row. getWalkthroughQueue already derived each case's
+disputed set; it now also fetches every parameter any case disputes, once, and maps codes and
+titles onto the rows. Framework text only, so nothing about a school crosses into it.
+
+A search field sits above, at full width. Finding a case by its code is the question asked
+several times a day, and the code is the only name a case has, so it earns the width; the four
+counts below it are pressable, which turns a line that was already printing them into the
+filter. They are real buttons with aria-pressed and a visible focus ring, because prose that
+behaves like a button and is not one is a control only a mouse user can find.
+
+Two words changed with the layout. "4 recording" named no actor and could be read as the
+verifier recording something; the filter now reads "4 videos" against "5 calls", which is
+parallel and uses the word agreed in section 32. The row chip "Recording" becomes "School is
+filming" for the same reason, since leaving the filter and the chip disagreeing would be worse
+than either word alone.
+
+Direction C, the week, was drawn and not built. It is at its best when the cell is in trouble
+and nearly empty when it is healthy, it has nowhere honest to put an unclaimed case, and with a
+seven day deadline against forty-eight hours of filming time most of what it ever draws is a
+pile at one edge. It would suit a supervisor's view of the whole cell, which is a different
+screen for a different person.

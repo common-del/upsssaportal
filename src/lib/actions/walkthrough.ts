@@ -101,6 +101,10 @@ export type WalkthroughQueueRow = {
   /** The score that pushed this case over the threshold, for an unclaimed row to justify
    *  itself. Null when no score was stored, which older demo rows can be. */
   riskScore: number | null;
+  /** The indicators in dispute, and whether each has been checked. Shown on the focused case
+   *  so a verifier knows what they are walking into before the console opens. Framework text
+   *  only: a code and a title identify an indicator, never a school. */
+  agenda: { code: string; titleEn: string; checked: boolean }[];
 };
 
 export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
@@ -142,6 +146,20 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
     orderBy: { enteredStateAt: 'asc' },
     take: 200,
   });
+
+  // Every indicator any case disputes, fetched once rather than per row.
+  const allDisputed = new Set<string>();
+  for (const r of runs) {
+    for (const d of r.deskDecisions) allDisputed.add(d.parameterId);
+    for (const a of r.autoChecks) allDisputed.add(a.parameterId);
+  }
+  const parameters = allDisputed.size
+    ? await prisma.parameter.findMany({
+        where: { id: { in: [...allDisputed] } },
+        select: { id: true, code: true, titleEn: true },
+      })
+    : [];
+  const parameterBy = new Map(parameters.map((p) => [p.id, p]));
 
   const now = Date.now();
   return runs.map((r) => {
@@ -191,6 +209,11 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
         session?.guidedCaptureDeadline !== undefined &&
         session.guidedCaptureDeadline.getTime() <= now,
       riskScore: r.riskScores[0]?.score ?? null,
+      agenda: [...disputed]
+        .map((id) => parameterBy.get(id))
+        .filter((p): p is NonNullable<typeof p> => p !== undefined)
+        .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))
+        .map((p) => ({ code: p.code, titleEn: p.titleEn, checked: observed.has(p.id) })),
     };
   });
 }

@@ -181,31 +181,26 @@ const VERIFIER_REFERENCE_SECTION: NavSection = {
  * "Overview", not "My Assignments": the front door summarises whichever queues this
  * verifier's cell works from, and an online verifier has no assignments in the old sense.
  *
- * The two badges are live counts injected per-request by the layout, like the admin's
- * Decisions badge; the config itself stays static. `appealsBadge` is the on-ground cell's
- * appeals waiting on the SSSA. `recordingBadge` is the online cell's piles of clips that are
- * complete and can be settled now, which is the only number on that page that means work
- * waiting: a school still recording needs nothing from the verifier.
+ * `appealsBadge` is the on-ground cell's live count of appeals waiting on the SSSA, injected
+ * per-request by the layout like the admin's Decisions badge; the config itself stays static.
+ *
+ * The online cell has no badge. Recording tasks briefly had an entry of its own with a count of
+ * complete clip piles, and that count was the honest one: it moved only when there was work.
+ * Folding the recordings back into Walkthroughs leaves no equally honest number, because open
+ * cases never fall to zero and a badge that is always lit is ignored inside a week. The queue's
+ * "Do now" zone carries the urgency instead.
  */
-export function verifierSidebarSections(
-  role: string,
-  appealsBadge = 0,
-  recordingBadge = 0,
-): NavSection[] {
+export function verifierSidebarSections(role: string, appealsBadge = 0): NavSection[] {
   if (role === 'ONLINE_VERIFIER') {
     return [
       {
         items: [
           { href: '/app/verifier', label: 'Overview', exact: true },
           { href: '/app/verifier/desk', label: 'Desk Screening' },
-          { href: '/app/verifier/walkthroughs', label: 'Walkthroughs', also: ['/app/verifier/walkthrough'] },
-          // Sits under Walkthroughs because a case arrives here from one, but it is its own
-          // queue: the console for a recording case is reached from either entry, so the
-          // walkthrough alias stays where it is and this entry matches its own path only.
           {
-            href: '/app/verifier/recording-tasks',
-            label: 'Recording tasks',
-            ...(recordingBadge > 0 ? { badge: recordingBadge } : {}),
+            href: '/app/verifier/walkthroughs',
+            label: 'Walkthroughs',
+            also: ['/app/verifier/walkthrough', '/app/verifier/recording-tasks'],
           },
         ],
       },

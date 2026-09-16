@@ -13,7 +13,6 @@ export function VerifierAppLayout({
   userName,
   unreadCount = 0,
   appealsBadge = 0,
-  recordingBadge = 0,
   children,
 }: {
   role: string;
@@ -21,13 +20,11 @@ export function VerifierAppLayout({
   unreadCount?: number;
   /** On-ground only: appeals on this verifier's inspections still waiting on the SSSA. */
   appealsBadge?: number;
-  /** Online only: recording piles whose clips are all in and can be settled now. */
-  recordingBadge?: number;
   children: React.ReactNode;
 }) {
   return (
     <SidebarShell
-      sections={verifierSidebarSections(role, appealsBadge, recordingBadge)}
+      sections={verifierSidebarSections(role, appealsBadge)}
       roleLabel="VERIFIER"
       userName={userName}
       brandHref="/app/verifier"

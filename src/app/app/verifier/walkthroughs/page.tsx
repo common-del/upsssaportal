@@ -5,13 +5,26 @@ import { getWalkthroughQueue, type WalkthroughQueueRow } from '@/lib/actions/wal
 import { ClaimWalkthroughButton } from '@/components/verifier/ClaimWalkthroughButton';
 
 /**
- * The walkthrough queue: cases desk screening pushed over the risk threshold.
+ * The walkthrough queue: cases desk screening pushed over the risk threshold, on both routes.
  *
- * Two zones, because the page answers two different questions. "Yours" is what you are already
- * committed to, with a call in progress at the top because nothing else on this screen matters
- * while a school is waiting on the line. "Unclaimed" is the pool anyone in the cell can pick up.
- * Deadline order inside each zone. The old page gave a live session the same white card as an
- * untouched one and printed raw dates instead of a clock.
+ * Most are settled on a live call. Where the call will not hold, the school records a clip for
+ * each disputed indicator instead, and for a day those cases had a page of their own. They are
+ * back here, because one case belongs in one queue and a second page was a second place to
+ * forget it.
+ *
+ * Merging them back raises the problem that split them, and the zones are the answer. A call is
+ * measured against the seven day turnaround and a recording against the school's 48 hour
+ * window, so a single deadline column would be wrong for half the list: instead each row states
+ * its own clock in the tile, and the zones sort by whether the verifier can act at all.
+ *
+ *   Do now          a live call, a clip pile that is complete, anything past the turnaround
+ *   Yours           calls to place or keep, in deadline order
+ *   Waiting         a school still filming. Nothing is needed here, and it says so
+ *   Unclaimed       the pool anyone in the cell can take
+ *
+ * Ordering by whichever clock expires first would put "24 hours left" on a school that is still
+ * filming above a call due in five days, although one needs the verifier and the other does not.
+ * The question this page answers is what to do next, not what runs out first.
  *
  * Masked codes here, as everywhere in the online track; the identity discloses only inside a
  * case's console, at a recorded moment, immediately followed by the conflict declaration.
@@ -21,6 +34,7 @@ const NAVY = '#1F3864';
 const NAVY_DEEP = '#073763';
 const NAVY_WASH = '#EEF2F9';
 const INK_MUTED = '#5F7190';
+const GOLD = '#BF9000';
 const GOLD_TINT = '#D0AD42';
 const GOLD_DARK = '#7A5209';
 const GOLD_WASH = '#FDF8EC';
@@ -47,58 +61,63 @@ function daysFromNow(iso: string) {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
+function hoursSince(iso: string) {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000);
+}
+
+const recording = (row: WalkthroughQueueRow) => row.sessionState === 'GUIDED_CAPTURE';
+
+/** Every clip asked for has come back, so the case can be settled now. */
+const clipsComplete = (row: WalkthroughQueueRow) =>
+  recording(row) && row.disputed > 0 && (row.clipsReturned ?? 0) >= row.disputed;
+
 /**
- * The left-hand tile. A live call shows minutes elapsed rather than a deadline, because while
- * the school is on the line the turnaround is not the thing that matters.
+ * The left-hand tile, which states the clock that governs this particular row.
+ *
+ * A live call shows minutes elapsed, because while the school is on the line the turnaround is
+ * not the thing that matters. A school still filming shows hours of its own window. Everything
+ * else shows the turnaround. One column, one meaning per row, and none of them borrowed.
  */
 function StateTile({ row }: { row: WalkthroughQueueRow }) {
-  if (row.sessionState === 'LIVE' && row.startedAt) {
-    const minutes = Math.max(0, Math.floor((Date.now() - new Date(row.startedAt).getTime()) / 60_000));
-    return (
-      <span
-        className="w-16 flex-none rounded-lg border-2 py-1 text-center"
-        style={{ borderColor: '#BFE0CF', backgroundColor: GREEN_WASH }}
-      >
-        <span className="block text-lg font-extrabold leading-tight tabular-nums" style={{ color: GREEN }}>
-          {minutes.toLocaleString('en-IN')}
-        </span>
-        <span className="block text-[9px] font-extrabold uppercase tracking-wide" style={{ color: GREEN }}>
-          min in
-        </span>
-      </span>
-    );
-  }
-
-  const days = daysFromNow(row.dueBy);
-  const overdue = row.overdue;
-  const urgent = !overdue && days <= 2;
-  const palette = overdue
-    ? { border: RED, bg: RED_WASH, ink: RED }
-    : urgent
-      ? { border: GOLD_TINT, bg: GOLD_WASH, ink: GOLD_DARK }
-      : { border: '#C7D2E8', bg: NAVY_WASH, ink: NAVY_DEEP };
-  const value = Math.abs(days);
-  const label = overdue
-    ? value === 1
-      ? 'day over'
-      : 'days over'
-    : value === 1
-      ? 'day left'
-      : 'days left';
-
-  return (
-    <span
-      className="w-16 flex-none rounded-lg border-2 py-1 text-center"
-      style={{ borderColor: palette.border, backgroundColor: palette.bg }}
-    >
-      <span className="block text-lg font-extrabold leading-tight tabular-nums" style={{ color: palette.ink }}>
+  const tile = (value: number, label: string, border: string, bg: string, ink: string) => (
+    <span className="w-16 flex-none rounded-lg border-2 py-1 text-center" style={{ borderColor: border, backgroundColor: bg }}>
+      <span className="block text-lg font-extrabold leading-tight tabular-nums" style={{ color: ink }}>
         {value.toLocaleString('en-IN')}
       </span>
-      <span className="block text-[9px] font-extrabold uppercase tracking-wide" style={{ color: palette.ink }}>
+      <span className="block text-[9px] font-extrabold uppercase tracking-wide" style={{ color: ink }}>
         {label}
       </span>
     </span>
   );
+
+  if (row.sessionState === 'LIVE' && row.startedAt) {
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(row.startedAt).getTime()) / 60_000));
+    return tile(minutes, 'min in', '#BFE0CF', GREEN_WASH, GREEN);
+  }
+
+  const days = daysFromNow(row.dueBy);
+  if (row.overdue) {
+    const over = Math.abs(days);
+    return tile(over, over === 1 ? 'day over' : 'days over', RED, RED_WASH, RED);
+  }
+
+  if (recording(row)) {
+    // The window is shut: these are all the clips there will ever be, so the count is the fact
+    // that matters rather than a deadline nobody can meet.
+    if (row.windowClosed) {
+      return tile(row.clipsReturned ?? 0, `of ${row.disputed} in`, RED, RED_WASH, RED);
+    }
+    if (clipsComplete(row)) {
+      return tile(row.clipsReturned ?? 0, `of ${row.disputed} in`, '#BFE0CF', GREEN_WASH, GREEN);
+    }
+    const left = row.hoursLeft ?? 0;
+    return tile(left, left === 1 ? 'hour left' : 'hours left', GOLD_TINT, GOLD_WASH, GOLD_DARK);
+  }
+
+  const urgent = days <= 2;
+  return urgent
+    ? tile(days, days === 1 ? 'day left' : 'days left', GOLD_TINT, GOLD_WASH, GOLD_DARK)
+    : tile(days, days === 1 ? 'day left' : 'days left', '#C7D2E8', NAVY_WASH, NAVY_DEEP);
 }
 
 function StateChip({ row }: { row: WalkthroughQueueRow }) {
@@ -109,22 +128,33 @@ function StateChip({ row }: { row: WalkthroughQueueRow }) {
       </span>
     );
   }
-  if (row.sessionState === 'GUIDED_CAPTURE') {
+  if (recording(row)) {
+    if (row.windowClosed) {
+      return (
+        <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold text-white" style={{ backgroundColor: RED }}>
+          Window closed short
+        </span>
+      );
+    }
+    if (clipsComplete(row)) {
+      return (
+        <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ backgroundColor: GREEN_WASH, color: GREEN }}>
+          All clips returned
+        </span>
+      );
+    }
     return (
       <span
-        className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold"
-        style={{ backgroundColor: GOLD_WASH, color: GOLD_DARK }}
+        className="rounded-full border px-2.5 py-0.5 text-[10.5px] font-extrabold"
+        style={{ borderColor: GOLD_TINT, backgroundColor: GOLD_WASH, color: GOLD_DARK }}
       >
-        Recording tasks
+        Recording
       </span>
     );
   }
   if (row.sessionState === 'SCHEDULED' && row.scheduledFor) {
     return (
-      <span
-        className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold"
-        style={{ backgroundColor: NAVY_WASH, color: NAVY }}
-      >
+      <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ backgroundColor: NAVY_WASH, color: NAVY }}>
         Scheduled {weekdayTime(row.scheduledFor)}
       </span>
     );
@@ -136,20 +166,29 @@ function StateChip({ row }: { row: WalkthroughQueueRow }) {
 function metaFor(row: WalkthroughQueueRow): string {
   const bits: string[] = [row.category];
 
-  if (row.sessionState === 'GUIDED_CAPTURE') {
-    // The live call failed twice, so the school is recording clips instead. Progress against
-    // the tasks it was sent is the only number that matters on this row.
-    bits.push(
-      `${(row.clipsReturned ?? 0).toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} clips returned`,
-    );
+  if (recording(row)) {
+    const returned = row.clipsReturned ?? 0;
+    const missing = Math.max(0, row.disputed - returned);
+    if (row.windowClosed) {
+      bits.push(`${returned.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} clips returned`);
+      if (missing > 0) bits.push(`${missing.toLocaleString('en-IN')} never sent`);
+    } else if (clipsComplete(row)) {
+      bits.push(
+        row.lastClipAt ? `last clip arrived ${hoursSince(row.lastClipAt)} hours ago` : 'every clip is in',
+      );
+      if (row.hoursLeft !== null) bits.push(`${row.hoursLeft} h of the window left`);
+    } else {
+      bits.push(
+        returned === 0
+          ? 'nothing returned yet'
+          : `${returned.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} clips returned`,
+      );
+      if (returned > 0 && row.lastClipAt) bits.push(`last arrived ${hoursSince(row.lastClipAt)} hours ago`);
+    }
   } else if (row.observed > 0) {
-    bits.push(
-      `${row.observed.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} observed`,
-    );
+    bits.push(`${row.observed.toLocaleString('en-IN')} of ${row.disputed.toLocaleString('en-IN')} observed`);
   } else {
-    bits.push(
-      `${row.disputed.toLocaleString('en-IN')} disputed ${row.disputed === 1 ? 'indicator' : 'indicators'}`,
-    );
+    bits.push(`${row.disputed.toLocaleString('en-IN')} disputed ${row.disputed === 1 ? 'indicator' : 'indicators'}`);
   }
 
   // An unclaimed row has to justify itself: the score is why it is here at all.
@@ -157,14 +196,39 @@ function metaFor(row: WalkthroughQueueRow): string {
   return bits.join(' · ');
 }
 
-function QueueRow({ row }: { row: WalkthroughQueueRow }) {
+/** The one thing this row is for. A recording case says how much there is to look at. */
+function actionLabel(row: WalkthroughQueueRow): string {
+  if (row.sessionState === 'LIVE') return 'Rejoin the call';
+  if (recording(row)) {
+    if (row.windowClosed) return 'Review and send to the field';
+    if (clipsComplete(row)) return 'Review the clips';
+    const returned = row.clipsReturned ?? 0;
+    return returned > 0 ? `Review ${returned} so far` : 'Open case';
+  }
+  return 'Open console';
+}
+
+function QueueRow({ row, quiet }: { row: WalkthroughQueueRow; quiet?: boolean }) {
   const live = row.sessionState === 'LIVE';
-  const border = live ? GREEN : row.overdue ? RED : row.sessionState === 'GUIDED_CAPTURE' ? GOLD_TINT : '#E5E7EB';
+  const done = clipsComplete(row) && !row.windowClosed;
+  const border = live || done
+    ? GREEN
+    : row.overdue || (recording(row) && row.windowClosed)
+      ? RED
+      : recording(row)
+        ? GOLD_TINT
+        : '#E5E7EB';
+
+  const actionStyle = live || done
+    ? { backgroundColor: GREEN, color: 'white' }
+    : quiet
+      ? { backgroundColor: 'white', border: '2px solid #D1D5DB', color: '#3C4A61' }
+      : { backgroundColor: NAVY, color: 'white' };
 
   return (
     <div
-      className="flex flex-wrap items-center gap-3 rounded-xl border-2 bg-white px-3 py-2.5"
-      style={{ borderColor: border }}
+      className="flex flex-wrap items-center gap-3 rounded-xl border-2 px-3 py-2.5"
+      style={{ borderColor: border, backgroundColor: quiet ? '#FAFBFD' : 'white' }}
     >
       <StateTile row={row} />
       <span className="min-w-0 flex-1">
@@ -178,18 +242,64 @@ function QueueRow({ row }: { row: WalkthroughQueueRow }) {
           {metaFor(row)}
         </span>
       </span>
+      {/* Progress against the agenda, whichever route the case took: clips returned for a
+          recording, indicators settled for a call. */}
+      <span className="hidden h-2 w-24 flex-none overflow-hidden rounded-full bg-[#EDEFF3] sm:block">
+        <span
+          className="block h-full rounded-full"
+          style={{
+            backgroundColor: row.overdue || (recording(row) && row.windowClosed) ? RED : done || live ? GREEN : GOLD,
+            width: `${
+              row.disputed === 0
+                ? 0
+                : Math.min(100, Math.round(((recording(row) ? (row.clipsReturned ?? 0) : row.observed) / row.disputed) * 100))
+            }%`,
+          }}
+        />
+      </span>
       {row.mine ? (
         <Link
           href={`/app/verifier/walkthrough/${row.runId}`}
-          className="flex-none rounded-lg px-4 py-2 text-sm font-bold text-white"
-          style={{ backgroundColor: live ? GREEN : NAVY }}
+          className="flex-none rounded-lg px-4 py-2 text-sm font-bold"
+          style={actionStyle}
         >
-          {live ? 'Rejoin the call' : 'Open console'}
+          {actionLabel(row)}
         </Link>
       ) : (
         <ClaimWalkthroughButton runId={row.runId} />
       )}
     </div>
+  );
+}
+
+function Zone({
+  label,
+  explain,
+  colour,
+  rows,
+  quiet,
+}: {
+  label: string;
+  explain?: string;
+  colour: string;
+  rows: WalkthroughQueueRow[];
+  quiet?: boolean;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <section className="space-y-3">
+      <p className="text-[11px] font-extrabold uppercase tracking-widest" style={{ color: colour }}>
+        {label} · {rows.length.toLocaleString('en-IN')}
+        {explain && (
+          <span className="mt-0.5 block text-[11.5px] font-semibold normal-case tracking-normal" style={{ color: INK_MUTED }}>
+            {explain}
+          </span>
+        )}
+      </p>
+      {rows.map((row) => (
+        <QueueRow key={row.runId} row={row} quiet={quiet} />
+      ))}
+    </section>
   );
 }
 
@@ -204,29 +314,40 @@ export default async function WalkthroughsPage() {
     (a.sessionState === 'LIVE' ? 0 : 1) - (b.sessionState === 'LIVE' ? 0 : 1) ||
     Date.parse(a.dueBy) - Date.parse(b.dueBy);
 
-  const mine = rows.filter((r) => r.mine).sort(byUrgency);
+  const mine = rows.filter((r) => r.mine);
   const unclaimed = rows.filter((r) => !r.mine).sort(byUrgency);
+
+  // Can this be finished now? A live call, a complete pile of clips, a window that shut with
+  // clips missing, or anything already past the turnaround.
+  const canAct = (r: WalkthroughQueueRow) =>
+    r.sessionState === 'LIVE' || r.overdue || (recording(r) && (clipsComplete(r) || r.windowClosed));
+
+  const doNow = mine.filter(canAct).sort(byUrgency);
+  // A school still filming. Sorted by its own clock, which is the only one that applies.
+  const waiting = mine
+    .filter((r) => !canAct(r) && recording(r))
+    .sort((a, b) => (a.hoursLeft ?? 9999) - (b.hoursLeft ?? 9999));
+  const yours = mine.filter((r) => !canAct(r) && !recording(r)).sort(byUrgency);
+
   const overdue = rows.filter((r) => r.overdue).length;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: NAVY_DEEP }}>
-          Video walkthroughs
+          Walkthroughs
         </h1>
         <p className="mt-1 text-sm" style={{ color: INK_MUTED }}>
-          Cases whose risk score crossed the threshold. Each needs a live, geofenced walkthrough,
-          resolved or sent to the field within the turnaround.
+          Cases whose risk score crossed the threshold. Most are settled on a live, geofenced
+          call; where the call will not hold, the school records a clip for each disputed
+          indicator instead. Either way the case is resolved or sent to the field within the
+          turnaround.
         </p>
       </div>
 
       {rows.length === 0 ? (
         <p className="rounded-xl border-2 border-gray-200 bg-white p-5 text-sm" style={{ color: INK_MUTED }}>
-          Nothing is waiting for a walkthrough. A case whose call could not hold is on{' '}
-          <Link href="/app/verifier/recording-tasks" className="font-bold underline" style={{ color: NAVY }}>
-            Recording tasks
-          </Link>
-          .
+          Nothing is waiting for a walkthrough.
         </p>
       ) : (
         <>
@@ -235,39 +356,37 @@ export default async function WalkthroughsPage() {
             {overdue > 0 && ` · ${overdue.toLocaleString('en-IN')} past the turnaround`}
           </p>
 
-          {mine.length > 0 && (
-            <section className="space-y-3">
-              <p className="text-[11px] font-extrabold uppercase tracking-widest" style={{ color: GREEN }}>
-                Yours · {mine.length.toLocaleString('en-IN')}
-              </p>
-              {mine.map((row) => (
-                <QueueRow key={row.runId} row={row} />
-              ))}
-            </section>
-          )}
-
-          {unclaimed.length > 0 && (
-            <section className="space-y-3">
-              <p className="text-[11px] font-extrabold uppercase tracking-widest" style={{ color: INK_MUTED }}>
-                Unclaimed · {unclaimed.length.toLocaleString('en-IN')}
-                <span className="mt-0.5 block text-[11.5px] font-semibold normal-case tracking-normal" style={{ color: INK_MUTED }}>
-                  Anyone in the online cell can take these. Claiming is recorded.
-                </span>
-              </p>
-              {unclaimed.map((row) => (
-                <QueueRow key={row.runId} row={row} />
-              ))}
-            </section>
-          )}
+          <Zone
+            label="Do now"
+            explain="A call in progress, clip piles that are complete, and anything past the turnaround."
+            colour={GREEN}
+            rows={doNow}
+          />
+          <Zone
+            label="Yours, not yet started"
+            explain="Calls to place or keep. Deadline order."
+            colour={NAVY}
+            rows={yours}
+          />
+          <Zone
+            label="Waiting on a school"
+            explain="Nothing is needed from you until the clips arrive. Listed so you know they exist, not so you act on them."
+            colour={GOLD_DARK}
+            rows={waiting}
+            quiet
+          />
+          <Zone
+            label="Unclaimed"
+            explain="Anyone in the online cell can take these. Claiming is recorded."
+            colour={INK_MUTED}
+            rows={unclaimed}
+          />
 
           <p className="text-xs" style={{ color: INK_MUTED }}>
-            Cases waiting since {dayMonth(rows[rows.length - 1]!.enteredStateAt)} at the oldest.
-            The school is named only inside a console, at a recorded moment. A case whose call
-            could not hold leaves this queue for{' '}
-            <Link href="/app/verifier/recording-tasks" className="font-bold underline" style={{ color: NAVY }}>
-              Recording tasks
-            </Link>
-            .
+            Cases waiting since {dayMonth(rows[rows.length - 1]!.enteredStateAt)} at the oldest. A
+            case whose call could not hold stays in this queue and changes its clock: hours of
+            the school&apos;s recording window rather than days of the turnaround. The school is
+            named only inside a console, at a recorded moment.
           </p>
         </>
       )}

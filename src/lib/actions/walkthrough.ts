@@ -89,8 +89,15 @@ export type WalkthroughQueueRow = {
   disputed: number;
   /** How many of those already carry an observation, so a row shows progress. */
   observed: number;
-  /** Guided capture only: clips the school has returned, against tasks sent. */
+  /** Recording cases only: clips the school has returned, against the disputed count above,
+   *  and when the most recent one arrived. */
   clipsReturned: number | null;
+  lastClipAt: string | null;
+  /** Recording cases only: the school's 48 hour window and what is left of it. This is the
+   *  second clock in the queue, and the reason a row states its own rather than reading a
+   *  shared deadline column that would be wrong for half the list. */
+  hoursLeft: number | null;
+  windowClosed: boolean;
   /** The score that pushed this case over the threshold, for an unclaimed row to justify
    *  itself. Null when no score was stored, which older demo rows can be. */
   riskScore: number | null;
@@ -126,8 +133,9 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
           startedAt: true,
           endedAt: true,
           mode: true,
+          guidedCaptureDeadline: true,
           observations: { select: { parameterId: true } },
-          clips: { select: { id: true } },
+          clips: { select: { capturedAt: true }, orderBy: { capturedAt: 'desc' } },
         },
       },
     },
@@ -136,11 +144,7 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
   });
 
   const now = Date.now();
-  return runs
-    // A case that dropped to recording tasks lives on its own page now: it is waiting on the
-    // school, not on a call, and a row you can do nothing about is noise in a working queue.
-    .filter((r) => r.walkthroughs[0]?.mode !== 'GUIDED_CAPTURE' || r.walkthroughs[0]?.endedAt)
-    .map((r) => {
+  return runs.map((r) => {
     const session = r.walkthroughs[0];
     const dueBy = new Date(r.enteredStateAt.getTime() + turnaroundDays * 86_400_000);
     // The agenda, counted the same way the console derives it: non-accepting desk decisions
@@ -176,91 +180,19 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
       disputed: disputed.size,
       observed: observed.size,
       clipsReturned: guided ? (session?.clips.length ?? 0) : null,
+      lastClipAt: guided ? (session?.clips[0]?.capturedAt.toISOString() ?? null) : null,
+      hoursLeft:
+        guided && session?.guidedCaptureDeadline
+          ? Math.max(0, Math.ceil((session.guidedCaptureDeadline.getTime() - now) / 3_600_000))
+          : null,
+      windowClosed:
+        guided &&
+        session?.guidedCaptureDeadline !== null &&
+        session?.guidedCaptureDeadline !== undefined &&
+        session.guidedCaptureDeadline.getTime() <= now,
       riskScore: r.riskScores[0]?.score ?? null,
     };
   });
-}
-
-export type RecordingTaskRow = {
-  runId: string;
-  maskedCode: string;
-  category: string;
-  /** Tasks sent, one per disputed indicator, and how many clips came back. */
-  tasksSent: number;
-  clipsReturned: number;
-  /** When the most recent clip arrived, so a row can say how fresh the pile is. */
-  lastClipAt: string | null;
-  /** The school's 48 hour window, and what is left of it. */
-  deadline: string | null;
-  hoursLeft: number | null;
-  windowClosed: boolean;
-};
-
-/**
- * Cases where the call could not hold and the school is recording clips instead.
- *
- * A page of its own rather than a state inside the walkthrough queue, because conducting a
- * call and reviewing clips two days later are different jobs on different clocks: the
- * walkthrough turnaround against the school's 48 hour recording window. A case appears in
- * exactly one of the two queues, so there is only ever one place to lose it.
- */
-export async function getRecordingTaskQueue(): Promise<RecordingTaskRow[]> {
-  const me = await myOnlineProfile();
-  if (!me) return [];
-
-  const sessions = await prisma.walkthroughSession.findMany({
-    where: { profileId: me.profileId, mode: 'GUIDED_CAPTURE', endedAt: null, recusedAt: null },
-    select: {
-      guidedCaptureDeadline: true,
-      clips: { select: { capturedAt: true }, orderBy: { capturedAt: 'desc' } },
-      run: {
-        select: {
-          id: true,
-          // Only what the mask needs; the name is not selected here either.
-          school: { select: { udise: true, category: true } },
-          deskDecisions: {
-            where: { decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' } },
-            select: { parameterId: true },
-          },
-          autoChecks: { where: { outcome: 'MISMATCH' }, select: { parameterId: true } },
-        },
-      },
-    },
-  });
-
-  const now = Date.now();
-  return sessions
-    .map((session) => {
-      // One task per disputed indicator, counted as the console counts them.
-      const tasksSent = new Set([
-        ...session.run.deskDecisions.map((d) => d.parameterId),
-        ...session.run.autoChecks.map((a) => a.parameterId),
-      ]).size;
-      const deadline = session.guidedCaptureDeadline;
-      const msLeft = deadline ? deadline.getTime() - now : null;
-      return {
-        runId: session.run.id,
-        ...maskSchool(session.run.school),
-        tasksSent,
-        clipsReturned: session.clips.length,
-        lastClipAt: session.clips[0]?.capturedAt.toISOString() ?? null,
-        deadline: deadline?.toISOString() ?? null,
-        hoursLeft: msLeft === null ? null : Math.max(0, Math.ceil(msLeft / 3_600_000)),
-        windowClosed: msLeft !== null && msLeft <= 0,
-      };
-    })
-    // Complete piles first, because those are the only ones that can be settled; then by how
-    // little time is left.
-    .sort((a, b) => {
-      const ready = (r: RecordingTaskRow) => (r.clipsReturned >= r.tasksSent && r.tasksSent > 0 ? 0 : 1);
-      return ready(a) - ready(b) || (a.hoursLeft ?? 9999) - (b.hoursLeft ?? 9999);
-    });
-}
-
-/** The sidebar badge: piles that are complete and waiting to be settled. */
-export async function countRecordingTasksReady(): Promise<number> {
-  const rows = await getRecordingTaskQueue();
-  return rows.filter((r) => r.tasksSent > 0 && r.clipsReturned >= r.tasksSent).length;
 }
 
 /** Take over a case whose conductor recused or was never set. */

@@ -140,8 +140,9 @@ async function OnlineOverview({
       school: { select: { udise: true, category: true } },
       deskDecisions: { select: { decision: true } },
       _count: { select: { autoChecks: true } },
-      // Only to tell a case waiting on a call from one waiting on the school's recordings:
-      // they are separate queues and must not be counted twice on the same row of tiles.
+      // Only to tell a case waiting on a call from one waiting on the school's recordings.
+      // Both are one queue, so the Walkthroughs tile counts them together and the second tile
+      // names the subset a verifier can do nothing about.
       walkthroughs: {
         where: { recusedAt: null },
         orderBy: { createdAt: 'desc' },
@@ -158,13 +159,12 @@ async function OnlineOverview({
   const isRecording = (r: (typeof runs)[number]) =>
     r.walkthroughs[0]?.mode === 'GUIDED_CAPTURE' && r.walkthroughs[0]?.endedAt === null;
   const recordingRuns = inWalkthroughState.filter(isRecording);
-  const walkthroughRuns = inWalkthroughState.filter((r) => !isRecording(r));
   // Everything whose state moved past desk screening: walkthrough, census queue, the field
   // stages or published. Against Assigned this is "how far through am I".
   const cleared = assigned - deskRuns.length;
 
   const turnaroundMs = (config?.videoWalkthroughTurnaroundDays ?? 7) * 86_400_000;
-  const overdue = walkthroughRuns.filter(
+  const overdue = inWalkthroughState.filter(
     (r) => r.enteredStateAt.getTime() + turnaroundMs < Date.now(),
   ).length;
 
@@ -233,7 +233,7 @@ async function OnlineOverview({
           colour={GREEN}
         />
         <Tile
-          value={walkthroughRuns.length}
+          value={inWalkthroughState.length}
           label="Walkthroughs"
           detail={
             overdue > 0
@@ -241,17 +241,17 @@ async function OnlineOverview({
               : 'Flagged cases needing a live look'
           }
           href="/app/verifier/walkthroughs"
-          colour={overdue > 0 ? RED : walkthroughRuns.length > 0 ? NAVY : INK_MUTED}
+          colour={overdue > 0 ? RED : inWalkthroughState.length > 0 ? NAVY : INK_MUTED}
         />
         <Tile
           value={recordingRuns.length}
-          label="Recording tasks"
+          label="Waiting on schools"
           detail={
             recordingRuns.length === 0
               ? 'No school is recording for you'
-              : 'Calls that dropped. The school records instead.'
+              : 'Filming clips after a dropped call. Counted above too.'
           }
-          href="/app/verifier/recording-tasks"
+          href="/app/verifier/walkthroughs"
           colour={recordingRuns.length > 0 ? NAVY : INK_MUTED}
         />
       </div>
@@ -330,8 +330,8 @@ async function OnlineOverview({
           <span>
             {cleared.toLocaleString('en-IN')} {cleared === 1 ? 'case' : 'cases'} cleared this
             cycle
-            {walkthroughRuns.length > 0
-              ? `. ${walkthroughRuns.length.toLocaleString('en-IN')} went on to a walkthrough.`
+            {inWalkthroughState.length > 0
+              ? `. ${inWalkthroughState.length.toLocaleString('en-IN')} went on to a walkthrough.`
               : '.'}
           </span>
         </div>

@@ -858,3 +858,40 @@ in time but arriving late would still count. It does not. The deadline is enforc
 because accepting a school-reported filming time would make the window enforceable only against
 schools that do not know to lie about it. The screen says plainly that a clip which missed the
 window cannot be counted.
+
+## 30. Recordings fold back into the walkthrough queue, decided 16 September 2026
+
+SSSA reversed section 28 the same day: one queue, not two. Recording tasks loses its page, its
+sidebar entry and its badge, and its cases return to Walkthroughs.
+
+The reversal is reasonable even though the split was not wrong. A recording case only exists
+when a call drops twice, which should be uncommon; a whole page and a sidebar slot for what may
+be three cases in forty is a lot of furniture, and one case's lifecycle spread across two
+destinations is two places to lose it.
+
+But the merge has to answer the problem that caused the split, which is that a call and a pile
+of clips keep different clocks. A call runs against the seven day turnaround, a recording against
+the school's 48 hour window, and one deadline column would be wrong for half the list.
+
+Two devices answer it. The tile states the clock that governs its own row: minutes elapsed on a
+live call, hours of the window while a school films, clips returned once the window shuts or the
+pile is complete, days of the turnaround otherwise. And the zones sort by whether the verifier
+can act rather than by which clock runs out first. "Do now" holds a live call, a complete pile
+and anything overdue; "Yours, not yet started" holds calls to place; "Waiting on a school" is
+quiet and says outright that nothing is needed; "Unclaimed" is the pool.
+
+Sorting by clock alone was the option rejected. It would put "24 hours left" on a school that is
+still filming above a call due in five days, although one needs the verifier and the other does
+not. The question the page answers is what to do next, not what expires first.
+
+What is lost, stated because it was a real gain: the sidebar badge. It counted clip piles that
+were complete, which is the rare kind of count that only moves when there is work to do. Merged
+into Walkthroughs there is no equally honest number, because open cases never fall to zero and a
+badge that is always lit is ignored inside a week. The badge is dropped rather than replaced with
+a number that means nothing, and the "Do now" zone carries the urgency instead. The alternative
+on the table was a tabbed page, which would have kept the count; SSSA chose the single list.
+
+/app/verifier/recording-tasks still redirects, as /app/sssa/escalations does, because the URL was
+in production and a bookmark should land on the work rather than on a 404. The Overview's
+Walkthroughs tile now counts the whole queue, and a second tile names the subset waiting on
+schools, which is the one number on that row a verifier can do nothing about.

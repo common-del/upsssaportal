@@ -646,14 +646,32 @@ lower than it did before, which is the intended correction rather than a side ef
 
 ## 25. The escalation path is removed, decided 16 September 2026
 
-SSSA directed that the escalation path be removed in full. This is a deliberate departure
-from the build brief, which states it as a requirement ("The verifier can escalate any case
-where the rubric cannot be cleanly applied. Escalation routes to the Supervisor and freezes
-the case", plus "Escalate control on every indicator" and "Escalation inbox"). The departure
-was put to SSSA with that text and with the consequence that a verifier facing an indicator
-the rubric cannot judge must now record a decision they may not believe, most likely
-"evidence insufficient", which is the honest one available. SSSA confirmed. Recorded here so
-the brief and the build can be reconciled deliberately rather than read as drift.
+SSSA directed that the escalation path be removed in full, on the reasoning that the risk
+scoring mechanism makes it unnecessary. That reasoning holds, and it is recorded here rather
+than merely the instruction, because the departure from the build brief only makes sense
+alongside it.
+
+The brief states escalation as a requirement ("The verifier can escalate any case where the
+rubric cannot be cleanly applied. Escalation routes to the Supervisor and freezes the case",
+plus "Escalate control on every indicator" and "Escalation inbox"). It was written for a
+worry that the pipeline answers another way. A desk screener never assigns a level: they
+judge evidence, and the four verdicts are supports, insufficient, missing and contradicts.
+An indicator the rubric cannot cleanly settle therefore already has an exact and honest
+answer, evidence insufficient, and no screener is forced to record a judgement they do not
+hold. That verdict then carries weight into the risk score, pushes the case toward the
+threshold, and routes it to a video walkthrough and onward to a physical inspection. The
+unjudgeable case reaches a person who can stand in the room and look, which is what
+escalation was reaching for, arrived at by evidence rather than by a manual request that can
+be forgotten.
+
+An objection raised during the review was wrong and is corrected here: that removing
+escalation would force a verifier to put a level they did not believe onto a school's
+published record. Desk screening sets no levels, so it does not.
+
+What does go is a rubric quality signal. The retired "most escalated indicator" panel existed
+to find level descriptions that do not fit real schools. The same finding survives in the
+data as a high rate of evidence insufficient on one indicator across many schools; recovering
+it is a query, not a mechanism.
 
 Gone from the verifier: the escalate control on every indicator, the escalateIndicator
 action, the hold that stopped a case being completed and scored, and every trace of the

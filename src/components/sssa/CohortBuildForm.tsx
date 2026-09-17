@@ -112,6 +112,20 @@ export function CohortBuildForm({ selectedCount }: { selectedCount: number }) {
               them. They are listed on the verification year screen, where one can be sent.
             </p>
           )}
+          {/* The other half of the draw: schools it passed over have no visit coming, so their
+              results are final and publish on the spot. There is no publish button any more. */}
+          {(result.published ?? 0) > 0 && (
+            <p>
+              {result.published?.toLocaleString('en-IN')} schools the draw passed over were
+              published, with their scores recomputed from the verified record.
+            </p>
+          )}
+          {(result.publishFailed ?? 0) > 0 && (
+            <p>
+              {result.publishFailed?.toLocaleString('en-IN')} could not be published and stayed in
+              the queue. {result.publishErrors?.[0] ?? ''}
+            </p>
+          )}
           {(result.excludedSkips ?? 0) > 0 && (
             <p>
               {result.excludedSkips?.toLocaleString('en-IN')} had every candidate verifier ruled out

@@ -6,6 +6,7 @@ import { requireRole, requireOngroundVerifier } from '@/lib/authz';
 import { planCohort, PRIORITY_LABEL, type CohortCandidate } from '@/lib/verification/cohort';
 import { assignmentFor, revealMomentFor, type Assignment } from '@/lib/verification/reveal';
 import { eligibleFor, loadFieldVerifiers, placeReplacement } from '@/lib/verification/placement';
+import { publishRemainingCensusQueue } from '@/lib/verification/publishQueue';
 import { transitionRun } from '@/lib/verification/stateMachine';
 
 /**
@@ -224,6 +225,10 @@ export type BuildResult = {
   visitsCreated?: number;
   unassigned?: number;
   excludedSkips?: number;
+  /** Census-queue schools the draw passed over, published on the spot. */
+  published?: number;
+  publishFailed?: number;
+  publishErrors?: string[];
 };
 
 /**
@@ -336,9 +341,22 @@ export async function buildCohort(
     },
   });
 
+  // The draw settles the census queue as well as filling the cohort. A school left in the queue
+  // after this has no visit coming, so its year is finished and it publishes now rather than
+  // waiting for somebody to press a button that no longer exists.
+  const publishing = await publishRemainingCensusQueue(loaded.cycleId, { actorUserId: actor.userId });
+
   revalidatePath('/app/sssa/cohort');
   revalidatePath('/app/sssa/year');
-  return { success: true, visitsCreated, unassigned, excludedSkips };
+  return {
+    success: true,
+    visitsCreated,
+    unassigned,
+    excludedSkips,
+    published: publishing.published,
+    publishFailed: publishing.failed,
+    publishErrors: publishing.firstErrors,
+  };
 }
 
 /**

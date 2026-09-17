@@ -12,6 +12,7 @@ import {
   GUIDED_CAPTURE_HOURS,
   isFreshCapture,
 } from '@/lib/verification/walkthroughRules';
+import { publishIfCohortAlreadyDrawn } from '@/lib/verification/publishQueue';
 import { transitionRun } from '@/lib/verification/stateMachine';
 import type { WalkthroughOutcome } from '@prisma/client';
 
@@ -586,6 +587,12 @@ export async function resolveWalkthrough(
   const moved = await transitionRun(runId, next, { actorUserId: mine.me.userId });
   if (!moved?.ok) {
     return { success: false, error: moved?.ok === false ? moved.reason : 'Could not route the case.' };
+  }
+
+  // Resolved on video after this year's cohort was already drawn: nothing further is coming, so
+  // the result publishes now rather than sitting in a queue nothing will empty.
+  if (next === 'CENSUS_QUEUE') {
+    await publishIfCohortAlreadyDrawn(runId, { actorUserId: mine.me.userId });
   }
 
   revalidatePath('/app/verifier/walkthroughs');

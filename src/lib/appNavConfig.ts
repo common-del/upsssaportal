@@ -69,8 +69,11 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // The draw is a once-a-year decision, so it stopped being a permanent tab and became a row
       // in the year's sequence. The draw screen itself lives on underneath, reached from that
       // row, which is why the year owns its URL too.
+      // Reporting is gone. Publication needed no screen once it stopped needing a button: a
+      // field visit signed off clean, and a supervisor's last ruling, already published
+      // themselves, and the census queue now publishes at the draw and on arrival after it.
+      // Its district and division rollups went with it, by SSSA's choice.
       { href: '/app/sssa/year', label: 'Verification Year', also: ['/app/sssa/cohort'] },
-      { href: '/app/sssa/reporting', label: 'Reporting' },
     ],
   },
   {

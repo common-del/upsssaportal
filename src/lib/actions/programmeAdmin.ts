@@ -3,12 +3,17 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { requireSssa } from '@/lib/authz';
-import { transitionRun } from '@/lib/verification/stateMachine';
 import type { RiskThresholdBasis } from '@prisma/client';
 
 /**
- * SSSA PMU administration: the programme configuration with its audit trail, rubric
- * versioning, status reporting, and publication control. Build step 8.
+ * SSSA PMU administration: the programme configuration with its audit trail, and rubric
+ * versioning. Build step 8.
+ *
+ * Status reporting and publication control used to live here too, behind the Reporting tab.
+ * Both are gone: the district and division rollups on SSSA's instruction, and the publication
+ * button because publication no longer needs one. What it did is in
+ * `@/lib/verification/publishQueue`, fired by the events that finish a school's year rather
+ * than by a person pressing something two hundred schools at a time.
  *
  * The brief's section 6 rule sits under all of it: every contested number is a stored
  * configuration, every change writes a ProgrammeConfigChange row with who and why, and the
@@ -302,188 +307,4 @@ export async function activateRubric(rubricId: string): Promise<{ success: boole
 
   revalidatePath('/app/sssa/configuration');
   return { success: true };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status reporting: state, division, district
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type DistrictStatusRow = {
-  districtCode: string;
-  districtName: string;
-  mandalCode: string | null;
-  mandalName: string | null;
-  schools: number;
-  byState: Record<string, number>;
-};
-
-export type StatusReport = {
-  stateTotals: Record<string, number>;
-  totalSchools: number;
-  districts: DistrictStatusRow[];
-};
-
-export async function getStatusReport(): Promise<StatusReport | null> {
-  if (!(await requireSssa())) return null;
-
-  // Grouping runs by the school's district crosses a relation, which Prisma's groupBy
-  // cannot do; one raw aggregate keeps this a single scan at state volume instead of
-  // 2,65,278 rows shipped to the app server.
-  const grouped = await prisma.$queryRaw<{ districtCode: string; state: string; count: number }[]>`
-    SELECT s."districtCode" AS "districtCode", r."state"::text AS "state", COUNT(*)::int AS "count"
-    FROM "AssessmentCycleRun" r
-    JOIN "School" s ON s."udise" = r."schoolUdise"
-    GROUP BY s."districtCode", r."state"
-  `;
-
-  const [districts, mandals, schoolCounts] = await Promise.all([
-    prisma.district.findMany({ select: { code: true, nameEn: true, mandalCode: true } }),
-    prisma.mandal.findMany({ select: { code: true, nameEn: true } }),
-    prisma.school.groupBy({ by: ['districtCode'], _count: { _all: true } }),
-  ]);
-
-  const mandalName = new Map(mandals.map((m) => [m.code, m.nameEn]));
-  const schoolsBy = new Map(schoolCounts.map((s) => [s.districtCode, s._count._all]));
-
-  const byDistrict = new Map<string, Record<string, number>>();
-  const stateTotals: Record<string, number> = {};
-  for (const row of grouped) {
-    const entry = byDistrict.get(row.districtCode) ?? {};
-    entry[row.state] = (entry[row.state] ?? 0) + row.count;
-    byDistrict.set(row.districtCode, entry);
-    stateTotals[row.state] = (stateTotals[row.state] ?? 0) + row.count;
-  }
-
-  const rows: DistrictStatusRow[] = districts
-    .map((d) => ({
-      districtCode: d.code,
-      districtName: d.nameEn,
-      mandalCode: d.mandalCode,
-      mandalName: d.mandalCode ? (mandalName.get(d.mandalCode) ?? null) : null,
-      schools: schoolsBy.get(d.code) ?? 0,
-      byState: byDistrict.get(d.code) ?? {},
-    }))
-    // Districts with no runs at all sit at the bottom rather than being hidden: a district
-    // where nothing has started is a fact the state office needs, not noise.
-    .sort((a, b) => {
-      const runs = (r: DistrictStatusRow) => Object.values(r.byState).reduce((s, n) => s + n, 0);
-      return runs(b) - runs(a) || a.districtName.localeCompare(b.districtName);
-    });
-
-  return {
-    stateTotals,
-    totalSchools: [...schoolsBy.values()].reduce((s, n) => s + n, 0),
-    districts: rows,
-  };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Publication control
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type PublicationOverview = {
-  censusQueueCount: number;
-  publishedCount: number;
-  recent: {
-    runId: string;
-    schoolName: string;
-    schoolUdise: string;
-    districtName: string;
-    publishedAt: string | null;
-    finalScorePercent: number | null;
-    gradeBandCode: string | null;
-    corrections: number;
-  }[];
-};
-
-export async function getPublicationOverview(): Promise<PublicationOverview | null> {
-  if (!(await requireSssa())) return null;
-
-  const [censusQueueCount, publishedCount, recentRuns] = await Promise.all([
-    prisma.assessmentCycleRun.count({ where: { state: 'CENSUS_QUEUE' } }),
-    prisma.assessmentCycleRun.count({ where: { state: 'PUBLISHED' } }),
-    prisma.assessmentCycleRun.findMany({
-      where: { state: 'PUBLISHED' },
-      select: {
-        id: true,
-        cycleId: true,
-        schoolUdise: true,
-        enteredStateAt: true,
-        school: { select: { nameEn: true, district: { select: { nameEn: true } } } },
-        discrepancies: { where: { upheldAt: { not: null } }, select: { id: true } },
-      },
-      orderBy: { enteredStateAt: 'desc' },
-      take: 15,
-    }),
-  ]);
-
-  const results = recentRuns.length
-    ? await prisma.result.findMany({
-        where: { OR: recentRuns.map((r) => ({ cycleId: r.cycleId, schoolUdise: r.schoolUdise })) },
-        select: { cycleId: true, schoolUdise: true, finalScorePercent: true, gradeBandCode: true, publishedAt: true },
-      })
-    : [];
-  const resultBy = new Map(results.map((r) => [`${r.cycleId}:${r.schoolUdise}`, r]));
-
-  return {
-    censusQueueCount,
-    publishedCount,
-    recent: recentRuns.map((r) => {
-      const result = resultBy.get(`${r.cycleId}:${r.schoolUdise}`);
-      return {
-        runId: r.id,
-        schoolName: r.school.nameEn,
-        schoolUdise: r.schoolUdise,
-        districtName: r.school.district.nameEn,
-        publishedAt: result?.publishedAt?.toISOString() ?? r.enteredStateAt.toISOString(),
-        finalScorePercent: result?.finalScorePercent ?? null,
-        gradeBandCode: result?.gradeBandCode ?? null,
-        corrections: r.discrepancies.length,
-      };
-    }),
-  };
-}
-
-/**
- * Publish the census queue: every screened school not drawn into the field cohort, up to a
- * batch cap per press. Each run goes through the state machine individually, so each one's
- * Result is recomputed and each failure carries its own reason instead of poisoning the
- * batch. Capped because 1,75,000 in one request is a job queue, not a button.
- */
-export async function publishCensusQueue(): Promise<{
-  success: boolean;
-  published: number;
-  failed: number;
-  remaining: number;
-  firstErrors: string[];
-  error?: string;
-}> {
-  const actor = await requireSssa();
-  if (!actor) {
-    return { success: false, published: 0, failed: 0, remaining: 0, firstErrors: [], error: 'Not authorised.' };
-  }
-
-  const BATCH = 200;
-  const runs = await prisma.assessmentCycleRun.findMany({
-    where: { state: 'CENSUS_QUEUE' },
-    select: { id: true },
-    orderBy: { enteredStateAt: 'asc' },
-    take: BATCH,
-  });
-
-  let published = 0;
-  let failed = 0;
-  const firstErrors: string[] = [];
-  for (const run of runs) {
-    const moved = await transitionRun(run.id, 'PUBLISHED', { actorUserId: actor.userId });
-    if (moved?.ok) published += 1;
-    else {
-      failed += 1;
-      if (firstErrors.length < 3 && moved?.ok === false) firstErrors.push(moved.reason);
-    }
-  }
-
-  const remaining = await prisma.assessmentCycleRun.count({ where: { state: 'CENSUS_QUEUE' } });
-  revalidatePath('/app/sssa/reporting');
-  return { success: true, published, failed, remaining, firstErrors };
 }

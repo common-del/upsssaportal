@@ -96,7 +96,7 @@ export default async function VerificationYearPage() {
                 : { backgroundColor: '#E3F0E8', color: '#1E6344' }
             }
           >
-            {year.resultsPublished ? 'Results published' : 'Year open'}
+            {year.resultsPublished ? 'Year complete' : 'Year open'}
           </span>
           {year.startsAt && year.endsAt && (
             <span className="text-[13px]" style={{ color: INK_MUTED }}>

@@ -374,7 +374,7 @@ export async function computeAndStoreResult(cycleId: string, schoolUdise: string
     update: { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode },
   });
 
-  revalidatePath('/app/sssa/reporting');
+  revalidatePath('/app/sssa/year');
   return { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode };
 }
 
@@ -398,36 +398,8 @@ export async function finalizeAllResults(cycleId: string) {
     computed++;
   }
 
-  revalidatePath('/app/sssa/reporting');
+  revalidatePath('/app/sssa/year');
   return { success: true, computed };
-}
-
-// ─── SSSA: Publish Results ───
-
-export async function publishResults(cycleId: string) {
-  if (!(await requireSssa())) return { success: false, error: 'Not authorised.' };
-
-  const cycle = await prisma.cycle.findUnique({ where: { id: cycleId } });
-  if (!cycle) return { success: false, error: 'Cycle not found.' };
-
-  const resultCount = await prisma.result.count({ where: { cycleId } });
-  if (resultCount === 0) return { success: false, error: 'No results computed yet. Finalize first.' };
-
-  const now = new Date();
-  await prisma.result.updateMany({
-    where: { cycleId, publishedAt: null },
-    data: { publishedAt: now },
-  });
-
-  await prisma.cycle.update({
-    where: { id: cycleId },
-    data: { resultsPublished: true, resultsPublishedAt: now },
-  });
-
-  revalidatePath('/app/sssa/reporting');
-  revalidatePath('/public/directory');
-  revalidatePath('/public/find-your-school');
-  return { success: true };
 }
 
 // ─── Get Finalization Summary for SSSA ───

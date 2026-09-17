@@ -1209,3 +1209,62 @@ preview guessing at it.
 
 "Build" became "draw" throughout, including the typed confirmation. Build named the machinery.
 Draw names what is happening to the schools.
+
+## 39. Reporting retires and publication stops needing a button, 17 September 2026
+
+SSSA asked for the Reporting tab to go, on the grounds that results publish themselves: a score is
+visible once a school finishes its self assessment, and verification revises it afterwards.
+
+The tab held two unrelated things, and the reasoning covered one of them.
+
+### What was already true
+
+The public school profile never read the run state or `Result.publishedAt`. It reads what the
+school entered plus a verified badge derived from whether a verification submission exists. So
+scores were already visible without anybody pressing anything, exactly as described.
+
+### What was not
+
+The button was the only thing that recomputed a score from the verified record.
+`computeVerifiedResult` runs on the transition into `PUBLISHED`: it takes the school's claims and
+replaces every indicator where a supervisor upheld a discrepancy, and for a non-submitter it uses
+the field verifier's observed levels instead. Nothing else writes a corrected `Result`. Deleting
+the tab and stopping there would have frozen every public score at its self-claim for good, which
+is the opposite of "the score updates automatically after verification".
+
+Raised before building. SSSA's answer: make publication automatic, and drop the district tables
+as well.
+
+### Three of the four paths already published themselves
+
+A field visit signed off with nothing raised goes straight to `PUBLISHED`. A supervisor's ruling
+on the last discrepancy publishes the run, whether the school's response window was used or not.
+Only the census queue needed a person.
+
+### The rule that replaced the button: the draw is the cut-off
+
+A school sits in the census queue because desk screening found nothing worth a walkthrough, or
+because its walkthrough resolved. Its verified record is therefore its own self-assessment, and
+the only thing still undecided is whether a field verifier will turn up. The draw decides that.
+
+So anything not selected publishes at the draw, and anything reaching the queue after the draw
+publishes on arrival. Both halves are needed: publishing only at the draw strands every school
+screened after it, and publishing only on arrival empties the pool the census rotation draws
+from. The second half is possible because `CohortDraw` exists, which section 38 added for a
+different reason.
+
+At full state volume the draw-time sweep is a long loop in one request, the same shape as the
+draw's own allocation loop beside it. Both belong in a job queue before this runs against
+2,65,278 schools for real, and the project has no scheduling infrastructure yet.
+
+### What went
+
+`/app/sssa/reporting` is a redirect, the sidebar entry is gone, and `PublishControl`,
+`publishCensusQueue`, `getStatusReport` and `getPublicationOverview` are deleted. `publishResults`
+in the finalization actions went with them: it was already unreachable, and it was the last bulk
+writer of `Result.publishedAt`, which the automatic path now sets per school on its way through.
+
+Removing it did leave `Cycle.resultsPublished` with nothing to set it, so the verification year no
+longer reads that flag as its state. A year is complete when every run in it has a published
+result, derived. The old flag is still read as history, so a cycle from before this change still
+counts as complete if somebody threw the switch.

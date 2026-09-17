@@ -12,6 +12,7 @@ import {
   type IndicatorVerdict,
   type Rubric,
 } from '@/lib/verification/riskScore';
+import { publishIfCohortAlreadyDrawn } from '@/lib/verification/publishQueue';
 import { transitionRun } from '@/lib/verification/stateMachine';
 
 /**
@@ -364,6 +365,12 @@ export async function completeDeskScreening(
   const moved = await transitionRun(runId, next, { actorUserId: actor.userId });
   if (!moved?.ok) {
     return { success: false, error: moved?.ok === false ? moved.reason : 'Could not route the case.' };
+  }
+
+  // Screened clean after this year's cohort was already drawn: there is no visit coming, so the
+  // result publishes now instead of waiting in a queue nothing will empty.
+  if (next === 'CENSUS_QUEUE') {
+    await publishIfCohortAlreadyDrawn(runId, { actorUserId: actor.userId });
   }
 
   revalidatePath('/app/verifier/desk');

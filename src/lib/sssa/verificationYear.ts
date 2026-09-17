@@ -28,6 +28,7 @@ export type VerificationYear = {
   cycleName: string;
   startsAt: string | null;
   endsAt: string | null;
+  /** Every run in the year has a published result, so nothing is left in flight. */
   resultsPublished: boolean;
   registerCount: number;
   steps: YearStep[];
@@ -126,6 +127,12 @@ export async function buildVerificationYear(): Promise<VerificationYear> {
     }),
   ]);
 
+  // A year is finished when nothing is left in flight, derived rather than flagged. The old
+  // cycle-wide `resultsPublished` switch was thrown by a button that no longer exists, so it is
+  // read only as history: a cycle from before publication became automatic still counts as
+  // complete if somebody threw it.
+  const complete = cycle.resultsPublished || (runTotal > 0 && published === runTotal);
+
   const steps: YearStep[] = [
     {
       key: 'self-assessment',
@@ -172,10 +179,12 @@ export async function buildVerificationYear(): Promise<VerificationYear> {
       name: 'Results published',
       state:
         published === 0
-          ? 'Opens once the visits are signed off.'
-          : `${formatIN(published)} schools have a published result.`,
-      status: cycle.resultsPublished ? 'DONE' : published === 0 ? 'WAITING' : 'RUNNING',
-      note: cycle.resultsPublished ? 'published' : '',
+          ? 'Opens as schools finish verification.'
+          : complete
+            ? `All ${formatIN(published)} schools have a published result.`
+            : `${formatIN(published)} of ${formatIN(runTotal)} schools have a published result.`,
+      status: complete ? 'DONE' : published === 0 ? 'WAITING' : 'RUNNING',
+      note: complete ? 'complete' : published === 0 ? '' : 'publishing',
     },
   ];
 
@@ -183,7 +192,7 @@ export async function buildVerificationYear(): Promise<VerificationYear> {
     cycleName: cycle.name,
     startsAt: cycle.startsAt?.toISOString() ?? null,
     endsAt: cycle.endsAt?.toISOString() ?? null,
-    resultsPublished: cycle.resultsPublished,
+    resultsPublished: complete,
     registerCount,
     steps: [...steps, ...tail],
     cohort: {

@@ -1426,3 +1426,58 @@ weekly rather than one nobody opened.
 The escalation ladder still routes to DISTRICT, and district logins were retired in section 34. A
 complaint escalating to that rung sits with nobody until it escalates again. Raised twice, not
 yet ruled on.
+
+## 43. The walkthrough queue says what happened, in a sentence, 17 September 2026
+
+The queue built in section 33 as a focus panel on a rail was rejected as hard to navigate. Three
+alternatives were drawn and SSSA chose the sentence list.
+
+### What was wrong with it
+
+**Nine hex codes were the only name a case had.** `SC-AC5DFCAA55`, `SC-B4EFCD300B`,
+`SC-E1537174D4`. Choosing between rows meant decoding ten characters and holding them in your
+head. The masking rule means a school cannot be named on this page, and that is not negotiable,
+but nothing required the code to be the thing the row led with.
+
+**The rail and the panel were the same nine cases twice**, side by side, competing for attention.
+"START HERE" was the screen admitting it did not know which a person would read first.
+
+**Two clocks in identical type.** "26 days open" and "26 days over" sat in the same position
+looking the same. One is age, the other is lateness.
+
+**Everything was red.** Six of nine past the deadline, so red had stopped being a signal and
+become the background.
+
+**A three line policy paragraph** under the heading, about risk thresholds and turnarounds, read
+once on somebody's first day and skipped ever after, pushing the work below the fold.
+
+### What replaced it
+
+Each row leads with what happened, written out: "The filming window closed with 11 clips never
+sent." The code drops to the line beneath, shortened to four characters with the whole thing on
+the tooltip and in the console, and search still matches it in full.
+
+The clock states its own unit rather than sharing a column. A case on the call route counts days
+against the seven day turnaround; a school that is filming counts hours of its forty-eight. One
+column of days would be wrong for half the list, which is what split these into two pages in the
+first place.
+
+Red now means one thing: this needs you today. A live call, a closed window, a missed call, and a
+filming window inside its last eight hours. Not "overdue", which on this backlog is most of it.
+
+The sentence, the clock, the button and the sort order are one pure module with eighteen tests,
+because they are rules about the state machine rather than layout. The ordering is by what the
+verifier can act on, not by which clock runs out soonest: a school still filming would otherwise
+sort above a call somebody needs to join now.
+
+### What the mock-up did not cover
+
+An unclaimed case. It keeps its sentence, because that is what tells you whether to take it, but
+sinks below everything claimed and offers Claim rather than an action it cannot perform.
+
+### Still wrong on this screen
+
+The line reading "Govt" under the case code is a masking leak. `maskSchool` returns `category`
+believing it holds a stage, but for bulk-register schools that field holds ownership type, and
+management is on the list of fields an online verifier must never see. The fix is written in
+`src/lib/schoolStage.ts` with sixteen tests and wired to nothing, pending a decision.

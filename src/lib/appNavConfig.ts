@@ -66,22 +66,26 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // Exception-first self assessment monitoring: built, working, and in no sidebar
       // until now.
       { href: '/app/sssa/monitoring', label: 'Monitoring' },
-      // The draw is a once-a-year decision, so it stopped being a permanent tab and became a row
-      // in the year's sequence. The draw screen itself lives on underneath, reached from that
-      // row, which is why the year owns its URL too.
       // Reporting is gone. Publication needed no screen once it stopped needing a button: a
       // field visit signed off clean, and a supervisor's last ruling, already published
       // themselves, and the census queue now publishes at the draw and on arrival after it.
-      // Its district and division rollups went with it, by SSSA's choice.
-      { href: '/app/sssa/year', label: 'Verification Year', also: ['/app/sssa/cohort'] },
+      // Verification Year went the same way. The draw is what puts schools on field verifiers,
+      // so it is a button on Workforce, and the schools nobody is going to are a list there
+      // rather than a page of their own.
     ],
   },
   {
     label: 'Oversight',
     items: [
-      { href: '/app/sssa/workforce', label: 'Workforce' },
-      { href: '/app/sssa/quality', label: 'Quality Sample' },
-      { href: '/app/sssa/de-empanelment', label: 'De-empanelment' },
+      // Workforce absorbed three screens. Quality Sample and De-empanelment were whole-roster
+      // tabs answering a question about one person, so both are sections of that person's page
+      // now; the draw screen and the year's URL land here because assigning schools to field
+      // verifiers is a staffing decision.
+      {
+        href: '/app/sssa/workforce',
+        label: 'Workforce',
+        also: ['/app/sssa/quality', '/app/sssa/de-empanelment', '/app/sssa/cohort', '/app/sssa/year'],
+      },
       { href: '/app/sssa/drift', label: 'Risk Drift' },
       { href: '/app/sssa/audit', label: 'Audit' },
       { href: '/app/sssa/integrity', label: 'Integrity Reports' },

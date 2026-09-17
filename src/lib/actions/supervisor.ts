@@ -44,6 +44,8 @@ const SUBJECT_ROLES = ['VERIFIER', 'ONLINE_VERIFIER', 'ONGROUND_VERIFIER'];
 export type RosterRow = {
   profileId: string;
   name: string;
+  /** Their login, so the workforce search can match what an administrator was given. */
+  username: string;
   cell: VerifierCell;
   workforceSource: string;
   certification: string;
@@ -173,6 +175,7 @@ export async function getSupervisorOverview(): Promise<SupervisorOverview | null
     return {
       profileId: p.id,
       name: p.user.name ?? p.user.username,
+      username: p.user.username,
       cell: p.cell,
       workforceSource: p.workforceSource,
       certification: p.certification,

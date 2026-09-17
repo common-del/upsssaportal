@@ -1,21 +1,13 @@
-import { getDeEmpanelmentCases } from '@/lib/actions/supervisor';
-import { DeEmpanelmentBoard } from '@/components/supervisor/DeEmpanelmentBoard';
+import { redirect } from 'next/navigation';
 
-export default async function DeEmpanelmentPage() {
-  const items = await getDeEmpanelmentCases();
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: '#073763' }}>
-          De-empanelment cases
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: '#5F7190' }}>
-          Every empanelled verifier&apos;s audited record against both rules: the contradiction
-          rate with its minimum-cases floor, and the absolute count in a rolling 12 months. Only
-          reconciled audits count, and only a person confirms a removal.
-        </p>
-      </div>
-      <DeEmpanelmentBoard items={items} />
-    </div>
-  );
+/**
+ * De-empanelment folded into Workforce.
+ *
+ * Each verifier's standing against both rules is on their own page, under the work the rules
+ * are read against, and the removal button still sits directly below the numbers that justify
+ * it. The whole-roster question the board answered, who is over a line, is a column: a row
+ * reads "Removal recommended" when either rule has triggered.
+ */
+export default function DeEmpanelmentMovedPage() {
+  redirect('/app/sssa/workforce');
 }

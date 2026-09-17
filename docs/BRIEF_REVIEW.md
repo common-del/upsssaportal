@@ -1268,3 +1268,54 @@ Removing it did leave `Cycle.resultsPublished` with nothing to set it, so the ve
 longer reads that flag as its state. A year is complete when every run in it has a published
 result, derived. The old flag is still read as history, so a cycle from before this change still
 counts as complete if somebody threw the switch.
+
+## 40. Workforce absorbs three screens, 17 September 2026
+
+Four sidebar entries became one. Workforce now carries the KPIs, the assign button, the schools
+nobody is going to, and a filterable verifier table whose rows open a page per person. Quality
+Sample, De-empanelment and Verification Year are redirects.
+
+### Why the two oversight tabs folded in
+
+Both were whole-roster screens answering a question about one person. You arrived at Quality
+Sample already knowing whose work you wanted to read, then looked for them in a list of
+everybody; the de-empanelment board was the same shape. Under a verifier's own name, the sampled
+work and the standing against the removal rules sit beneath the caseload they are judgements
+about, which is the order somebody actually reads them in.
+
+What that loses is the cross-roster reading, and the table keeps the part of it that was doing
+work: a flag count per verifier, and a row that says "Removal recommended" when either rule has
+triggered. What it does not keep is reviewing the week's sample as a batch. Named here because
+it was a real capability and it is gone, not overlooked.
+
+The weekly draw itself is untouched: still seeded on the server, still redrawn on Monday, so a
+verifier cannot predict which of their cases will come up. A verifier's page shows the part of
+this week's draw that is theirs, with the verdict control on it. Without that the page would
+have shown a sampled-work section that could never fill and a flag count that could never move.
+
+### Why Verification Year went, a day after it was built
+
+Section 38 gave the cohort draw a home with a visible before and after, which it needed. It did
+not need a tab: the draw is the act of putting schools on field verifiers, so it belongs where
+the verifiers are, and the schools left with nobody are a staffing list rather than a stage in a
+timeline. Both are on Workforce, with the draw screen still at `/app/sssa/cohort` behind the
+assign button.
+
+The stage-by-stage view of the year did not survive the move. The four KPIs answer how far the
+year has got in aggregate; which stage is backed up they do not answer. Dropped on SSSA's
+instruction, recorded here rather than left to be discovered.
+
+### The district filter answers "can work there", not "is listed there"
+
+An empty roster means statewide everywhere else in the code, so a filter that read the narrower
+question would return nothing for exactly the district that has nobody rostered, which is the
+district you were looking at it for. The cost is that where nobody has a roster the filter
+returns everybody, so the column says "Statewide" on every row and the count line says the
+result includes statewide staff. No seed sets district rosters, so on the demo that is every
+verifier.
+
+### The assign panel is the Authority's
+
+`previewCohort` returns nothing to a supervisor, and a panel reading "nothing is waiting" off a
+null would be a statement about the queue rather than about their permissions. The panel renders
+for SSSA_ADMIN only.

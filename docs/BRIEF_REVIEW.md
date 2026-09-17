@@ -1092,3 +1092,51 @@ Schools loses its tab strip. With Furthest behind gone and Compliance folded in 
 the register is the only view left, and a strip with one tab is furniture. SchoolsTabs is
 deleted. The district select inside the block table no longer writes tab=behind, which would
 have been a dead parameter on a page with no tabs.
+
+## 37. The register gets one grade column and six filters, 17 September 2026
+
+Two changes SSSA specified together.
+
+### One grade, and who gave it
+
+The table was carrying Self assessed and Verified as separate score columns. It now carries
+SQAAF, which is the band the school sits in, and Status, which says whether that band came from
+the school or from a verifier.
+
+The verifier's figure wins where there is one. That is what makes a single column possible:
+once a verification exists, the school's own claim is no longer the answer to "where does this
+school stand". Status is what keeps the merge honest, because Utkarsh claimed and Utkarsh found
+are not the same fact. Verified is solid, Self-assessed is outlined, and a school that has not
+submitted shows a dash, because there is no assessment for a status to describe.
+
+SQAAF shows the band as a coloured pill with the score small beneath it: the band is what an
+officer reads down a page, the score is what they check once a row catches the eye. "Not
+submitted" sits in the same column as a fourth value, in grey, because it answers the same
+question.
+
+What this gives up is the ability to see a school's own score beside the verifier's. A school
+claiming 74 that a verifier scored 51 now reads as one Uday row. That analysis is Monitoring's:
+it carries an exception group for schools where the two differ by fifteen points or more, and
+that group is now the only place the disagreement is visible.
+
+### Six filters above the table
+
+Search, District, Block, Management, SQAAF, Status. One control per column the register can be
+asked a question about, in column order. Fee has a column and no menu by SSSA's choice: worth
+seeing on a row, not a question asked of all 32,579.
+
+Block is built from the chosen district rather than listing 826 at once, and is disabled until
+a district is picked, which says why it is empty without a sentence. Changing district clears
+the block, because a block from the old district would filter every school out and read as an
+empty register. Any change resets to page one, since page seven of the old result set means
+nothing in the new one.
+
+District, block and management filter in the query. SQAAF and Status are derived from the
+scores, so they filter after the rows are built; the page already fetches the whole match set
+before slicing a page out of it, so the count stays right. The count names both numbers when
+anything is in force, because a filtered register that still reports 32,579 is lying about what
+is on screen.
+
+The bar replaced the public DirectoryFilters component, which rendered two of the five selects
+it supports and had to be told to hide the rest. category, type and performance are still read
+from the URL, because other pages link in with them, but they have no control here.

@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
-import { DirectoryFilters } from '@/components/public/DirectoryFilters';
+import { RegisterFilters } from '@/components/sssa/RegisterFilters';
 import { CycleFunnel } from '@/components/sssa/CycleFunnel';
 import { buildCycleCounts, type CycleCounts } from '@/lib/sssa/cycleCounts';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
-import { MANAGEMENT_LABELS_SHORT, isManagementCode } from '@/lib/schoolManagement';
+import { MANAGEMENT_CODES, MANAGEMENT_LABELS_SHORT, isManagementCode } from '@/lib/schoolManagement';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
 import type { PerformanceLevel, SchoolType } from '@/lib/public/constants';
 import type { Prisma } from '@prisma/client';
@@ -23,28 +22,58 @@ const PAGE_SIZE = 20;
  * typed into this file. Two hardcoded copies of the cutoffs is how the portal came
  * to grade the same school Uday on the public site and Satisfactory to an officer.
  */
-function ScoreCell({
-  score,
-  band,
-  absent = '—',
-}: {
-  score: number | null;
-  band: string | null;
-  /** What to print in place of a score. The self assessment column names the fact —
-   *  a school that has not submitted — rather than leaving a dash to be interpreted. */
-  absent?: string;
-}) {
+/** The framework's three bands, lowest first, with the colour each carries across the portal. */
+const BAND_STYLE: Record<string, string> = {
+  Uday: 'bg-[#FBF1DE] text-[#7A5209]',
+  Unnat: 'bg-[#EDF1F8] text-[#1B2A6B]',
+  Utkarsh: 'bg-[#E7F5EE] text-[#14603A]',
+};
+
+/**
+ * Where a school stands: the band as a pill, the score small beneath it.
+ *
+ * The band is what an officer reads down a page; the score is what they check once a row has
+ * caught their eye. A school that has not submitted takes the same column as a fourth value,
+ * because it answers the same question, in grey because it is an absence rather than a grade.
+ */
+function BandCell({ score, band }: { score: number | null; band: string | null }) {
   if (score == null) {
     return (
       <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600">
-        {absent}
+        Not submitted
       </span>
     );
   }
   return (
-    <span className="flex flex-col items-end leading-tight">
-      <span className="font-bold tabular-nums text-gray-900">{score.toFixed(1)}</span>
-      {band && <span className="text-[11px] text-gray-500">{band}</span>}
+    <span className="flex flex-col items-start leading-tight">
+      <span
+        className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+          band ? (BAND_STYLE[band] ?? 'bg-gray-100 text-gray-700') : 'bg-gray-100 text-gray-700'
+        }`}
+      >
+        {band ?? 'Scored'}
+      </span>
+      <span className="mt-0.5 pl-1 text-[11px] tabular-nums text-gray-400">{score.toFixed(1)}</span>
+    </span>
+  );
+}
+
+/**
+ * Who gave the grade beside it.
+ *
+ * This is the column that makes one grade column safe. Utkarsh claimed by a school and Utkarsh
+ * found by a verifier are not the same fact, so Verified is solid and Self-assessed is
+ * outlined: a glance down the column separates findings from claims.
+ */
+function StatusCell({ status }: { status: 'VERIFIED' | 'SELF' | null }) {
+  if (status === null) return <span className="text-gray-300">—</span>;
+  return status === 'VERIFIED' ? (
+    <span className="whitespace-nowrap rounded-full bg-[#14603A] px-2.5 py-0.5 text-[11px] font-bold text-white">
+      Verified
+    </span>
+  ) : (
+    <span className="whitespace-nowrap rounded-full border-2 border-[#B9C4D8] px-2.5 py-0.5 text-[11px] font-bold text-[#5F7190]">
+      Self-assessed
     </span>
   );
 }
@@ -61,26 +90,39 @@ type DirectoryRow = {
   /** Who runs the school, from School.management. Null where the UDISE extract has
    *  not been imported — shown as unknown rather than filed under a guess. */
   management: string | null;
-  /** The cycle's scores. Null before a school submits, and the verified one stays
-   *  null until a verifier does. Bands come from the framework's GradeBand rows, so
-   *  this page cannot disagree with Verification about where 55 and 80 sit. */
-  selfScore: number | null;
-  selfBand: string | null;
-  verifiedScore: number | null;
-  verifiedBand: string | null;
+  /** Where the school stands, and who says so.
+   *
+   *  One grade rather than two columns of scores: a verifier's figure replaces the school's
+   *  own rather than sitting beside it, so once a verification exists the school's claim is no
+   *  longer the answer to "where does this school stand". `status` is what keeps that honest —
+   *  Utkarsh claimed and Utkarsh found are not the same fact, and the column says which.
+   *
+   *  Bands come from the framework's GradeBand rows, so this page cannot disagree with
+   *  Verification about where 55 and 80 sit. Null band and null status mean nothing submitted.
+   *
+   *  The school's own score is still read, to fall back on before a verifier has been, but it
+   *  is no longer shown beside the verified one. The gap between the two is Monitoring's
+   *  question, and it has an exception group for it. */
+  score: number | null;
+  band: string | null;
+  status: 'VERIFIED' | 'SELF' | null;
 };
 
 export default async function SssaSchoolDirectoryPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const searchParams = await props.searchParams;
-  const locale = await getLocale();
 
   const district = (searchParams.district as string) || '';
   const block = (searchParams.block as string) || '';
   const category = (searchParams.category as string) || '';
   const type = (searchParams.type as string) || '';
   const performance = (searchParams.performance as string) || '';
+  // The six filters SSSA asked for. category, type and performance stay readable from the URL
+  // because other pages link in with them, but they have no control on this bar.
+  const management = (searchParams.management as string) || '';
+  const sqaaf = (searchParams.sqaaf as string) || '';
+  const status = (searchParams.status as string) || '';
   const q = (searchParams.q as string) || '';
   const page = Math.max(1, parseInt((searchParams.page as string) || '1', 10));
 
@@ -89,6 +131,10 @@ export default async function SssaSchoolDirectoryPage(props: {
   let rows: DirectoryRow[] = [];
   let usingFallback = false;
   let funnel: CycleCounts | null = null;
+  /** The framework's band labels, lifted out of the try so the filter menu can offer exactly
+   *  the grades the table prints. Empty when there is no active cycle, which leaves the menu
+   *  with "Not submitted" alone rather than inventing bands. */
+  let bandLabels: string[] = [];
 
   try {
     funnel = await buildCycleCounts();
@@ -111,6 +157,7 @@ export default async function SssaSchoolDirectoryPage(props: {
     if (district) where.districtCode = district;
     if (block) where.blockCode = block;
     if (category) where.category = category;
+    if (management) where.management = management;
     if (q) {
       where.OR = [
         { nameEn: { contains: q, mode: 'insensitive' } },
@@ -127,6 +174,8 @@ export default async function SssaSchoolDirectoryPage(props: {
           orderBy: { order: 'asc' },
         })
       : [];
+
+    bandLabels = gradeBands.map((b) => b.labelEn);
 
     /** Upper bound exclusive except on the top band, matching computeAndStoreResult. */
     const bandFor = (score: number | null): string | null => {
@@ -165,6 +214,11 @@ export default async function SssaSchoolDirectoryPage(props: {
       // hash of the UDISE.
       const extra = deriveResultFields(s.udise, s.management);
       const result = 'results' in s ? s.results?.[0] : undefined;
+      const verified = result?.verifierScorePercent ?? null;
+      const self = result?.selfScorePercent ?? null;
+      // The verifier's figure wins where there is one. That is what makes a single grade
+      // column possible, and what the status column then has to declare.
+      const score = verified ?? self;
       return {
         id: s.id,
         udise: s.udise,
@@ -172,10 +226,9 @@ export default async function SssaSchoolDirectoryPage(props: {
         districtName: s.district.nameEn,
         blockName: s.block.nameEn,
         management: s.management,
-        selfScore: result?.selfScorePercent ?? null,
-        selfBand: bandFor(result?.selfScorePercent ?? null),
-        verifiedScore: result?.verifierScorePercent ?? null,
-        verifiedBand: bandFor(result?.verifierScorePercent ?? null),
+        score,
+        band: bandFor(score),
+        status: verified !== null ? ('VERIFIED' as const) : self !== null ? ('SELF' as const) : null,
         ...extra,
       };
     });
@@ -200,16 +253,20 @@ export default async function SssaSchoolDirectoryPage(props: {
         // The dummy set predates management and the score columns, so these read
         // as unknown rather than borrowing a value from the demo data.
         management: null,
-        selfScore: null,
-        selfBand: null,
-        verifiedScore: null,
-        verifiedBand: null,
+        score: null,
+        band: null,
+        status: null,
       }));
   }
 
+  // Grade and status are derived from the scores, so they filter after the rows are built
+  // rather than in the query. The page already fetches the whole match set before slicing a
+  // page out of it, so the count below stays right.
   const filtered = rows.filter((r) => {
     if (type && r.type !== (type as SchoolType)) return false;
     if (performance && r.performanceLevel !== (performance as PerformanceLevel)) return false;
+    if (sqaaf === 'NOT_SUBMITTED' ? r.band !== null : sqaaf && r.band !== sqaaf) return false;
+    if (status && r.status !== status) return false;
     return true;
   });
 
@@ -224,6 +281,9 @@ export default async function SssaSchoolDirectoryPage(props: {
     if (category) params.set('category', category);
     if (type) params.set('type', type);
     if (performance) params.set('performance', performance);
+    if (management) params.set('management', management);
+    if (sqaaf) params.set('sqaaf', sqaaf);
+    if (status) params.set('status', status);
     if (q) params.set('q', q);
     if (p > 1) params.set('page', String(p));
     const qs = params.toString();
@@ -249,14 +309,21 @@ export default async function SssaSchoolDirectoryPage(props: {
       )}
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
-        {/* School, district and block. An officer arrives knowing one of the three;
-            class, management and rating were furniture they had to read past. */}
-        <DirectoryFilters
-          districts={districts}
-          blocks={blocks}
-          selected={{ district, block, category, type, performance, q }}
-          locale={locale}
-          show={{ district: true, block: true, type: false, category: false, performance: false }}
+        {/* One control per column the register can be asked about, in column order. Fee has a
+            column and no menu: it is worth seeing on a row and is not a question anyone asks of
+            all 32,579. */}
+        <RegisterFilters
+          selected={{ q, district, block, management, sqaaf, status }}
+          districts={districts.map((d) => ({ value: d.code, label: d.nameEn }))}
+          blocks={blocks.map((b) => ({ value: b.code, label: b.nameEn }))}
+          managements={MANAGEMENT_CODES.map((c) => ({ value: c, label: MANAGEMENT_LABELS_SHORT[c] }))}
+          // The framework's own labels, so the menu cannot offer a band the table never prints.
+          bands={[
+            ...bandLabels.map((b) => ({ value: b, label: b })),
+            { value: 'NOT_SUBMITTED', label: 'Not submitted' },
+          ]}
+          total={rows.length}
+          matched={total}
         />
       </div>
 
@@ -274,8 +341,8 @@ export default async function SssaSchoolDirectoryPage(props: {
                 <th className="px-4 py-3">Block</th>
                 <th className="px-4 py-3">Management</th>
                 <th className="px-4 py-3">Fee</th>
-                <th className="px-4 py-3 text-right">SQAAF</th>
-                <th className="px-4 py-3 text-right">Verified</th>
+                <th className="px-4 py-3">SQAAF</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -317,15 +384,11 @@ export default async function SssaSchoolDirectoryPage(props: {
                   {/* Accreditation is gone: it read SQAAF Verified or Pending, which
                       is the same fact the Verified score now carries — a score means a
                       verifier has been, a dash means they have not. */}
-                  {/* Whether a school has filled its SQAAF is the compliance question worth
-                      asking, and this column already held the answer as an unexplained dash.
-                      It now says so. The retired Compliance page asked a different question,
-                      about address and phone, which UDISE+ supplies for every school. */}
-                  <td className="px-4 py-3 text-right">
-                    <ScoreCell score={r.selfScore} band={r.selfBand} absent="Not submitted" />
+                  <td className="px-4 py-3">
+                    <BandCell score={r.score} band={r.band} />
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <ScoreCell score={r.verifiedScore} band={r.verifiedBand} absent="Not verified" />
+                  <td className="px-4 py-3">
+                    <StatusCell status={r.status} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <Link

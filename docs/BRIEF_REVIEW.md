@@ -1552,3 +1552,64 @@ shows the school's name, UDISE, district and category in a table.** `verifier1 /
 a live seeded login. Either that dashboard should not exist, or `VERIFIER` should not be on the
 must-mask list. It is a real contradiction, it predates this change, and it wants a decision
 rather than a guess.
+
+## 45. The walkthrough queue splits into three tabs, 17 September 2026
+
+SSSA asked for one list to become three piles: cases where a time still has to be agreed with the
+school, cases with a call booked, and schools that have sent video. Three options were put up —
+tabs, three stacked tables, one table with grouped rows — and tabs were chosen.
+
+### Why splitting at all is right
+
+The three barely share a column. A case nobody has spoken to has a risk score, an age and no
+window. A booked call has a time and no clips. A recording case has a filming window and no
+appointment. A single table across all three means either a column of empty cells for two thirds
+of the rows, or one State column doing the work of four, which is the sentence-per-row list
+from §43 with extra furniture.
+
+Worth recording that these are not three independent queues. They read left to right as a
+pipeline: a case starts with no time agreed, becomes a booked call, and reaches the recording
+route only when that call drops out on connectivity. Nothing lands in Recordings without having
+been in Booked first.
+
+### The three states the brief's three buckets did not cover
+
+Each has a row in the current demo, so none of this is hypothetical.
+
+**A call running now.** Not waiting for a time, not a future appointment. It is the most urgent
+row on the page and it belongs to no bucket. It sits under Booked, which is where the verifier
+who agreed it would look.
+
+**Filming started, nothing sent.** On the recording route with no video to review.
+
+**Window closed with clips missing.** Nothing more is coming; the case cannot be reviewed and
+goes to the field.
+
+All three filming states stay in Recordings, along with the one that worked. A verifier asking
+"what are my schools recording" should get every case, not only the ones that succeeded.
+
+### What was done about the cost of tabs
+
+Tabs hide two thirds of the work, and would have hidden the live call with it. That was named
+before the choice was made and two things answer it, deliberately no more:
+
+Every tab carries its count, and the count turns red when that tab holds something needing the
+verifier today. It is the only thing that can carry urgency across a tab boundary.
+
+The page opens on To schedule every time except one: when a call of the verifier's own is live,
+it opens on Booked. One exception with one reason, so the default stays predictable rather than
+chasing whatever is most urgent that minute. Somebody else's live call does not move it, because
+that is a case this verifier cannot join.
+
+A missed call goes back to To schedule rather than staying under Booked. The session row still
+reads SCHEDULED, but no time is agreed any more and the only move is to agree another one.
+
+Search runs across all three tabs and the counts show matches per tab, so a case in a tab you are
+not looking at announces where it is instead of reading as no result.
+
+### Where the rules live
+
+`src/lib/verification/walkthroughTabs.ts`, with sixteen tests, for the same reason the sentence
+module exists: which tab a case belongs to and which tab opens are rules about the state machine,
+not layout. One test asserts every one of the five session states lands in a tab, so a state added
+later cannot quietly fall through the page.

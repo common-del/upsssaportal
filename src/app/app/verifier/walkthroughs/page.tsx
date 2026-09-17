@@ -11,10 +11,15 @@ import { WalkthroughQueueList } from '@/components/verifier/WalkthroughQueueList
  * back here, because one case belongs in one queue and a second page was a second place to
  * forget it.
  *
+ * Three tabs now, not one list: no time agreed, a call booked, and the school filming. They read
+ * left to right as the pipeline they are, since a recording case is a booked call whose
+ * connectivity failed. The split is worth the click because the three barely share a column, and
+ * what a verifier does first is choose which kind of work they are doing.
+ *
  * The standing explanation that used to sit under this heading is gone. It was three lines of
  * policy about risk thresholds and turnarounds, true, read once on somebody's first day and
- * skipped every day after, and it pushed the work below the fold. Each row now says what has
- * happened to its own case, which is the only thing a verifier opens this page to find out.
+ * skipped every day after, and it pushed the work below the fold. A one line note under the
+ * table says what the open tab holds, which is the part anyone actually needed.
  *
  * Masked codes here, as everywhere in the online track; the identity discloses only inside a
  * case's console, at a recorded moment, immediately followed by the conflict declaration. That

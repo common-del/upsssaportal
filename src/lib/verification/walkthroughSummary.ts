@@ -55,7 +55,13 @@ export type QueueSummary = {
   rank: number;
 };
 
-const weekdayTime = (iso: string) =>
+/**
+ * When a call is booked for, in IST.
+ *
+ * Exported because the Booked table prints the same time in its own column, and reading it back
+ * out of the sentence would make a table cell depend on the wording of a sentence.
+ */
+export const weekdayTime = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', {
     weekday: 'long',
     hour: '2-digit',

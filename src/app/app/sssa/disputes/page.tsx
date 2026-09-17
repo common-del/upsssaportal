@@ -1,35 +1,41 @@
 import Link from 'next/link';
-import { buildComplaints } from '@/lib/sssa/complaints';
+import { buildComplaints, type ComplaintFilterValues, type ComplaintRow } from '@/lib/sssa/complaints';
 import { prisma } from '@/lib/db';
 import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
 import { RunEscalationsButton } from '@/components/tickets/RunEscalationsButton';
+import { ComplaintFilters } from '@/components/sssa/ComplaintFilters';
 
 const NAVY = '#1B2A6B';
+const GOLD_INK = '#7A5209';
+const RED = '#C8372D';
 const inr = (n: number) => n.toLocaleString('en-IN');
 
-const LEVEL_STYLE: Record<string, string> = {
-  SSSA: 'bg-red-50 text-red-700',
-  DISTRICT: 'bg-amber-50 text-amber-800',
-  SCHOOL: 'bg-gray-100 text-gray-600',
+const LEVEL_STYLE: Record<string, { bg: string; ink: string }> = {
+  SSSA: { bg: '#FBE9E7', ink: '#96271E' },
+  DISTRICT: { bg: '#FDF8EC', ink: GOLD_INK },
+  SCHOOL: { bg: '#F3F4F6', ink: '#4B5563' },
 };
 
 /**
- * Complaints: parents and the public, against a school.
+ * Complaints: everything anyone has objected to, from either side of the programme.
  *
- * Named for who files them rather than for the table they live in. This page and
- * Appeals used to be one queue, which hid that they are different mechanisms with
- * different resolution paths — and hid the escalation ladder that makes a case
- * arriving here mean two levels already let it lapse.
+ * Two queues became one. A parent's complaint against a school and a verifier's report of
+ * inducement were separate tabs, and they are different objects — one has a deadline and an
+ * escalation ladder, the other has neither — but they are the same question for whoever opens
+ * this page: what has somebody objected to, and what is waiting on me.
  *
- * The escalation control lives here now. It used to be the only thing on
- * /app/sssa/tickets, a second page over the same Ticket table that nothing in the
- * app linked to — so this page reported the deadline breach while the only way to
- * act on it was a URL nobody could find.
+ * Treating inducement as a complaint type is what makes one table work rather than two glued
+ * together: the type filter and the category bars cover both with no special case, and the only
+ * place the difference shows is the status cell.
  */
-export default async function ComplaintsPage() {
-  // Escalating on read, as the old page did. A ticket's handler level is a
-  // function of how long it has sat unanswered, so leaving it to a cron would mean
-  // this page showing a level that expired hours ago.
+export default async function ComplaintsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // Escalating on read, as this page has always done. A ticket's handler level is a function of
+  // how long it has sat unanswered, so leaving it to a cron would mean showing a level that
+  // expired hours ago.
   const stale = await prisma.ticket.findMany({
     where: { status: { notIn: ['RESOLVED', 'REJECTED'] }, nextDueAt: { lt: new Date() } },
     select: { id: true },
@@ -37,7 +43,19 @@ export default async function ComplaintsPage() {
   });
   for (const t of stale) await ensureEscalationUpToDate(t.id);
 
-  const data = await buildComplaints();
+  const params = await searchParams;
+  const one = (k: string) => {
+    const v = params[k];
+    return (Array.isArray(v) ? v[0] : v) ?? '';
+  };
+  const selected: ComplaintFilterValues = {
+    q: one('q'),
+    district: one('district'),
+    type: one('type'),
+    source: one('source'),
+  };
+
+  const data = await buildComplaints(selected);
   const maxCat = data.categories[0]?.count ?? 1;
 
   return (
@@ -45,10 +63,10 @@ export default async function ComplaintsPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
-          <p className="mt-1 text-sm text-gray-500">Raised by parents and the public</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Everything anyone has objected to, from parents and from inside the programme
+          </p>
         </div>
-        {/* Beside the overdue count rather than buried: an officer who can see the
-            SLA has been breached should be able to act on it from the same screen. */}
         <RunEscalationsButton />
       </header>
 
@@ -58,74 +76,66 @@ export default async function ComplaintsPage() {
         </div>
       ) : (
         <>
-          <p className="max-w-[64ch] text-[16.5px] leading-relaxed text-gray-600">
+          <p className="max-w-[68ch] text-[16.5px] leading-relaxed text-gray-600">
             <b className="font-bold tabular-nums text-gray-900">{inr(data.open)}</b> complaints are
             open.{' '}
             {data.overdue > 0 && (
               <>
-                <b className="font-bold tabular-nums text-[#C8372D]">{inr(data.overdue)}</b> are past
-                their deadline
+                <b className="font-bold tabular-nums" style={{ color: RED }}>
+                  {inr(data.overdue)}
+                </b>{' '}
+                are past their deadline
                 {data.atSssa > 0 && (
                   <>
                     , and <b className="font-bold tabular-nums text-gray-900">{inr(data.atSssa)}</b>{' '}
                     have escalated to you
                   </>
                 )}
-                .
+                .{' '}
+              </>
+            )}
+            {data.unacknowledged > 0 && (
+              <>
+                <b className="font-bold tabular-nums" style={{ color: RED }}>
+                  {inr(data.unacknowledged)}
+                </b>{' '}
+                {data.unacknowledged === 1 ? 'report from a verifier is' : 'reports from verifiers are'}{' '}
+                waiting to be acknowledged.
               </>
             )}
           </p>
 
+          <ComplaintFilters
+            selected={selected}
+            districts={data.districts}
+            types={data.types}
+            total={data.open}
+            matched={data.matched}
+          />
+
           <section>
-            <h2 className="text-base font-bold tracking-tight text-gray-900">Open cases</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Past deadline first, then oldest. With shows the level currently handling the case.
-            </p>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[760px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] overflow-hidden rounded-2xl border border-gray-200 bg-white text-[13px]">
                 <thead>
                   <tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
-                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">School</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Raised by</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">About</th>
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">District</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Complaint</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Filed by</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Complaint type</th>
                     <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Age</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-right font-bold">Overdue</th>
-                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">With</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.rows.map((r) => (
-                    <tr key={r.id} className="border-t border-gray-100 first:border-t-0 hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/app/sssa/disputes/${r.id}`}
-                          className="font-semibold hover:underline"
-                          style={{ color: NAVY }}
-                        >
-                          {r.school}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">{r.district}</td>
-                      <td className="px-4 py-3 text-gray-700">{r.category}</td>
-                      <td className="px-4 py-3 text-gray-700">{r.filedBy}</td>
-                      <td className="px-4 py-3 text-right tabular-nums text-gray-500">{r.ageDays}d</td>
-                      <td
-                        className="px-4 py-3 text-right font-bold tabular-nums"
-                        style={{ color: r.overdueDays != null ? '#C8372D' : '#9AA2B4' }}
-                      >
-                        {r.overdueDays != null ? `${r.overdueDays}d` : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                            LEVEL_STYLE[r.level] ?? 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {r.level}
-                        </span>
+                  {data.rows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-gray-500">
+                        No complaint matches these filters.
                       </td>
                     </tr>
+                  )}
+                  {data.rows.map((r) => (
+                    <Row key={`${r.source}:${r.id}`} row={r} />
                   ))}
                 </tbody>
               </table>
@@ -138,18 +148,23 @@ export default async function ComplaintsPage() {
                 What people complain about
               </h2>
               <p className="mt-0.5 text-xs text-gray-500">
-                All {inr(data.open)} open complaints by category.
+                All {inr(data.open)} open complaints by type, whoever raised them.
               </p>
               <div className="mt-3 flex flex-col gap-2.5">
                 {data.categories.map((c) => (
                   <div key={c.name} className="flex items-center gap-3.5">
-                    <span className="w-56 shrink-0 truncate text-[13px] text-gray-600">{c.name}</span>
+                    <span
+                      className="w-60 shrink-0 truncate text-[13px]"
+                      style={{ color: c.inside ? GOLD_INK : '#4B5563' }}
+                    >
+                      {c.name}
+                    </span>
                     <span className="h-4 flex-1 overflow-hidden rounded bg-gray-100">
                       <span
                         className="block h-full rounded"
                         style={{
-                          width: `${Math.round((c.count / maxCat) * 100)}%`,
-                          background: c.count > maxCat * 0.6 ? '#C8372D' : NAVY,
+                          width: `${Math.max(2, Math.round((c.count / maxCat) * 100))}%`,
+                          background: c.inside ? '#BF9000' : c.count > maxCat * 0.6 ? RED : NAVY,
                         }}
                       />
                     </span>
@@ -161,8 +176,63 @@ export default async function ComplaintsPage() {
               </div>
             </section>
           )}
+
+          <p className="text-xs leading-relaxed text-gray-400">
+            A report from a verifier has no deadline and no escalation ladder, so its status reads
+            acknowledged or not. A school disputing its own verification is an Appeal and sits in
+            Decisions; a school has no way to raise a complaint here.
+          </p>
         </>
       )}
     </div>
+  );
+}
+
+function Row({ row }: { row: ComplaintRow }) {
+  const inside = row.source === 'VERIFIER';
+  const waiting = row.acknowledged === false;
+  const chip = inside
+    ? waiting
+      ? { text: 'Not acknowledged', bg: '#96271E', ink: '#FFFFFF' }
+      : { text: 'Acknowledged', bg: '#E3F0E8', ink: '#1E6344' }
+    : {
+        text: row.level ?? '—',
+        ...(LEVEL_STYLE[row.level ?? ''] ?? { bg: '#F3F4F6', ink: '#4B5563' }),
+      };
+
+  return (
+    <tr
+      className="border-t border-gray-100 first:border-t-0 hover:bg-gray-50"
+      style={waiting ? { backgroundColor: '#FDF2F1' } : undefined}
+    >
+      <td className="px-4 py-3">
+        <span className="block text-[12.5px] font-semibold" style={{ color: inside ? GOLD_INK : '#4B5563' }}>
+          {inside ? 'A verifier' : 'The public'}
+        </span>
+        <span className="block text-[11.5px] text-gray-400">{row.raisedBy}</span>
+      </td>
+      <td className="px-4 py-3">
+        <Link href={row.href} className="font-semibold hover:underline" style={{ color: NAVY }}>
+          {row.about}
+        </Link>
+      </td>
+      <td className="px-4 py-3 text-gray-700">{row.district}</td>
+      <td className="px-4 py-3 text-gray-700">{row.type}</td>
+      <td className="px-4 py-3 text-right tabular-nums text-gray-500">{row.ageDays}d</td>
+      <td className="px-4 py-3">
+        <span
+          className="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold"
+          style={{ backgroundColor: chip.bg, color: chip.ink }}
+        >
+          {chip.text}
+        </span>
+        <span
+          className="mt-0.5 block text-[11.5px]"
+          style={{ color: row.overdueDays != null ? RED : '#9AA2B4' }}
+        >
+          {inside ? 'no deadline' : row.overdueDays != null ? `${row.overdueDays}d overdue` : 'on time'}
+        </span>
+      </td>
+    </tr>
   );
 }

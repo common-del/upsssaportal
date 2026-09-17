@@ -1364,3 +1364,65 @@ walkthrough and the census queue; only the monitoring of its distribution is gon
 
 `RiskScore.band` survives the removal. It was read by this screen, and it remains the readable
 form of a number nobody wants to compare by eye.
+
+## 42. Integrity reports fold into Complaints, 17 September 2026
+
+Two queues become one list with four filters: search, district, complaint type, and who raised
+it. Integrity Reports leaves the sidebar; `/app/sssa/integrity` redirects.
+
+### Why one list and not two tabs
+
+They are different objects. A Ticket is filed on the public form against a UDISE code, carries
+`nextDueAt` and a `handlerLevel`, and climbs a level on its own when a deadline passes. An
+IntegrityReport is filed by somebody in the verification workforce about inducement or pressure
+and carries neither a clock nor a ladder, only whether the Authority has acknowledged it.
+
+But they are the same question for whoever opens either page: what has somebody objected to, and
+what is waiting on me. Two tabs made that a navigation decision taken before the question was
+asked, with three rows behind one tab and a hundred and fifty behind the other.
+
+Drafted first as two tabs split by who the complaint was about. SSSA rejected that split, and was
+right to: the useful cut is who raised it, not who it names.
+
+### Treating inducement as a complaint type is what makes it work
+
+Given a category of its own, "Inducement or pressure" flows through the type filter and the
+category bars with no special case, and the only place the two kinds differ on screen is the
+status cell: an escalation level and a deadline for one, acknowledged or not for the other. Both
+are stated on the page, because with two kinds of urgency in one list the sort order stops being
+self-evident. It reads past-deadline first, then reports waiting on the Authority, then oldest.
+
+### "Raised by" filters the group, not the words
+
+`Ticket.submitterRole` is free text a member of the public types about themselves. A menu built
+from that column would list every phrase anybody had ever used, so the filter offers the source
+instead: the public, or a verifier.
+
+There is no option for a school, because a school cannot raise a complaint. Its Complaints tab is
+where it answers complaints filed against it; it can appeal its own verification and reply to
+proposed corrections, but both argue about its own score. A school with something to say about a
+verifier has nowhere to say it. The option was drawn in the mock-up and dropped on SSSA's
+instruction rather than left as a menu entry that can never match anything.
+
+### A report now has somewhere to go
+
+The old inbox showed the paragraph and offered one control: acknowledge. Acknowledging a report
+of a bribe and then having nowhere to go is not a process, so a report has its own page under
+Complaints, and that page links through to the subject's record on Workforce, where their sampled
+work and their standing against the removal rules are.
+
+The page also states that the report is not anonymous. The reporter is named on the record, which
+was true before and said nowhere, and matters most to somebody reading a report about their own
+supervisor.
+
+### Access is unchanged
+
+Both screens were already gated to the audit function and the Authority, so the merge grants
+nobody anything new. What changes is attention: these reports now sit in a list somebody opens
+weekly rather than one nobody opened.
+
+### Still outstanding on this page
+
+The escalation ladder still routes to DISTRICT, and district logins were retired in section 34. A
+complaint escalating to that rung sits with nobody until it escalates again. Raised twice, not
+yet ruled on.

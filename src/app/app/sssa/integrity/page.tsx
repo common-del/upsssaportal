@@ -1,21 +1,16 @@
-import { getIntegrityReports } from '@/lib/actions/audit';
-import { IntegrityInbox } from '@/components/audit/IntegrityInbox';
+import { redirect } from 'next/navigation';
 
-export default async function IntegrityPage() {
-  const rows = await getIntegrityReports();
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: '#073763' }}>
-          Integrity reports
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: '#5F7190' }}>
-          Reports of inducement or pressure, filed by anyone in the verification workforce. They
-          come here as well as to the supervisor, because the supervisor may be the subject.
-          Acknowledgement is yours alone to record.
-        </p>
-      </div>
-      <IntegrityInbox rows={rows} />
-    </div>
-  );
+/**
+ * Integrity reports folded into Complaints.
+ *
+ * They were a tab of their own for a queue of three, beside a Complaints tab holding a hundred
+ * and fifty. Both answer the same question for whoever opens either: what has somebody objected
+ * to, and what is waiting on me. Inducement is a complaint type now, so one list holds both and
+ * the type filter separates them when that is what you want.
+ *
+ * Nothing about who may read them changed: this page was already gated to the audit function and
+ * the Authority, and so is the list they moved into.
+ */
+export default function IntegrityMovedPage() {
+  redirect('/app/sssa/disputes');
 }

@@ -505,36 +505,6 @@ export async function fileIntegrityReport(
   return { success: true };
 }
 
-export type IntegrityReportRow = {
-  id: string;
-  body: string;
-  reportedBy: string;
-  about: string | null;
-  createdAt: string;
-  auditAcknowledgedAt: string | null;
-};
-
-export async function getIntegrityReports(): Promise<IntegrityReportRow[]> {
-  const actor = await auditActor();
-  if (!actor) return [];
-  const rows = await prisma.integrityReport.findMany({
-    include: {
-      reportedBy: { select: { name: true, username: true } },
-      about: { select: { name: true, username: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  });
-  return rows.map((r) => ({
-    id: r.id,
-    body: r.body,
-    reportedBy: r.reportedBy.name ?? r.reportedBy.username,
-    about: r.about ? (r.about.name ?? r.about.username) : null,
-    createdAt: r.createdAt.toISOString(),
-    auditAcknowledgedAt: r.auditAcknowledgedAt?.toISOString() ?? null,
-  }));
-}
-
 /** Originally Audit Cell only, deliberately not settable by a supervisor, who may be the
  *  subject of the report. The consolidation folds the audit function into the admin login,
  *  so SSSA_ADMIN acknowledges these now — an accepted independence trade, recorded in
@@ -546,6 +516,6 @@ export async function acknowledgeIntegrityReport(id: string): Promise<{ success:
     where: { id },
     data: { auditAcknowledgedAt: new Date() },
   });
-  revalidatePath('/app/sssa/integrity');
+  revalidatePath('/app/sssa/disputes');
   return { success: true };
 }

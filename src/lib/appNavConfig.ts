@@ -87,13 +87,15 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
         also: ['/app/sssa/quality', '/app/sssa/de-empanelment', '/app/sssa/cohort', '/app/sssa/year'],
       },
       { href: '/app/sssa/audit', label: 'Audit' },
-      { href: '/app/sssa/integrity', label: 'Integrity Reports' },
     ],
   },
   {
     label: 'General',
     items: [
-      { href: '/app/sssa/disputes', label: 'Complaints' },
+      // Integrity reports fold in here: a verifier reporting inducement and a parent reporting a
+      // school are the same question for whoever opens the page, and inducement is now a
+      // complaint type like any other.
+      { href: '/app/sssa/disputes', label: 'Complaints', also: ['/app/sssa/integrity'] },
       { href: '/app/sssa/frameworks', label: 'Framework' },
       { href: '/app/sssa/users', label: 'Users' },
       { href: '/app/sssa/configuration', label: 'Configuration' },

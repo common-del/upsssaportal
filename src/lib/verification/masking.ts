@@ -1,4 +1,5 @@
 import { createHmac } from 'crypto';
+import { stageLabel } from '@/lib/schoolStage';
 
 /**
  * What an Online Verifier is allowed to see about a school.
@@ -31,11 +32,17 @@ export type MaskedSchool = {
   /** Stable, keyed, non-invertible. Shown to the verifier in place of a name. */
   maskedCode: string;
   /**
-   * The school's stage: PRIMARY, UPPER_PRIMARY or SECONDARY. Not identifying, and the verifier
-   * needs it, because 18 of the 89 indicators do not apply to every stage and a screener has to
-   * know which paper they are reading.
+   * Which grades the school teaches, as a label. Not identifying, and the verifier needs it,
+   * because 18 of the 89 indicators do not apply to every stage and a screener has to know
+   * which paper they are reading.
+   *
+   * This used to be `School.category`, which was a leak. That column holds a stage for the
+   * hand-seeded schools and an ownership type for the bulk register, and ownership is on the
+   * list below: every bulk-register case put "GOVT" in front of a screener who must not be told
+   * who runs the school. It reads `School.stage` now, and a school the register has not told us
+   * about says so rather than passing as primary.
    */
-  category: string;
+  stage: string;
 };
 
 /** The fields a school row carries that must never reach an Online Verifier. */
@@ -53,6 +60,9 @@ export const IDENTIFYING_FIELDS = [
   'feesRangeMin',
   'feesRangeMax',
   'management',
+  // The legacy column that carries ownership for every bulk-register school. Named here so a
+  // future select of it into a masked payload reads as the leak it would be.
+  'category',
 ] as const;
 
 function maskingKey(): string {
@@ -88,10 +98,10 @@ export function maskedCodeFor(udise: string): string {
  * default; the opposite approach, stripping known-bad keys, leaks every field nobody remembered
  * to add to the list.
  */
-export function maskSchool(school: { udise: string; category: string }): MaskedSchool {
+export function maskSchool(school: { udise: string; stage: string | null }): MaskedSchool {
   return {
     maskedCode: maskedCodeFor(school.udise),
-    category: school.category,
+    stage: stageLabel(school.stage),
   };
 }
 

@@ -5,6 +5,7 @@ import {
   gradeBandFor,
   type ScorableParameter,
 } from '@/lib/verification/scoreFormula';
+import { stageCodeFor } from '@/lib/schoolStage';
 
 /**
  * What "publish" means: the moment a run enters PUBLISHED, the Result row the public site
@@ -41,7 +42,7 @@ export async function computeVerifiedResult(runId: string): Promise<PublishCompu
     select: {
       cycleId: true,
       schoolUdise: true,
-      school: { select: { category: true } },
+      school: { select: { stage: true } },
       discrepancies: {
         where: { upheldAt: { not: null } },
         select: { parameterId: true, proposedLevel: true, revisedLevel: true },
@@ -91,12 +92,7 @@ export async function computeVerifiedResult(runId: string): Promise<PublishCompu
     }),
   ]);
 
-  const categoryToCode: Record<string, string> = {
-    Primary: 'PRIMARY',
-    'Upper Primary': 'UPPER_PRIMARY',
-    Secondary: 'SECONDARY',
-  };
-  const level = categoryToCode[run.school.category] ?? 'PRIMARY';
+  const level = stageCodeFor(run.school.stage);
   const applicable: ScorableParameter[] = parameters
     .filter((p) => (p.applicability as string[]).includes(level))
     .map((p) => ({

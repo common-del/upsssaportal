@@ -4,13 +4,9 @@ import { requireSssa, requireSchool, requireOversight, requireSchoolOrOversight 
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { stageCodeFor } from '@/lib/schoolStage';
 
 const APPEAL_WINDOW_DAYS = 5;
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
 
 // ─── Appeal Eligibility ───
 
@@ -73,8 +69,8 @@ export async function getDifferingParameters(cycleId: string, schoolUdise: strin
   if (!actor) return { diffs: [], totalApplicable: 0 };
   if (actor.schoolUdise && actor.schoolUdise !== schoolUdise) return { diffs: [], totalApplicable: 0 };
 
-  const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { category: true } });
-  const catCode = CATEGORY_TO_CODE[school?.category ?? 'Primary'] ?? 'PRIMARY';
+  const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { stage: true } });
+  const catCode = stageCodeFor(school?.stage);
 
   const [saSubmission, vSubmission, fieldVisit, parameters] = await Promise.all([
     prisma.selfAssessmentSubmission.findUnique({
@@ -273,8 +269,8 @@ export async function decideAppeal(
 export async function computeAndStoreResult(cycleId: string, schoolUdise: string, frameworkId: string) {
   if (!(await requireSssa())) return null;
 
-  const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { category: true } });
-  const catCode = CATEGORY_TO_CODE[school?.category ?? 'Primary'] ?? 'PRIMARY';
+  const school = await prisma.school.findUnique({ where: { udise: schoolUdise }, select: { stage: true } });
+  const catCode = stageCodeFor(school?.stage);
 
   const [saSubmission, vSubmission, rubrics, domains, parameters, appeal, gradeBands] = await Promise.all([
     prisma.selfAssessmentSubmission.findUnique({

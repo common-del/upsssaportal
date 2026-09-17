@@ -8,9 +8,13 @@
  * hand-seeded schools hold a level there ("Primary", "Upper Primary", "Secondary"); the bulk
  * register holds an ownership type ("GOVT", "GOVT_AIDED", "PRIVATE_AIDED", "PRIVATE"), which is
  * also stored properly in `School.management`, so the column duplicates one field and misnames
- * the other. Six copies of a `CATEGORY_TO_CODE` map, each with its own silent `?? 'PRIMARY'`,
- * read it. A secondary school whose category says GOVT was screened against primary's paper and
- * nothing said so.
+ * the other. Seven copies of a category-to-code map, each with its own silent `?? 'PRIMARY'`,
+ * read it, and two of the demo seeds carried an eighth and ninth. A secondary school whose
+ * category says GOVT was screened against primary's paper and nothing said so.
+ *
+ * The same column was also the one fact `maskSchool` handed an Online Verifier about the school
+ * under review, so every bulk-register case printed its ownership under the case code, and who
+ * runs a school is on `IDENTIFYING_FIELDS`.
  *
  * `School.stage` replaces that reading. It is nullable on purpose and the null means one thing:
  * the register has not told us. Inventing a stage would be worse than admitting the gap, because

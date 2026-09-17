@@ -232,7 +232,7 @@ export function DeskCaseWorkspace({ deskCase }: { deskCase: DeskCase }) {
               {deskCase.school.maskedCode}
             </p>
             <p className="text-xs" style={{ color: INK_MUTED }}>
-              {deskCase.school.category}
+              {deskCase.school.stage}
             </p>
           </div>
 

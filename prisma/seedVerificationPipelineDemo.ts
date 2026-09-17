@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { stageCodeFor } from '../src/lib/schoolStage';
 
 const prisma = new PrismaClient();
 
@@ -33,12 +34,6 @@ function hash(s: string): number {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 999983;
   return h;
 }
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
 
 const DAY = 86_400_000;
 const IST_OFFSET_MS = (5 * 60 + 30) * 60_000;
@@ -106,8 +101,11 @@ async function main() {
   });
   if (parameters.length === 0) return console.log('pipeline demo: no parameters');
 
-  const applicableFor = (category: string) => {
-    const code = CATEGORY_TO_CODE[category] ?? 'PRIMARY';
+  // Reads School.stage, the same column the app's applicability reads. Seeding demo cases
+  // against a different notion of stage than the screens use would put the drift this fix
+  // removed straight back into the demo data.
+  const applicableFor = (stage: string | null) => {
+    const code = stageCodeFor(stage);
     return parameters.filter((p) => (p.applicability as string[]).includes(code));
   };
 
@@ -124,13 +122,13 @@ async function main() {
 
   const submitted = await prisma.selfAssessmentSubmission.findMany({
     where: { cycleId: cycle.id, status: 'SUBMITTED', schoolUdise: { not: 'school' } },
-    select: { schoolUdise: true, school: { select: { udise: true, category: true, districtCode: true } } },
+    select: { schoolUdise: true, school: { select: { udise: true, stage: true, districtCode: true } } },
     orderBy: { schoolUdise: 'asc' },
     take: 120,
   });
-  const pool: { udise: string; category: string; districtCode: string }[] = submitted
+  const pool: { udise: string; stage: string | null; districtCode: string }[] = submitted
     .filter((s) => !hasRun.has(s.schoolUdise))
-    .map((s) => ({ udise: s.school.udise, category: s.school.category, districtCode: s.school.districtCode }));
+    .map((s) => ({ udise: s.school.udise, stage: s.school.stage, districtCode: s.school.districtCode }));
 
   if (pool.length < NEEDED) {
     const have = new Set(pool.map((p) => p.udise));
@@ -139,12 +137,12 @@ async function main() {
         udise: { notIn: [...have, 'school', ...hasRun] },
         selfAssessments: { none: { cycleId: cycle.id } },
       },
-      select: { udise: true, category: true, districtCode: true },
+      select: { udise: true, stage: true, districtCode: true },
       orderBy: { udise: 'asc' },
       take: NEEDED - pool.length,
     });
     for (const school of more) {
-      const applicable = applicableFor(school.category);
+      const applicable = applicableFor(school.stage);
       const submission = await prisma.selfAssessmentSubmission.create({
         data: {
           cycleId: cycle.id,
@@ -225,8 +223,8 @@ async function main() {
   }
 
   /** MATCH for most AUTO indicators, a deterministic few MISMATCH, occasional gap. */
-  async function seedAutoChecks(runId: string, udise: string, category: string) {
-    const auto = applicableFor(category).filter((p) => p.checkMethod === 'AUTO');
+  async function seedAutoChecks(runId: string, udise: string, stage: string | null) {
+    const auto = applicableFor(stage).filter((p) => p.checkMethod === 'AUTO');
     await prisma.autoCheckResult.createMany({
       data: auto.map((p) => {
         const roll = hash(udise + p.code) % 12;
@@ -266,9 +264,9 @@ async function main() {
       assignee: item.assignee ?? undefined,
       enteredDaysAgo: 2 + (hash(item.school.udise) % 6),
     });
-    await seedAutoChecks(run.id, item.school.udise, item.school.category);
+    await seedAutoChecks(run.id, item.school.udise, item.school.stage);
     if (item.decide > 0 && item.assignee) {
-      const manual = applicableFor(item.school.category).filter((p) => p.checkMethod === 'MANUAL');
+      const manual = applicableFor(item.school.stage).filter((p) => p.checkMethod === 'MANUAL');
       const chosen = manual.slice(0, item.decide);
       await prisma.deskScreeningDecision.createMany({
         data: chosen.map((p) => {
@@ -290,13 +288,13 @@ async function main() {
 
   // ── Walkthroughs, four states for online1 plus two unassigned ─────────────
   const walkthroughSchools = take(6);
-  const walkthroughRuns: { runId: string; udise: string; category: string }[] = [];
+  const walkthroughRuns: { runId: string; udise: string; stage: string | null }[] = [];
   for (const [i, school] of walkthroughSchools.entries()) {
     const assignee = i < 4 ? online1 : null;
     const run = await createRun(school, 'VIDEO_WALKTHROUGH', { assignee: assignee ?? undefined, enteredDaysAgo: 2 + i });
-    await seedAutoChecks(run.id, school.udise, school.category);
+    await seedAutoChecks(run.id, school.udise, school.stage);
     // The disputed list the console shows: a handful of non-accepting desk decisions.
-    const manual = applicableFor(school.category).filter((p) => p.checkMethod === 'MANUAL');
+    const manual = applicableFor(school.stage).filter((p) => p.checkMethod === 'MANUAL');
     const disputed = manual.filter((p) => hash(school.udise + p.code) % 9 === 0).slice(0, 5);
     const supporter = assignee ?? online1;
     await prisma.deskScreeningDecision.createMany({
@@ -321,11 +319,11 @@ async function main() {
         aboveThreshold: true,
         autoCheckedCount: 25,
         manualDecidedCount: manual.length,
-        applicableCount: applicableFor(school.category).length,
+        applicableCount: applicableFor(school.stage).length,
         computedAt: new Date(Date.now() - (2 + i) * DAY),
       },
     });
-    walkthroughRuns.push({ runId: run.id, udise: school.udise, category: school.category });
+    walkthroughRuns.push({ runId: run.id, udise: school.udise, stage: school.stage });
   }
   // Session states: [0] no session (declaration gate), [1] scheduled, [2] live, [3] guided capture.
   const scheduled = await prisma.walkthroughSession.create({
@@ -380,7 +378,7 @@ async function main() {
   // ── Census queue, for the publish button ───────────────────────────────────
   for (const school of take(6)) {
     const run = await createRun(school, 'CENSUS_QUEUE', { assignee: online1, enteredDaysAgo: 1 + (hash(school.udise) % 4) });
-    await seedAutoChecks(run.id, school.udise, school.category);
+    await seedAutoChecks(run.id, school.udise, school.stage);
   }
 
   // ── Field visits ───────────────────────────────────────────────────────────
@@ -473,7 +471,7 @@ async function main() {
   // ── School response window: one open for the demo school, one answered ────
   const storySchool = await prisma.school.findUnique({
     where: { udise: 'school' },
-    select: { udise: true, category: true, districtCode: true },
+    select: { udise: true, stage: true, districtCode: true },
   });
   if (storySchool && !hasRun.has('school')) {
     const { run } = await createVisit(storySchool, field1, -4, { findings: 'signedOff', signedDaysAgo: 3 });

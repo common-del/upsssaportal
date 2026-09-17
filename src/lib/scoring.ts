@@ -1,10 +1,5 @@
 import { prisma } from '@/lib/db';
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
+import { stageCodeFor } from '@/lib/schoolStage';
 
 export type SchoolScoreResult = {
   scorePercent: number | null;
@@ -43,7 +38,7 @@ export async function getBatchSelfAssessmentScores(
     }),
     prisma.school.findMany({
       where: { udise: { in: schoolUdises } },
-      select: { udise: true, category: true },
+      select: { udise: true, stage: true },
     }),
   ]);
 
@@ -59,7 +54,7 @@ export async function getBatchSelfAssessmentScores(
 
   const schoolCategoryMap = new Map<string, string>();
   for (const s of schools) {
-    schoolCategoryMap.set(s.udise, CATEGORY_TO_CODE[s.category] ?? 'PRIMARY');
+    schoolCategoryMap.set(s.udise, stageCodeFor(s.stage));
   }
 
   const submissionMap = new Map<string, typeof submissions[0]>();
@@ -156,7 +151,7 @@ export async function getBatchVerificationScores(
     }),
     prisma.school.findMany({
       where: { udise: { in: schoolUdises } },
-      select: { udise: true, category: true },
+      select: { udise: true, stage: true },
     }),
   ]);
 
@@ -167,7 +162,7 @@ export async function getBatchVerificationScores(
   for (const d of domains) domainWeightMap.set(d.id, d.weightPercent ?? 0);
 
   const schoolCategoryMap = new Map<string, string>();
-  for (const s of schools) schoolCategoryMap.set(s.udise, CATEGORY_TO_CODE[s.category] ?? 'PRIMARY');
+  for (const s of schools) schoolCategoryMap.set(s.udise, stageCodeFor(s.stage));
 
   const submissionMap = new Map<string, typeof submissions[0]>();
   for (const sub of submissions) submissionMap.set(sub.schoolUdise, sub);

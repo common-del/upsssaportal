@@ -4,12 +4,7 @@ import { requireSssa, requireRole } from '@/lib/authz';
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
+import { stageCodeFor } from '@/lib/schoolStage';
 
 export async function assignVerifiersForCycle({
   cycleId,
@@ -198,11 +193,11 @@ export async function getActiveFrameworkForVerification(schoolUdise: string) {
 
   const school = await prisma.school.findUnique({
     where: { udise: schoolUdise },
-    select: { category: true },
+    select: { stage: true },
   });
   if (!school) return null;
 
-  const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const categoryCode = stageCodeFor(school.stage);
 
   const fullFramework = await prisma.framework.findUnique({
     where: { id: framework.id },
@@ -314,10 +309,10 @@ export async function submitVerification(
   if (submission.verifierUserId !== verifierUserId) return { success: false, message: 'Access denied.' };
   if (submission.status === 'SUBMITTED') return { success: false, message: 'Already submitted.' };
 
-  const school = await prisma.school.findUnique({ where: { udise: submission.schoolUdise }, select: { category: true } });
+  const school = await prisma.school.findUnique({ where: { udise: submission.schoolUdise }, select: { stage: true } });
   if (!school) return { success: false, message: 'School not found.' };
 
-  const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const categoryCode = stageCodeFor(school.stage);
   const applicableParams = submission.framework.parameters.filter((p) =>
     (p.applicability as string[]).includes(categoryCode),
   );

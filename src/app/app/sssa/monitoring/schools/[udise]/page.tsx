@@ -5,12 +5,7 @@ import { CheckCircle2, Clock } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
 import MonitoringSchoolTabs from '@/components/monitoring/MonitoringSchoolTabs';
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
+import { stageCodeFor, stageLabel } from '@/lib/schoolStage';
 
 export default async function MonitoringSchoolDetailPage({
   params,
@@ -26,7 +21,7 @@ export default async function MonitoringSchoolDetailPage({
 
   const school = await prisma.school.findUnique({
     where: { udise },
-    select: { udise: true, nameEn: true, nameHi: true, category: true, districtCode: true, blockCode: true },
+    select: { udise: true, nameEn: true, nameHi: true, stage: true, districtCode: true, blockCode: true },
   });
   if (!school) notFound();
 
@@ -41,7 +36,7 @@ export default async function MonitoringSchoolDetailPage({
   }
 
   const framework = await prisma.framework.findUnique({ where: { cycleId: cycle.id } });
-  const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const categoryCode = stageCodeFor(school.stage);
 
   const [saSubmission, vSubmission] = await Promise.all([
     prisma.selfAssessmentSubmission.findUnique({
@@ -147,7 +142,7 @@ export default async function MonitoringSchoolDetailPage({
             <h1 className="text-xl font-bold text-navy-900">{school.nameHi}</h1>
             <p className="text-sm text-text-secondary">{school.nameEn}</p>
             <p className="mt-1 text-xs text-text-secondary">
-              UDISE: {school.udise} · {school.category} · {school.districtCode} / {school.blockCode}
+              UDISE: {school.udise} · {stageLabel(school.stage)} · {school.districtCode} / {school.blockCode}
             </p>
           </div>
           <div className="text-right space-y-1">

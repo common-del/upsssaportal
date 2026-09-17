@@ -86,7 +86,19 @@ model School {
   udise               String                     @unique
   nameEn              String
   nameHi              String
+  /// Legacy, and carrying two different things: the hand-seeded schools hold a
+  /// teaching stage here ("Primary", "Upper Primary", "Secondary"), the bulk register
+  /// holds an ownership type ("GOVT", "PRIVATE"), which `management` already stores
+  /// properly. Read `stage` for applicability and never this. Kept because older
+  /// screens and seeds still write it.
   category            String
+  /// Which grades the school teaches: PRIMARY, UPPER_PRIMARY or SECONDARY. The one
+  /// input to SQAAF applicability, since 18 of the 89 indicators do not apply to every
+  /// stage. Nullable on purpose, and the null means exactly one thing: the register has
+  /// not told us. An invented stage is indistinguishable from a known one and quietly
+  /// decides what a school is judged on, so the gap is recorded instead and
+  /// `stageCodeFor` applies the documented fallback in one visible place.
+  stage               String?
   /// Who runs the school: GOVERNMENT, AIDED or PRIVATE. UDISE already classifies
   /// every school this way, so this is imported from the same extract the register
   /// came from rather than collected from schools. Nullable because the backfill

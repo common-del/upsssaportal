@@ -6,7 +6,7 @@ import {
   mustSeeMaskedOnly,
 } from './masking';
 
-const SCHOOL = { udise: '09460401101', category: 'Upper Primary' };
+const SCHOOL = { udise: '09460401101', stage: 'UPPER_PRIMARY' };
 
 beforeEach(() => {
   process.env.AUTH_SECRET = 'test-secret-for-masking';
@@ -24,13 +24,24 @@ describe('the masked view carries nothing identifying', () => {
   });
 
   it('exposes exactly the two fields the workspace needs', () => {
-    expect(Object.keys(maskSchool(SCHOOL)).sort()).toEqual(['category', 'maskedCode']);
+    expect(Object.keys(maskSchool(SCHOOL)).sort()).toEqual(['maskedCode', 'stage']);
   });
 
   // Stage is not identifying, and withholding it would leave the screener unable to tell which
   // of the 89 indicators applied to the school in front of them.
   it('keeps the school stage', () => {
-    expect(maskSchool(SCHOOL).category).toBe('Upper Primary');
+    expect(maskSchool(SCHOOL).stage).toBe('Upper primary');
+  });
+
+  // The leak this replaced, written down so it cannot come back. `maskSchool` read
+  // `School.category`, which holds a stage only for the hand-seeded schools; for the 32,357 the
+  // bulk register supplied it holds the ownership type, so every one of those cases printed
+  // "GOVT" under the case code, and who runs a school is on IDENTIFYING_FIELDS.
+  it('cannot pass an ownership value off as a stage', () => {
+    const bulkRegisterSchool = { udise: '09460401101', category: 'GOVT', stage: null };
+    const masked = maskSchool(bulkRegisterSchool as never);
+    expect(masked.stage).toBe('Stage not recorded');
+    expect(Object.values(masked).join(' ')).not.toMatch(/GOVT|PRIVATE|AIDED/i);
   });
 
   it('does not contain the UDISE anywhere in the code', () => {

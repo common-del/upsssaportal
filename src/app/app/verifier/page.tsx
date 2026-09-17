@@ -134,10 +134,10 @@ async function OnlineOverview({
       id: true,
       state: true,
       enteredStateAt: true,
-      // Only what the mask needs: the udise feeds the HMAC and is never rendered; the category
-      // is the one non-identifying school fact a screener may see. No name, place or contact
-      // is fetched anywhere on this screen.
-      school: { select: { udise: true, category: true } },
+      // Only what the mask needs: the udise feeds the HMAC and is never rendered. Nothing else
+      // about the school is fetched on this screen, and the legacy category column least of
+      // all, because for a bulk-register school it holds the ownership type.
+      school: { select: { udise: true } },
       deskDecisions: { select: { decision: true } },
       _count: { select: { autoChecks: true } },
       // Only to tell a case waiting on a call from one waiting on the school's recordings.

@@ -76,7 +76,9 @@ async function disputedParameterIds(runId: string): Promise<string[]> {
 export type WalkthroughQueueRow = {
   runId: string;
   maskedCode: string;
-  category: string;
+  /** Which grades the school teaches, as a label. Was `category`, which for a bulk-register
+   *  school held the ownership type and put "Govt" in front of a screener. */
+  stage: string;
   enteredStateAt: string;
   /** enteredStateAt plus the configured turnaround. */
   dueBy: string;
@@ -122,7 +124,7 @@ export async function getWalkthroughQueue(): Promise<WalkthroughQueueRow[]> {
       id: true,
       enteredStateAt: true,
       deskAssigneeProfileId: true,
-      school: { select: { udise: true, category: true } },
+      school: { select: { udise: true, stage: true } },
       riskScores: { orderBy: { computedAt: 'desc' }, take: 1, select: { score: true } },
       deskDecisions: {
         where: { decision: { not: 'EVIDENCE_SUPPORTS_LEVEL' } },
@@ -319,7 +321,7 @@ export async function getWalkthroughConsole(runId: string): Promise<WalkthroughC
       schoolUdise: true,
       enteredStateAt: true,
       school: {
-        select: { udise: true, nameEn: true, category: true, geoLat: true, geoLng: true, district: { select: { nameEn: true } } },
+        select: { udise: true, nameEn: true, geoLat: true, geoLng: true, district: { select: { nameEn: true } } },
       },
     },
   });

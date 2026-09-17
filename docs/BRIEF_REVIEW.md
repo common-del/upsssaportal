@@ -1480,4 +1480,75 @@ sinks below everything claimed and offers Claim rather than an action it cannot 
 The line reading "Govt" under the case code is a masking leak. `maskSchool` returns `category`
 believing it holds a stage, but for bulk-register schools that field holds ownership type, and
 management is on the list of fields an online verifier must never see. The fix is written in
-`src/lib/schoolStage.ts` with sixteen tests and wired to nothing, pending a decision.
+`src/lib/schoolStage.ts` with sixteen tests and wired to nothing, pending a decision. *Closed the
+same day, in §44.*
+
+## 44. The masking leak is closed, and applicability stops guessing, 17 September 2026
+
+### The leak
+
+The last section ended by naming it: the line under a case code on the desk queue read "Govt".
+
+`maskSchool` returned two fields, the masked code and `School.category`, on the understanding
+that category held a teaching stage. It does for the 21 hand-seeded schools, which carry
+"Primary", "Upper Primary" or "Secondary". It does not for the 32,357 the bulk register supplied,
+which carry "GOVT", "GOVT_AIDED", "PRIVATE_AIDED" or "PRIVATE" in the same column: an ownership
+type, already stored properly in `School.management`, and `management` is on `IDENTIFYING_FIELDS`
+precisely because who runs a school is not something an Online Verifier may be told.
+
+So the enumerated test that guards `MaskedSchool` passed while the leak ran, because it checks
+that no field is *named* `management` and the value was arriving under a different name.
+
+### The second half of the same defect
+
+Seven copies of a category-to-code map read that column to decide which of the 89 indicators
+apply, each ending `?? 'PRIMARY'`. Two of the demo seeds carried an eighth and a ninth. Every
+bulk-register school missed every one of those maps, took the silent fallback, and was measured
+against primary's paper. Eighteen of the 89 indicators are stage-specific, so this is not a
+cosmetic mismatch: it changes what a school is judged on, and nothing anywhere said it had
+happened.
+
+### What changed
+
+`School.stage` is a new nullable column holding PRIMARY, UPPER_PRIMARY or SECONDARY, and it is
+the only thing applicability reads now. `src/lib/schoolStage.ts`, written earlier and until now
+wired to nothing, is the single place the stage is derived and the single place the fallback is
+applied.
+
+`maskSchool` takes `{ udise, stage }` and returns a label. A school with no recorded stage reads
+"Stage not recorded" rather than passing as primary, because "I do not know which paper this is"
+is information a screener needs. `category` has been added to `IDENTIFYING_FIELDS`, so a future
+select of it into a masked payload reads as the leak it would be, and the regression test asserts
+that an ownership value cannot come out of `maskSchool` at all.
+
+The nine maps are gone. Seven in the application, two in the seeds, all replaced by
+`stageCodeFor(school.stage)`.
+
+`prisma/backfillSchoolStage.ts` fills the column from the school's own declared class range
+first, then from the legacy category where that names a stage. It runs in the build chain after
+the enrolment seeds and before anything that computes a result.
+
+### What deliberately did not change
+
+No stored score moves. `STAGE_FALLBACK` is still PRIMARY, so a school the register cannot place
+is measured exactly as it was yesterday. The difference is that the backfill prints how many
+schools that is, every build, instead of the number being an accident of a lookup miss. On the
+current register that count is most of the 32,357, because the bulk seed records an ownership
+type and no class range, and nothing in the portal can honestly derive a stage from that. The
+fallback is now a stated assumption rather than a hidden one.
+
+`School.category` stays in the schema, annotated as legacy, because older screens and seeds still
+write it. Nothing reads it for applicability or masking any more.
+
+### Two things found on the way, not fixed
+
+**The field briefing printed the same fact twice.** "Category" and "Management" sat next to each
+other in the pre-visit briefing, and for a bulk-register school both said GOVT. The briefing now
+shows Stage, which is the fact a verifier walking in actually lacks. This one is fixed; it is
+listed here because it was not part of the leak.
+
+**`mustSeeMaskedOnly` returns true for the legacy `VERIFIER` role, and that role's dashboard
+shows the school's name, UDISE, district and category in a table.** `verifier1 / verifier123` is
+a live seeded login. Either that dashboard should not exist, or `VERIFIER` should not be on the
+must-mask list. It is a real contradiction, it predates this change, and it wants a decision
+rather than a guess.

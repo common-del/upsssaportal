@@ -5,12 +5,7 @@ import { markSubmitted } from '@/lib/verification/intake';
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
+import { stageCodeFor } from '@/lib/schoolStage';
 
 export async function getActiveFrameworkForSchool(
   schoolUdise: string,
@@ -28,11 +23,11 @@ export async function getActiveFrameworkForSchool(
 
   const school = await prisma.school.findUnique({
     where: { udise: schoolUdise },
-    select: { category: true },
+    select: { stage: true },
   });
   if (!school) return null;
 
-  const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const categoryCode = stageCodeFor(school.stage);
   const answeredSet = new Set(answeredParameterIds);
 
   // Not filtered by isActive at the query level: a parameter/domain that gets
@@ -180,11 +175,11 @@ export async function submitSubmission(
 
   const school = await prisma.school.findUnique({
     where: { udise: schoolUdise },
-    select: { category: true },
+    select: { stage: true },
   });
   if (!school) return { success: false, message: 'School not found.' };
 
-  const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const categoryCode = stageCodeFor(school.stage);
   const applicableParams = submission.framework.parameters.filter((p) =>
     (p.applicability as string[]).includes(categoryCode),
   );

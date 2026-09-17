@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { requireOngroundVerifier } from '@/lib/authz';
 import { isRevealed } from '@/lib/verification/reveal';
+import { stageLabel } from '@/lib/schoolStage';
 import {
   drawSpotCheckSample,
   isSameISTDay,
@@ -82,7 +83,10 @@ export type FieldVisitCase = {
   /** The pre-visit briefing: who this school is on paper. Facts from the school's own record,
    *  shown only after the reveal, before arrival. */
   briefing: {
-    category: string;
+    /** Which grades the school teaches. Was `category`, which for a bulk-register school holds
+     *  the ownership type, so the briefing printed the same fact twice: once here and once as
+     *  Management, under two different headings. */
+    stage: string;
     management: string | null;
     totalStudents: number | null;
     classesFrom: string | null;
@@ -124,7 +128,7 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
         select: {
           udise: true,
           nameEn: true,
-          category: true,
+          stage: true,
           management: true,
           block: { select: { nameEn: true } },
           district: { select: { nameEn: true } },
@@ -268,7 +272,7 @@ export async function getFieldVisit(visitId: string): Promise<FieldVisitCase | n
     blockName: run.school.block.nameEn,
     districtName: run.school.district.nameEn,
     briefing: {
-      category: run.school.category,
+      stage: stageLabel(run.school.stage),
       management: run.school.management,
       totalStudents: detail?.totalStudents ?? null,
       classesFrom: detail?.classesFrom ?? null,

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { MANDAL_SEED, DISTRICT_SEED, BLOCK_SEED } from './upGeoData';
+import { stageFromCategory } from '../src/lib/schoolStage';
 
 const prisma = new PrismaClient();
 
@@ -26,6 +27,10 @@ function buildSchools() {
     nameEn: string;
     nameHi: string;
     category: string;
+    /** Written alongside the legacy category because this seed is one of the few places that
+     *  genuinely knows the stage. Everything the bulk register supplied has an ownership type
+     *  in `category` and gets a null here, which backfillSchoolStage.ts counts. */
+    stage: string | null;
     management: string;
     districtCode: string;
     blockCode: string;
@@ -53,6 +58,7 @@ function buildSchools() {
         nameEn: `${block.nameEn} ${cat} School ${i}`,
         nameHi: `${block.nameHi} ${cat === 'Primary' ? 'प्राथमिक' : cat === 'Upper Primary' ? 'उच्च प्राथमिक' : 'माध्यमिक'} विद्यालय ${i}`,
         category: cat,
+        stage: stageFromCategory(cat),
         // Stands in for the UDISE extract's management column. Deterministic so a
         // reseed does not reshuffle which school is government and which private.
         management: (['GOVERNMENT', 'GOVERNMENT', 'PRIVATE', 'AIDED', 'GOVERNMENT'] as const)[(globalIdx - 1) % 5],
@@ -73,6 +79,7 @@ function buildSchools() {
     nameEn: 'Demo Model School',
     nameHi: 'डेमो मॉडल विद्यालय',
     category: 'Secondary',
+    stage: 'SECONDARY',
     management: 'GOVERNMENT',
     districtCode: 'D001',
     blockCode: 'B001',

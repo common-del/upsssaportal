@@ -6,12 +6,7 @@ import { AlertCircle, Scale } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getBatchSelfAssessmentScores, getBatchVerificationScores } from '@/lib/scoring';
 import { getAppealEligibility } from '@/lib/actions/finalization';
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
+import { stageCodeFor } from '@/lib/schoolStage';
 
 export default async function VerifierFeedbackPage() {
   const session = await auth();
@@ -33,11 +28,11 @@ export default async function VerifierFeedbackPage() {
 
   const school = await prisma.school.findUnique({
     where: { udise: schoolUdise },
-    select: { category: true },
+    select: { stage: true },
   });
   if (!school) return <EmptyWrap t={t} msg={t('notFound')} />;
 
-  const categoryCode = CATEGORY_TO_CODE[school.category] ?? 'PRIMARY';
+  const categoryCode = stageCodeFor(school.stage);
 
   const vSubmission = await prisma.verificationSubmission.findFirst({
     where: { cycleId: cycle.id, schoolUdise, status: 'SUBMITTED' },

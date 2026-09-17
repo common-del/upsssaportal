@@ -21,8 +21,8 @@ import { transitionRun } from '@/lib/verification/stateMachine';
  * Two rules run through everything here.
  *
  * The verifier never learns which school they are looking at. Every query in this file selects
- * only `udise` and `category` from the school and immediately reduces them through maskSchool,
- * so the name is not fetched rather than fetched and then withheld. A name that never enters the
+ * only `udise` and `stage` from the school and immediately reduces them through maskSchool, so
+ * the name is not fetched rather than fetched and then withheld. A name that never enters the
  * response cannot leak through a serialisation, a log line or a React devtools panel.
  *
  * The score stays hidden until the last decision is in. The brief asks for this so the number
@@ -96,7 +96,9 @@ async function myProfileId(): Promise<string | null> {
 export type DeskQueueRow = {
   runId: string;
   maskedCode: string;
-  category: string;
+  /** Which grades the school teaches, as a label. Was `category`, which for a bulk-register
+   *  school held the ownership type and put "Govt" in front of a screener. */
+  stage: string;
   /** Manual indicators still needing a decision. */
   remaining: number;
   /** Manual indicators already decided, so a meter can show progress rather than shortfall. */
@@ -123,8 +125,9 @@ export async function getDeskQueue(): Promise<DeskQueueRow[]> {
     select: {
       id: true,
       enteredStateAt: true,
-      // Only the two fields the mask needs. The name is not selected.
-      school: { select: { udise: true, category: true } },
+      // Only the two fields the mask needs. The name is not selected, and neither is the legacy
+      // category column, which carries ownership for every school the bulk register supplied.
+      school: { select: { udise: true, stage: true } },
       autoChecks: { select: { outcome: true } },
       deskDecisions: { select: { parameterId: true } },
     },
@@ -169,7 +172,7 @@ export async function getDeskCase(runId: string): Promise<DeskCase | null> {
       id: true,
       cycleId: true,
       schoolUdise: true,
-      school: { select: { udise: true, category: true } },
+      school: { select: { udise: true, stage: true } },
     },
   });
   if (!run) return null;

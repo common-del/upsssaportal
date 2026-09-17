@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { stageCodeFor } from '../src/lib/schoolStage';
 
 const prisma = new PrismaClient();
 
@@ -22,12 +23,6 @@ const prisma = new PrismaClient();
 const MARKER = 'demo-recording-tasks';
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
-
-const CATEGORY_TO_CODE: Record<string, string> = {
-  Primary: 'PRIMARY',
-  'Upper Primary': 'UPPER_PRIMARY',
-  Secondary: 'SECONDARY',
-};
 
 function hash(s: string): number {
   let h = 7;
@@ -119,7 +114,7 @@ async function main() {
   const hasRun = new Set(existing.map((r) => r.schoolUdise));
   const candidates = await prisma.selfAssessmentSubmission.findMany({
     where: { cycleId: cycle.id, status: 'SUBMITTED', schoolUdise: { notIn: [...hasRun, 'school'] } },
-    select: { school: { select: { udise: true, category: true } } },
+    select: { school: { select: { udise: true, stage: true } } },
     orderBy: { schoolUdise: 'asc' },
     take: CASES.length,
   });
@@ -134,7 +129,7 @@ async function main() {
   for (const [i, plan] of CASES.slice(0, candidates.length).entries()) {
     const school = candidates[i]!.school;
     const applicable = parameters.filter((p) =>
-      (p.applicability as string[]).includes(CATEGORY_TO_CODE[school.category] ?? 'PRIMARY'),
+      (p.applicability as string[]).includes(stageCodeFor(school.stage)),
     );
     if (applicable.length < plan.disputed) continue;
 

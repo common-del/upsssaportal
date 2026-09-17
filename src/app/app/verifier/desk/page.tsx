@@ -138,7 +138,7 @@ export default async function DeskQueuePage() {
                         {row.maskedCode}
                       </span>
                       <span className="ml-2 text-[11px]" style={{ color: INK_MUTED }}>
-                        {row.category}
+                        {row.stage}
                       </span>
                     </span>
                     <span className="mt-0.5 block text-xs" style={{ color: INK_MUTED }}>

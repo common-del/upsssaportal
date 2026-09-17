@@ -133,6 +133,9 @@ function TodayCard({ visit }: { visit: TodayVisit }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [standDown, setStandDown] = useState(false);
+  // What happened to the visit after standing down, known only on the turn that did it. On a
+  // later page load the card falls back to the line below, which is true either way.
+  const [handedOn, setHandedOn] = useState<boolean | null>(null);
 
   function confirmNoConflict() {
     setError('');
@@ -148,6 +151,7 @@ function TodayCard({ visit }: { visit: TodayVisit }) {
     startTransition(async () => {
       const res = await declareConflict(visit.visitId, true);
       if (!res.success) return setError(res.error ?? 'Could not record it.');
+      setHandedOn(res.reallocated ?? false);
       router.refresh();
     });
   }
@@ -191,7 +195,11 @@ function TodayCard({ visit }: { visit: TodayVisit }) {
 
         {visit.recusedAt ? (
           <p className="mt-3 rounded-lg bg-[#FBE9E7] px-3 py-2 text-sm font-semibold" style={{ color: RED }}>
-            You stood down from this visit. It is waiting to be reassigned.
+            {handedOn === true
+              ? 'You stood down from this visit. It has gone to another verifier.'
+              : handedOn === false
+                ? 'You stood down from this visit. Nobody else is eligible for this school, so the Authority has been asked to send somebody.'
+                : 'You stood down from this visit. It is no longer yours.'}
           </p>
         ) : inProgress ? (
           <>

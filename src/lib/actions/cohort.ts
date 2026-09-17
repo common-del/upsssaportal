@@ -3,8 +3,9 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { requireRole, requireOngroundVerifier } from '@/lib/authz';
-import { planCohort, PRIORITY_LABEL, type CohortCandidate, type CohortPlan } from '@/lib/verification/cohort';
-import { assignmentFor, isExcluded, revealMomentFor, type Assignment } from '@/lib/verification/reveal';
+import { planCohort, PRIORITY_LABEL, type CohortCandidate } from '@/lib/verification/cohort';
+import { assignmentFor, revealMomentFor, type Assignment } from '@/lib/verification/reveal';
+import { eligibleFor, loadFieldVerifiers, placeReplacement } from '@/lib/verification/placement';
 import { transitionRun } from '@/lib/verification/stateMachine';
 
 /**
@@ -16,15 +17,48 @@ import { transitionRun } from '@/lib/verification/stateMachine';
  * identity is not fetched-and-hidden; before the moment it is not fetched.
  */
 
+/** One district's share of the draw, with enough beside it to say whether the share is
+ *  deliverable. A count on its own cannot: 2,914 visits is fine with forty verifiers and
+ *  impossible with four. */
+export type DistrictLoadRow = {
+  code: string;
+  name: string;
+  count: number;
+  /** Certified field verifiers whose roster covers this district and who are not excluded from
+   *  it outright. Block-level and school-level exclusions are not counted here: they are
+   *  per-school facts, and the draw reports what it actually skipped. */
+  verifiers: number;
+  /** Visits each of them would carry. Null when there are none, which is the case worth seeing. */
+  perVerifier: number | null;
+  /** Share against the average district's share. 2.5 means two and a half times it. */
+  timesAverage: number;
+};
+
+/** What the last press of the button produced, or null if this year has not been drawn. */
+export type DrawRecord = {
+  at: string;
+  byName: string | null;
+  selectedCount: number;
+  visitsCreated: number;
+  unassignedCount: number;
+  travelWindowStart: string;
+  travelWindowEnd: string;
+};
+
 export type CohortPreview = {
-  plan: Omit<CohortPlan, 'selected'> & {
-    selected: { runId: string; maskedDistrict: string; priority: number; priorityLabel: string }[];
-  };
+  size: number;
+  deferredCount: number;
+  candidateCount: number;
+  byPriority: Record<number, number>;
+  districts: DistrictLoadRow[];
+  /** Districts in the draw with nobody rostered to visit them, and the schools stranded there. */
+  districtsWithoutVerifier: { code: string; name: string; count: number }[];
+  schoolsWithoutVerifier: number;
   basis: string;
   percentage: number;
   registerCount: number;
   intakeCount: number;
-  candidateCount: number;
+  drawn: DrawRecord | null;
 };
 
 async function loadCandidates(): Promise<{
@@ -39,7 +73,14 @@ async function loadCandidates(): Promise<{
   const runs = await prisma.assessmentCycleRun.findMany({
     // Both queues feed the cohort. CENSUS_QUEUE is the rotation; FIELD_COHORT already holds the
     // fast-tracked cases that sweepDeadlines and the walkthrough pushed in ahead of the draw.
-    where: { cycleId: cycle.id, state: { in: ['CENSUS_QUEUE', 'FIELD_COHORT'] } },
+    //
+    // A run that already has a visit of any kind is not a candidate. Without that condition a
+    // second press of the button redrew every school already in the cohort and wrote a second
+    // visit for each: FieldVisit has no unique key on runId, and a FIELD_COHORT to FIELD_COHORT
+    // move is a silent no-op, so nothing downstream refused it. A school whose only visit was
+    // recused is excluded here too and is put back through reallocation instead, because the
+    // draw's round-robin does not know who has already stood down from that school.
+    where: { cycleId: cycle.id, state: { in: ['CENSUS_QUEUE', 'FIELD_COHORT'] }, fieldVisits: { none: {} } },
     select: {
       id: true,
       schoolUdise: true,
@@ -72,7 +113,14 @@ async function loadCandidates(): Promise<{
   };
 }
 
-/** The plan, without committing it. Shown on the build screen before anyone presses the button. */
+/**
+ * The plan, without committing it. Shown on the draw screen before anyone presses the button.
+ *
+ * Returns the shape of the cohort rather than the list of schools in it. The Authority may see
+ * identities, but 87,542 rows answer no question anybody has at this point, and the two things
+ * that decide whether to press the button are where the visits fall and whether anyone is there
+ * to make them.
+ */
 export async function previewCohort(): Promise<CohortPreview | null> {
   if (!(await requireRole('SSSA_ADMIN'))) return null;
 
@@ -91,24 +139,83 @@ export async function previewCohort(): Promise<CohortPreview | null> {
     intakeCount: loaded.intakeCount,
   });
 
+  const [districtRecords, verifiers, lastDraw] = await Promise.all([
+    prisma.district.findMany({ select: { code: true, nameEn: true } }),
+    loadFieldVerifiers(),
+    prisma.cohortDraw.findFirst({
+      where: { cycleId: loaded.cycleId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        createdAt: true,
+        selectedCount: true,
+        visitsCreated: true,
+        unassignedCount: true,
+        travelWindowStart: true,
+        travelWindowEnd: true,
+        drawnBy: { select: { name: true } },
+      },
+    }),
+  ]);
+  const districtName = new Map(districtRecords.map((d) => [d.code, d.nameEn]));
+
+  const drawnCodes = Object.keys(plan.byDistrict);
+  const average = drawnCodes.length === 0 ? 0 : plan.size / drawnCodes.length;
+
+  const districts: DistrictLoadRow[] = drawnCodes
+    .map((code) => {
+      const count = plan.byDistrict[code]!;
+      // An empty roster is read as statewide, the same reading the allocation loop uses. A
+      // standing exclusion naming the district removes that person from it whatever the roster
+      // says.
+      const cover = verifiers.filter(
+        (v) =>
+          (v.districts.length === 0 || v.districts.includes(code)) &&
+          !v.exclusions.some((e) => e.districtCode === code),
+      ).length;
+      return {
+        code,
+        name: districtName.get(code) ?? code,
+        count,
+        verifiers: cover,
+        perVerifier: cover === 0 ? null : Math.round(count / cover),
+        timesAverage: average === 0 ? 0 : count / average,
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const districtsWithoutVerifier = districts
+    .filter((d) => d.verifiers === 0)
+    .map((d) => ({ code: d.code, name: d.name, count: d.count }));
+
   return {
-    plan: {
-      ...plan,
-      // The preview is for SSSA, who may see identities, but the list is long and the useful
-      // information is the shape of the cohort rather than which schools are in it.
-      selected: plan.selected.slice(0, 200).map((c) => ({
-        runId: c.runId,
-        maskedDistrict: c.districtCode,
-        priority: c.priority,
-        priorityLabel: PRIORITY_LABEL[c.priority],
-      })),
-    },
+    size: plan.size,
+    deferredCount: plan.deferredCount,
+    candidateCount: loaded.candidates.length,
+    byPriority: plan.byPriority,
+    districts,
+    districtsWithoutVerifier,
+    schoolsWithoutVerifier: districtsWithoutVerifier.reduce((t, d) => t + d.count, 0),
     basis,
     percentage,
     registerCount: loaded.registerCount,
     intakeCount: loaded.intakeCount,
-    candidateCount: loaded.candidates.length,
+    drawn: lastDraw
+      ? {
+          at: lastDraw.createdAt.toISOString(),
+          byName: lastDraw.drawnBy?.name ?? null,
+          selectedCount: lastDraw.selectedCount,
+          visitsCreated: lastDraw.visitsCreated,
+          unassignedCount: lastDraw.unassignedCount,
+          travelWindowStart: lastDraw.travelWindowStart.toISOString(),
+          travelWindowEnd: lastDraw.travelWindowEnd.toISOString(),
+        }
+      : null,
   };
+}
+
+/** The queue order, for the screen. Exported so the page cannot invent its own labels. */
+export async function cohortPriorityLabels(): Promise<{ priority: number; label: string }[]> {
+  return ([1, 2, 3] as const).map((p) => ({ priority: p, label: PRIORITY_LABEL[p] }));
 }
 
 export type BuildResult = {
@@ -160,15 +267,7 @@ export async function buildCohort(
   });
 
   // Field verifiers, with their district rosters and their standing exclusions.
-  const fieldVerifiers = await prisma.verifierProfile.findMany({
-    where: { cell: 'FIELD', certification: 'CERTIFIED', deEmpanelledAt: null },
-    select: {
-      id: true,
-      userId: true,
-      exclusions: { select: { districtCode: true, blockCode: true, schoolUdise: true } },
-      user: { select: { verifierDistricts: { select: { districtCode: true } } } },
-    },
-  });
+  const fieldVerifiers = await loadFieldVerifiers();
 
   const schools = await prisma.school.findMany({
     where: { udise: { in: plan.selected.map((c) => c.schoolUdise) } },
@@ -186,12 +285,9 @@ export async function buildCohort(
     if (!school) continue;
 
     // The standing eligibility rule, applied here rather than left to the declaration prompt.
-    // The prompt catches what the roster could not know; this catches what it could.
-    const eligible = fieldVerifiers.filter((v) => {
-      const roster = v.user.verifierDistricts.map((d) => d.districtCode);
-      if (roster.length > 0 && !roster.includes(school.districtCode)) return false;
-      return !isExcluded(v.exclusions, school);
-    });
+    // The prompt catches what the roster could not know; this catches what it could. Shared with
+    // the reallocation path so the two cannot disagree about who may be sent where.
+    const eligible = eligibleFor(fieldVerifiers, school);
     if (eligible.length === 0) excludedSkips += 1;
 
     // Round-robin across the eligible pool. Not a workload optimiser: capacity balancing is the
@@ -224,7 +320,24 @@ export async function buildCohort(
     await transitionRun(candidate.runId, 'FIELD_COHORT', { actorUserId: actor.userId });
   }
 
+  // The draw itself, recorded. Without it the only evidence that a year has been drawn is the
+  // presence of visits, which cannot tell a cohort the Authority drew from schools the
+  // walkthrough fast-tracked in one at a time, and leaves the screen looking identical before
+  // and after the most consequential button in the programme.
+  await prisma.cohortDraw.create({
+    data: {
+      cycleId: loaded.cycleId,
+      drawnByUserId: actor.userId,
+      travelWindowStart: start,
+      travelWindowEnd: end,
+      selectedCount: plan.size,
+      visitsCreated,
+      unassignedCount: unassigned,
+    },
+  });
+
   revalidatePath('/app/sssa/cohort');
+  revalidatePath('/app/sssa/year');
   return { success: true, visitsCreated, unassigned, excludedSkips };
 }
 
@@ -319,16 +432,24 @@ export async function getMyAssignments(): Promise<Assignment[]> {
 /**
  * The conflict-of-interest declaration at the moment of reveal, and the recuse path.
  *
- * Recusal is recorded, not erased. `recusedAt` is what marks a visit as needing reallocation, and
- * the original assignee stays on the row: who was sent to which school, and who stood down from
- * it, is exactly the history an integrity question would ask about later. Deleting the visit or
- * blanking the assignee would silently drop a school out of the year's cohort, which is the
- * failure nobody would notice.
+ * Recusal is recorded, not erased. `recusedAt` stays on the original row and the original
+ * assignee stays with it: who was sent to which school, and who stood down from it, is exactly
+ * the history an integrity question would ask about later. Deleting the visit or blanking the
+ * assignee would silently drop a school out of the year's cohort.
+ *
+ * Standing down now also hands the visit on. Until this was added, `recusedAt` was a mark nothing
+ * read: every query in the app filters recused rows out, so the school left the cohort without
+ * anybody being told, and the verifier's own card said it was "waiting to be reassigned" when
+ * nothing was going to reassign it. The replacement goes to the eligible verifier carrying the
+ * fewest visits, never to anybody who has already stood down from this school, and never today,
+ * since a recusal is normally declared at 07:00 on the morning of the visit. When there is
+ * nobody left, the school stays in the cohort with no visit and appears on the Authority's
+ * verification year screen, which is the honest outcome and not a silent one.
  */
 export async function declareConflict(
   visitId: string,
   hasConflict: boolean,
-): Promise<{ success: boolean; error?: string; recused?: boolean }> {
+): Promise<{ success: boolean; error?: string; recused?: boolean; reallocated?: boolean }> {
   const actor = await requireOngroundVerifier();
   if (!actor) return { success: false, error: 'Not authorised.' };
 
@@ -340,7 +461,7 @@ export async function declareConflict(
 
   const visit = await prisma.fieldVisit.findFirst({
     where: { id: visitId, profileId: profile.id },
-    select: { id: true, revealAt: true },
+    select: { id: true, revealAt: true, runId: true },
   });
   if (!visit) return { success: false, error: 'Assignment not found.' };
 
@@ -359,5 +480,9 @@ export async function declareConflict(
   });
 
   revalidatePath('/app/verifier/assignments');
-  return { success: true, recused: hasConflict };
+  if (!hasConflict) return { success: true, recused: false };
+
+  const placement = await placeReplacement(visit.runId);
+  revalidatePath('/app/sssa/year');
+  return { success: true, recused: true, reallocated: placement.placed };
 }

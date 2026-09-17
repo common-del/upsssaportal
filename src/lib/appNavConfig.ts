@@ -66,7 +66,10 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
       // Exception-first self assessment monitoring: built, working, and in no sidebar
       // until now.
       { href: '/app/sssa/monitoring', label: 'Monitoring' },
-      { href: '/app/sssa/cohort', label: 'Field Cohort' },
+      // The draw is a once-a-year decision, so it stopped being a permanent tab and became a row
+      // in the year's sequence. The draw screen itself lives on underneath, reached from that
+      // row, which is why the year owns its URL too.
+      { href: '/app/sssa/year', label: 'Verification Year', also: ['/app/sssa/cohort'] },
       { href: '/app/sssa/reporting', label: 'Reporting' },
     ],
   },

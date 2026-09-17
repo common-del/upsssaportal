@@ -49,6 +49,7 @@ model User {
   integrityAbout         IntegrityReport[]        @relation("IntegritySubject")
   qualityChecksMade      QualityCheck[]           @relation("QualityChecker")
   deEmpanelments         VerifierProfile[]        @relation("DeEmpaneller")
+  cohortDraws            CohortDraw[]             @relation("CohortDrawnBy")
 }
 
 model Mandal {
@@ -246,6 +247,7 @@ model Cycle {
   verifications       VerificationSubmission[]
   verifierAssignments VerifierAssignment[]
   cycleRuns           AssessmentCycleRun[]
+  cohortDraws         CohortDraw[]
 }
 
 model Framework {
@@ -1235,6 +1237,10 @@ model FieldVisit {
   /// Geotag of the sign-off, so a report filed from elsewhere is visible.
   signOffLat         Float?
   signOffLng         Float?
+  /// Set when this visit exists because an earlier one was recused. A recusal is never erased,
+  /// so a replacement is a new row pointing at the one it takes over from: who was sent, who
+  /// stood down, and who went instead all stay on the record.
+  replacesVisitId    String?   @unique
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -1242,9 +1248,36 @@ model FieldVisit {
   profile    VerifierProfile    @relation(fields: [profileId], references: [id])
   findings   FieldFinding[]
   spotChecks StudentSpotCheck[]
+  replaces   FieldVisit?        @relation("VisitReplacement", fields: [replacesVisitId], references: [id])
+  replacedBy FieldVisit?        @relation("VisitReplacement")
 
   @@index([profileId, revealAt])
   @@index([districtCode, notifiedDate])
+  @@index([runId, recusedAt])
+}
+
+/// One press of the draw button: which year it was for, who pressed it, and what came out.
+///
+/// Stored rather than inferred from the visits it created, because the screen's first job is to
+/// say whether this year's cohort has been drawn at all. Reading that off the visit table gives
+/// a number but not a decision, and cannot tell a cohort drawn by the Authority from schools
+/// fast-tracked into it one at a time by an unresolved walkthrough.
+model CohortDraw {
+  id                String   @id @default(cuid())
+  cycleId           String
+  drawnByUserId     String?
+  travelWindowStart DateTime
+  travelWindowEnd   DateTime
+  selectedCount     Int
+  visitsCreated     Int
+  /// Selected schools that ended the draw with nobody allocated to them.
+  unassignedCount   Int
+  createdAt         DateTime @default(now())
+
+  cycle   Cycle @relation(fields: [cycleId], references: [id])
+  drawnBy User? @relation("CohortDrawnBy", fields: [drawnByUserId], references: [id])
+
+  @@index([cycleId, createdAt])
 }
 
 model FieldFinding {

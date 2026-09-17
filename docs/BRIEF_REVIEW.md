@@ -1140,3 +1140,72 @@ is on screen.
 The bar replaced the public DirectoryFilters component, which rendered two of the five selects
 it supports and had to be told to hide the rest. category, type and performance are still read
 from the URL, because other pages link in with them, but they have no control here.
+
+## 38. Field Cohort becomes a step in the year, and a recusal stops losing the school, 17 September 2026
+
+Asked what the Field Cohort tab was for, the honest answer was that the screen did not say. It
+opened on an amber box about whether 33% means 33% of the register or 33% of the year's intake,
+then showed four counts, a list of raw district codes and a button labelled "Build cohort". It
+never stated what the button did, and it looked identical before and after the press.
+
+Two defects were found alongside the design problem, and both are fixed here.
+
+### Pressing the button twice created a second visit for every school
+
+`loadCandidates` selected runs in `CENSUS_QUEUE` **or** `FIELD_COHORT`. `buildCohort` created a
+`FieldVisit` unconditionally for everything the plan selected. `FieldVisit` has no unique key on
+`runId`, and `transitionRun` treats a `FIELD_COHORT` to `FIELD_COHORT` move as a silent no-op, so
+nothing downstream refused it. A second press would have given thousands of schools two visits,
+likely to two different verifiers, each holding a sealed card for the same school.
+
+The candidate query now excludes any run that already carries a visit of any kind
+(`fieldVisits: { none: {} }`). Drawing again adds only schools that have joined the queue since,
+which is the behaviour the screen now states in words.
+
+### A recusal silently dropped the school out of the year
+
+`recusedAt` was written and nothing read it. Every other query in the app filters recused rows
+out, so the school left the cohort with nobody told, while the verifier's own card said it was
+"waiting to be reassigned". Nothing was going to reassign it.
+
+Standing down now hands the visit on. `placeReplacement` writes a **new** visit row pointing back
+at the recused one through `replacesVisitId`, rather than mutating it: who was sent, who stood
+down and who went instead all stay on the record, which is the first thing an integrity question
+asks about. The replacement goes to the eligible verifier carrying the fewest open visits, never
+to anybody who has already stood down from that school, and never today, because a recusal is
+normally declared at 07:00 on the morning of the visit.
+
+Least-loaded here, round-robin in the draw. They are different decisions: the draw allocates the
+whole year at once, where round-robin is already even, and a replacement allocates one, where the
+fair answer is whoever is carrying least.
+
+When nobody is left, the school appears on the verification year screen with a per-row picker.
+The list is deliberately not paginated: a list long enough to need a pager is not a paging
+problem, it is a field cell too small for the cohort that was drawn.
+
+### The tab becomes a row
+
+Field Cohort was a permanent sidebar item for a button pressed once a year. It is now a row in a
+**Verification Year** screen, in its place after self assessment, desk screening and walkthroughs
+and before field visits and publication. Before the draw the row carries the button; after it, it
+carries the date, who pressed it, the travel window and anything still unplaced. The draw screen
+lives on at `/app/sssa/cohort`, reached from that row, and the year owns its highlighting.
+
+`CohortDraw` records the press: cycle, actor, window, selected, created, unassigned. Stored
+rather than inferred from the visits it produced, because a count of visits cannot distinguish a
+cohort the Authority drew from schools the walkthrough fast-tracked in one at a time.
+
+### The draw screen says what it does
+
+The first block on the screen is now three numbers with sentences attached: how many schools
+move, how many visits are created, and how many are in districts with nobody rostered to visit
+them. District load carries names, a bar and the verifier count beside it, because a cohort
+correctly sized statewide is still undeliverable in a district drawing three times its share, and
+unreadable as `D001`. The percentage argument is the last line on the page, which is its weight.
+
+Districts with no verifier are counted at district level only. Block-level and school-level
+exclusions are per-school facts; the draw reports what it actually skipped rather than the
+preview guessing at it.
+
+"Build" became "draw" throughout, including the typed confirmation. Build named the machinery.
+Draw names what is happening to the schools.

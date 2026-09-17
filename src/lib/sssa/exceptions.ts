@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { buildBehindBlocks } from '@/lib/sssa/cycleCounts';
 
 /**
  * PLACEHOLDER THRESHOLDS — these are policy decisions, not design ones.
@@ -59,36 +60,10 @@ export async function buildExceptions(
   if (!cycleId) return [];
   const districtCode = scope?.districtCode;
 
-  const [
-    blocksWithSubmissionRows,
-    allBlocks,
-    schoolsByBlock,
-    scoredResults,
-    gapResults,
-    verifiers,
-    assignments,
-  ] = await Promise.all([
-    // Distinct blocks that have at least one submitted assessment. Done as a
-    // relation filter rather than fetching every submitted UDISE and passing them
-    // back as an IN list, which would grow to tens of thousands as the cycle fills.
-    prisma.school.findMany({
-      where: {
-        selfAssessments: { some: { cycleId, status: 'SUBMITTED' } },
-        ...(districtCode ? { districtCode } : {}),
-      },
-      select: { blockCode: true },
-      distinct: ['blockCode'],
-    }),
-    prisma.block.findMany({
-      where: districtCode ? { districtCode } : undefined,
-      select: { code: true, nameEn: true, district: { select: { nameEn: true } } },
-      orderBy: { nameEn: 'asc' },
-    }),
-    prisma.school.groupBy({
-      by: ['blockCode'],
-      _count: { _all: true },
-      ...(districtCode ? { where: { districtCode } } : {}),
-    }),
+  // The three queries that fed the old silent-blocks group are gone with it:
+  // buildBehindBlocks answers the same question and does its own fetching.
+  const [behindBlocks, scoredResults, gapResults, verifiers, assignments] = await Promise.all([
+    buildBehindBlocks(districtCode),
     prisma.result.findMany({
       where: {
         cycleId,
@@ -122,18 +97,13 @@ export async function buildExceptions(
     prisma.verifierAssignment.findMany({ where: { cycleId }, select: { verifierUserId: true } }),
   ]);
 
-  const blockSchoolCount = new Map(schoolsByBlock.map((r) => [r.blockCode, r._count._all]));
-
-  // 1. Blocks where nothing has been submitted at all.
-  const blocksWithSubmissions = new Set(blocksWithSubmissionRows.map((s) => s.blockCode));
-  const silentBlocks = allBlocks
-    .filter((b) => !blocksWithSubmissions.has(b.code))
-    .map((b) => ({
-      block: b.nameEn,
-      district: b.district.nameEn,
-      schools: blockSchoolCount.get(b.code) ?? 0,
-    }))
-    .sort((a, b) => b.schools - a.schools);
+  // 1. Blocks furthest from having their schools open the form.
+  //
+  // This replaced a group that counted only the blocks at exactly zero. A block where two of
+  // sixty have started is not meaningfully better off, and ranking by how many have not started
+  // puts the biggest chase at the top. It shares buildBehindBlocks with the table that renders
+  // it, so the card's count and the rows beneath it cannot disagree — which they would the
+  // moment two definitions of "behind" existed.
 
   // 2. Districts sitting in the Uday band, ignoring those with too little data
   //    to judge. Averaged in memory from one query rather than 75.
@@ -187,18 +157,24 @@ export async function buildExceptions(
 
   return [
     {
-      id: 'silent-blocks',
-      count: silentBlocks.length,
-      title: 'blocks with no submissions at all',
-      action: 'Needs chasing',
+      id: 'behind-blocks',
+      count: behindBlocks.length,
+      title: 'blocks with the most schools yet to open the form',
+      action: 'Remind them',
       tone: 'critical',
+      // The Monitoring page renders this group through a slot, so these columns are the
+      // fallback if that slot is ever removed rather than what is normally shown.
       columns: [
         { key: 'block', label: 'Block' },
         { key: 'district', label: 'District' },
         { key: 'schools', label: 'Schools', numeric: true },
       ],
-      rows: silentBlocks.slice(0, MAX_ROWS),
-      clearMessage: 'Every block has at least one submission.',
+      rows: behindBlocks.slice(0, MAX_ROWS).map((b) => ({
+        block: b.name,
+        district: b.district,
+        schools: b.schools,
+      })),
+      clearMessage: 'Every block has schools that have opened the form.',
     },
     {
       id: 'low-districts',

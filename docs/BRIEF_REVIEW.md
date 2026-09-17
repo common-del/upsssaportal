@@ -1066,3 +1066,29 @@ deliberate one.
 /app/verifier/recording-tasks still redirect. src/lib/sssa/compliance.ts is deleted rather than
 left unreferenced; the school's own profileStatus.ts keeps the four-part rule and its comment no
 longer points at a file that has gone.
+
+## 36. The blocks furthest behind move to Monitoring, 17 September 2026
+
+A table of blocks with a chase button is monitoring, not a register of schools, and it was
+sitting behind a tab on the Schools page. It moves to Monitoring, which already reported a
+weaker version of the same thing.
+
+That weaker version was the exception group silent-blocks: blocks with no submissions at all,
+over Block, District and Schools, and no way to act on any of it. Furthest behind counts the
+same blocks, ranks them by how many schools have not started rather than only finding the ones
+at exactly zero, and carries the reminder. So it replaces that group rather than joining it, and
+Monitoring keeps four cards.
+
+Both now read buildBehindBlocks, so the card's count and the table beneath it cannot disagree.
+Two definitions of "behind" in one page is how a heading comes to contradict the rows under it.
+Removing the old group also removed three queries that nothing else used.
+
+The exception table could not hold a Remind button: its rows are a record of strings and
+numbers, with nowhere for a control. ExceptionMonitor now takes a slots map, so a group can hand
+in a panel that renders itself. BehindBlocks is server-rendered on the page and passed in as a
+node, which keeps the data fetching where it was.
+
+Schools loses its tab strip. With Furthest behind gone and Compliance folded in the day before,
+the register is the only view left, and a strip with one tab is furniture. SchoolsTabs is
+deleted. The district select inside the block table no longer writes tab=behind, which would
+have been a dead parameter on a page with no tabs.

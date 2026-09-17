@@ -2,10 +2,8 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/db';
 import { DirectoryFilters } from '@/components/public/DirectoryFilters';
-import { CycleFunnel, BehindBlocks } from '@/components/sssa/CycleFunnel';
-import { SchoolsTabs, type SchoolsTab } from '@/components/sssa/SchoolsTabs';
-import { lastRemindedByBlock } from '@/lib/actions/reminders';
-import { buildCycleCounts, buildBehindBlocks, type CycleCounts, type BehindBlock } from '@/lib/sssa/cycleCounts';
+import { CycleFunnel } from '@/components/sssa/CycleFunnel';
+import { buildCycleCounts, type CycleCounts } from '@/lib/sssa/cycleCounts';
 import { deriveResultFields } from '@/lib/public/schoolProfile';
 import { MANAGEMENT_LABELS_SHORT, isManagementCode } from '@/lib/schoolManagement';
 import { SCHOOLS, ALL_DISTRICTS } from '@/lib/public/dummyData';
@@ -78,7 +76,6 @@ export default async function SssaSchoolDirectoryPage(props: {
   const searchParams = await props.searchParams;
   const locale = await getLocale();
 
-  const tab: SchoolsTab = (searchParams.tab as string) === 'behind' ? 'behind' : 'register';
   const district = (searchParams.district as string) || '';
   const block = (searchParams.block as string) || '';
   const category = (searchParams.category as string) || '';
@@ -92,17 +89,9 @@ export default async function SssaSchoolDirectoryPage(props: {
   let rows: DirectoryRow[] = [];
   let usingFallback = false;
   let funnel: CycleCounts | null = null;
-  let behind: BehindBlock[] = [];
-  let lastReminded: Record<string, string> = {};
 
   try {
-    [funnel, behind, lastReminded] = await Promise.all([
-      buildCycleCounts(),
-      buildBehindBlocks(district),
-      // Only needed by the Furthest behind tab, so it is not paid for on the
-      // register, which is the tab most visits land on.
-      tab === 'behind' ? lastRemindedByBlock() : Promise.resolve({}),
-    ]);
+    funnel = await buildCycleCounts();
 
     const districtRecords = await prisma.district.findMany({ orderBy: { nameEn: 'asc' } });
     districts = districtRecords.map((d) => ({ code: d.code, nameEn: d.nameEn, nameHi: d.nameHi }));
@@ -248,28 +237,11 @@ export default async function SssaSchoolDirectoryPage(props: {
         <p className="mt-1 text-sm text-gray-500">The register and cycle progress</p>
       </header>
 
-      {/* The counts sit above the tabs because both tabs are views of the register
-          — inside one of them they would read as describing only that view. */}
+      {/* The tab strip is gone. Furthest behind moved to Monitoring, where a table of blocks
+          with a chase button belongs, and Compliance folded into the register, so there is one
+          view left and a strip with one tab is furniture. */}
       {funnel && <CycleFunnel counts={funnel} />}
 
-      <SchoolsTabs
-        active={tab}
-        registerCount={funnel?.totalSchools ?? 0}
-        behindCount={behind.length}
-        query={{ district, block, q }}
-      />
-
-      {tab === 'behind' && (
-        <BehindBlocks
-          blocks={behind}
-          district={district}
-          districts={districts}
-          lastReminded={lastReminded}
-        />
-      )}
-
-      {tab === 'register' && (
-        <>
       {usingFallback && (
         <p className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">
           Live school records are temporarily unavailable. Showing a sample of schools instead.
@@ -396,8 +368,6 @@ export default async function SssaSchoolDirectoryPage(props: {
             <span />
           )}
         </div>
-      )}
-        </>
       )}
     </div>
   );

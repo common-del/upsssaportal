@@ -1,7 +1,10 @@
 import { Suspense } from 'react';
 import { prisma } from '@/lib/db';
 import { buildExceptions } from '@/lib/sssa/exceptions';
+import { buildBehindBlocks } from '@/lib/sssa/cycleCounts';
+import { lastRemindedByBlock } from '@/lib/actions/reminders';
 import { ExceptionMonitor } from '@/components/sssa/ExceptionMonitor';
+import { BehindBlocks } from '@/components/sssa/CycleFunnel';
 
 /**
  * Self Assessment Monitoring, rebuilt exception-first.
@@ -10,6 +13,11 @@ import { ExceptionMonitor } from '@/components/sssa/ExceptionMonitor';
  * which made finding the handful that need chasing the officer's job. It now
  * opens on what is wrong. The funnel moved to the School Directory, where the
  * full list already lives, so neither is duplicated.
+ *
+ * The blocks furthest behind arrived here from the Schools page on 17 September 2026. It was a
+ * table of blocks with a chase button, which is monitoring rather than a register of schools,
+ * and this page already carried a weaker version of the same finding. Its panel is passed in as
+ * a slot because the generic exception table has nowhere to put a Remind button.
  */
 export default async function MonitoringPage({
   searchParams,
@@ -27,7 +35,15 @@ export default async function MonitoringPage({
     );
   }
 
-  const groups = await buildExceptions(cycle.id);
+  // The district select on the block table writes ?district=…, and the reminder history is
+  // only needed by that one panel.
+  const districtFilter = sp.district ?? '';
+  const [groups, behind, lastReminded, districtRecords] = await Promise.all([
+    buildExceptions(cycle.id),
+    buildBehindBlocks(districtFilter),
+    lastRemindedByBlock(),
+    prisma.district.findMany({ select: { code: true, nameEn: true }, orderBy: { nameEn: 'asc' } }),
+  ]);
 
   // Analytics' Low/High Performing tiles still link in with ?performance=…, so
   // that lands on the closest exception rather than 404-ing on a dead filter.
@@ -45,7 +61,20 @@ export default async function MonitoringPage({
       </header>
 
       <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
-        <ExceptionMonitor groups={groups} selectedId={selectedId} />
+        <ExceptionMonitor
+          groups={groups}
+          selectedId={selectedId}
+          slots={{
+            'behind-blocks': (
+              <BehindBlocks
+                blocks={behind}
+                district={districtFilter}
+                districts={districtRecords}
+                lastReminded={lastReminded}
+              />
+            ),
+          }}
+        />
       </Suspense>
     </div>
   );

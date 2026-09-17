@@ -18,10 +18,17 @@ const TONE: Record<ExceptionGroup['tone'], { bar: string; word: string }> = {
  */
 export function ExceptionMonitor({
   groups,
+  slots,
   selectedId,
 }: {
   groups: ExceptionGroup[];
   selectedId: string;
+  /**
+   * Panels that render themselves, keyed by group id, used where a finding carries an action
+   * the generic table cannot: a row of numbers has nowhere to put a Remind button. The panel is
+   * server-rendered and handed in as a node, so the data fetching stays on the page.
+   */
+  slots?: Record<string, React.ReactNode>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -78,6 +85,8 @@ export function ExceptionMonitor({
           </h2>
           {selected.count === 0 ? (
             <p className="mt-3 text-sm text-gray-600">{selected.clearMessage}</p>
+          ) : slots?.[selected.id] ? (
+            slots[selected.id]
           ) : (
             <>
               <p className="mt-1 text-sm text-gray-500">

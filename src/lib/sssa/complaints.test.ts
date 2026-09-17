@@ -63,6 +63,12 @@ describe('filterComplaints', () => {
     expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, q: '  ALLAHABAD ' }).map((r) => r.id)).toEqual(['b']);
   });
 
+  it('searches the role shown in its own column', () => {
+    // "Verifier" appears nowhere in these rows except the role, so this isolates that path.
+    // "Public" would not: one of the schools is called Allahabad Public School.
+    expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, q: 'verifier' }).map((r) => r.id)).toEqual(['c', 'd']);
+  });
+
   it('filters by district', () => {
     expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, district: 'Varanasi' }).map((r) => r.id)).toEqual(['a', 'c']);
   });

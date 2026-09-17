@@ -1,5 +1,10 @@
 import Link from 'next/link';
-import { buildComplaints, type ComplaintFilterValues, type ComplaintRow } from '@/lib/sssa/complaints';
+import {
+  buildComplaints,
+  SOURCE_LABEL,
+  type ComplaintFilterValues,
+  type ComplaintRow,
+} from '@/lib/sssa/complaints';
 import { prisma } from '@/lib/db';
 import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
 import { RunEscalationsButton } from '@/components/tickets/RunEscalationsButton';
@@ -119,6 +124,7 @@ export default async function ComplaintsPage({
                 <thead>
                   <tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Raised by</th>
+                    <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Role</th>
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">About</th>
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">District</th>
                     <th className="border-b border-gray-100 px-4 py-3 text-left font-bold">Complaint type</th>
@@ -129,7 +135,7 @@ export default async function ComplaintsPage({
                 <tbody>
                   {data.rows.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-gray-500">
+                      <td colSpan={7} className="px-4 py-6 text-gray-500">
                         No complaint matches these filters.
                       </td>
                     </tr>
@@ -205,11 +211,18 @@ function Row({ row }: { row: ComplaintRow }) {
       className="border-t border-gray-100 first:border-t-0 hover:bg-gray-50"
       style={waiting ? { backgroundColor: '#FDF2F1' } : undefined}
     >
+      <td className="px-4 py-3 font-semibold text-gray-900">{row.raisedBy}</td>
       <td className="px-4 py-3">
-        <span className="block text-[12.5px] font-semibold" style={{ color: inside ? GOLD_INK : '#4B5563' }}>
-          {inside ? 'A verifier' : 'The public'}
+        <span
+          className="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold"
+          style={
+            inside
+              ? { backgroundColor: '#FDF3DC', color: GOLD_INK }
+              : { backgroundColor: '#F3F4F6', color: '#4B5563' }
+          }
+        >
+          {SOURCE_LABEL[row.source]}
         </span>
-        <span className="block text-[11.5px] text-gray-400">{row.raisedBy}</span>
       </td>
       <td className="px-4 py-3">
         <Link href={row.href} className="font-semibold hover:underline" style={{ color: NAVY }}>

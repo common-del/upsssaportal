@@ -30,12 +30,21 @@ export const INDUCEMENT_TYPE = 'Inducement or pressure';
  *  every phrase anybody has ever used. */
 export type ComplaintSource = 'PUBLIC' | 'VERIFIER';
 
+/** How the group reads in a table cell. Short nouns rather than the filter's fuller phrases,
+ *  because a column of "A parent or the public" is a column of noise. */
+export const SOURCE_LABEL: Record<ComplaintSource, string> = {
+  PUBLIC: 'Public',
+  VERIFIER: 'Verifier',
+};
+
 export type ComplaintRow = {
   id: string;
   href: string;
   source: ComplaintSource;
-  /** The person, as far as the record knows them: a typed role for the public, a name for a
-   *  verifier. A verifier who reports their own supervisor is named on the record. */
+  /** The person's name. A verifier who reports their own supervisor is named on the record, and
+   *  a member of the public is named if they gave one. Their own description of themselves, the
+   *  free text role, is a fallback rather than the first choice: the question the column asks is
+   *  who this was, not what they called themselves. */
   raisedBy: string;
   /** The school for a public complaint; the person, or the school, for a report. */
   about: string;
@@ -89,7 +98,8 @@ export function filterComplaints(
       q !== '' &&
       !r.about.toLowerCase().includes(q) &&
       !r.raisedBy.toLowerCase().includes(q) &&
-      !r.type.toLowerCase().includes(q)
+      !r.type.toLowerCase().includes(q) &&
+      !SOURCE_LABEL[r.source].toLowerCase().includes(q)
     ) {
       return false;
     }
@@ -173,8 +183,9 @@ export async function buildComplaints(
       id: t.id,
       href: `/app/sssa/disputes/${t.id}`,
       source: 'PUBLIC' as const,
-      // Shown as given rather than mapped onto a role we would have to invent.
-      raisedBy: t.submitterRole?.trim() || t.submitterName?.trim() || 'Public',
+      // The name first. The role is free text the filer typed about themselves, so it stands in
+      // only when there is no name at all, and is never invented.
+      raisedBy: t.submitterName?.trim() || t.submitterRole?.trim() || 'Name not given',
       about: t.school?.nameEn ?? '—',
       district: t.school?.district?.nameEn ?? '—',
       type: t.category?.nameEn ?? '—',

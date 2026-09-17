@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EMPTY_COMPLAINT_FILTERS,
   INDUCEMENT_TYPE,
+  VERIFIER_ROLE,
   filterComplaints,
   sortComplaints,
   type ComplaintRow,
@@ -12,7 +13,8 @@ function ticket(over: Partial<ComplaintRow> = {}): ComplaintRow {
     id: 't1',
     href: '/app/sssa/disputes/t1',
     source: 'PUBLIC',
-    raisedBy: 'Parent',
+    role: 'Parent',
+    raisedBy: 'Sunita Yadav',
     about: 'Janta Inter College',
     district: 'Varanasi',
     type: 'Fee charged beyond the notified rate',
@@ -29,6 +31,7 @@ function report(over: Partial<ComplaintRow> = {}): ComplaintRow {
     id: 'r1',
     href: '/app/sssa/disputes/integrity/r1',
     source: 'VERIFIER',
+    role: VERIFIER_ROLE,
     raisedBy: 'Pushpa Devi',
     about: 'Santosh Kumar Yadav',
     district: 'Varanasi',
@@ -44,7 +47,7 @@ function report(over: Partial<ComplaintRow> = {}): ComplaintRow {
 describe('filterComplaints', () => {
   const rows = [
     ticket({ id: 'a', about: 'Janta Inter College', district: 'Varanasi' }),
-    ticket({ id: 'b', about: 'Allahabad Public School', district: 'Prayagraj', type: 'Teacher absence', raisedBy: 'Local resident' }),
+    ticket({ id: 'b', about: 'Allahabad Public School', district: 'Prayagraj', type: 'Teacher absence', raisedBy: 'Ram Naresh', role: 'School Staff' }),
     report({ id: 'c', about: 'Santosh Kumar Yadav', district: 'Varanasi' }),
     report({ id: 'd', about: 'Nobody named', district: '—', raisedBy: 'Neelam Verma' }),
   ];
@@ -78,16 +81,17 @@ describe('filterComplaints', () => {
     expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, type: INDUCEMENT_TYPE }).map((r) => r.id)).toEqual(['c', 'd']);
   });
 
-  it('filters by who raised it', () => {
-    expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, source: 'PUBLIC' }).map((r) => r.id)).toEqual(['a', 'b']);
-    expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, source: 'VERIFIER' }).map((r) => r.id)).toEqual(['c', 'd']);
+  it('filters by the role that filed it, in the form\u2019s own words', () => {
+    expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, role: 'Parent' }).map((r) => r.id)).toEqual(['a']);
+    expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, role: 'School Staff' }).map((r) => r.id)).toEqual(['b']);
+    expect(filterComplaints(rows, { ...EMPTY_COMPLAINT_FILTERS, role: VERIFIER_ROLE }).map((r) => r.id)).toEqual(['c', 'd']);
   });
 
   it('combines filters', () => {
     const picked = filterComplaints(rows, {
       ...EMPTY_COMPLAINT_FILTERS,
       district: 'Varanasi',
-      source: 'VERIFIER',
+      role: VERIFIER_ROLE,
     }).map((r) => r.id);
     expect(picked).toEqual(['c']);
   });

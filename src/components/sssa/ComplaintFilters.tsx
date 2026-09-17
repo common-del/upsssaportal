@@ -7,9 +7,10 @@ import type { ComplaintFilterValues } from '@/lib/sssa/complaints';
 /**
  * Search, district, complaint type and who raised it, above the one complaints list.
  *
- * "Raised by" offers the group rather than the words the filer typed. The public form lets
- * people describe their own role, so a menu built from that column would list every phrase
- * anybody has ever used; the group is the question somebody is actually asking of the list.
+ * "Raised by" offers exactly what the Role column shows, and both come from the public form's
+ * own "Filing As" select: Parent, Guardian, Community Member, School Staff, and Verifier for a
+ * report from inside the workforce. A filter whose words differ from the column it filters is a
+ * filter people stop trusting.
  *
  * Every filter is a search parameter, so the page stays server-rendered, a filtered view is
  * shareable, and Back steps through the filters. Search debounces; the menus navigate at once.
@@ -69,12 +70,15 @@ export function ComplaintFilters({
   selected,
   districts,
   types,
+  roles,
   total,
   matched,
 }: {
   selected: ComplaintFilterValues;
   districts: string[];
   types: string[];
+  /** The roles that have actually filed something, in the public form's own order. */
+  roles: string[];
   total: number;
   matched: number;
 }) {
@@ -106,7 +110,7 @@ export function ComplaintFilters({
   }
 
   const anyFilter =
-    isSet(selected.q) || isSet(selected.district) || isSet(selected.type) || isSet(selected.source);
+    isSet(selected.q) || isSet(selected.district) || isSet(selected.type) || isSet(selected.role);
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4">
@@ -144,18 +148,16 @@ export function ComplaintFilters({
           onChange={(v) => navigate({ type: v })}
         />
 
-        {/* No option for a school: a school has no way to raise a complaint, and a menu entry
-            that can never match anything is a promise the portal does not keep. */}
+        {/* The same words the Role column shows: the four the public form offers under
+            "Filing As", plus Verifier for a report. Built from what has actually been filed, so
+            the menu never offers a role that would come back empty. */}
         <Select
-          id="cx-source"
+          id="cx-role"
           label="Raised by"
-          value={selected.source}
-          options={[
-            { value: 'PUBLIC', label: 'A parent or the public' },
-            { value: 'VERIFIER', label: 'A verifier' },
-          ]}
+          value={selected.role}
+          options={roles.map((r) => ({ value: r, label: r }))}
           placeholder="Anyone"
-          onChange={(v) => navigate({ source: v })}
+          onChange={(v) => navigate({ role: v })}
         />
       </div>
 

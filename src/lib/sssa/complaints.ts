@@ -15,8 +15,9 @@ import { prisma } from '@/lib/db';
  * reads as acknowledged or not.
  *
  * A school disputing its own verification is still not here. That is an Appeal: one per school
- * per cycle, argued indicator by indicator, decided only by SSSA, no ladder and no clock. A
- * school has no way to raise a complaint at all, which is a real gap and not this file's to fix.
+ * per cycle, argued indicator by indicator, decided only by SSSA, no ladder and no clock. What a
+ * school's staff can do is file on the public form like anybody else, under the School Staff
+ * role, which is why that role appears in this list beside Parent and Guardian.
  */
 
 const OPEN_STATUSES_EXCLUDED = ['RESOLVED', 'REJECTED'] as const;
@@ -25,26 +26,31 @@ const OPEN_STATUSES_EXCLUDED = ['RESOLVED', 'REJECTED'] as const;
  *  filter menu and the bars cannot spell it differently from the rows. */
 export const INDUCEMENT_TYPE = 'Inducement or pressure';
 
-/** Where a complaint came from. The group, not the free text the filer typed: a public form
- *  lets people describe their own role, so filtering on what they wrote would offer a menu of
- *  every phrase anybody has ever used. */
+/** Which table a complaint came from. Used for styling and for the waiting-on-you count, not
+ *  for the filter: the filter asks the sharper question, which role filed it. */
 export type ComplaintSource = 'PUBLIC' | 'VERIFIER';
 
-/** How the group reads in a table cell. Short nouns rather than the filter's fuller phrases,
- *  because a column of "A parent or the public" is a column of noise. */
-export const SOURCE_LABEL: Record<ComplaintSource, string> = {
-  PUBLIC: 'Public',
-  VERIFIER: 'Verifier',
-};
+/** The four roles the public form offers under "Filing As". It is a required select, not free
+ *  text, so the column and the filter can both speak this vocabulary. Kept in step with
+ *  `ROLES` in `src/components/public/DisputeForm.tsx`. */
+export const FILING_ROLES = ['Parent', 'Guardian', 'Community Member', 'School Staff'] as const;
+
+/** The fifth role, which no public form offers: somebody in the verification workforce
+ *  reporting inducement or pressure. */
+export const VERIFIER_ROLE = 'Verifier';
+
+/** Older tickets predate the required select and carry no role at all. */
+export const ROLE_NOT_GIVEN = 'Not given';
 
 export type ComplaintRow = {
   id: string;
   href: string;
   source: ComplaintSource;
+  /** What the filer chose under "Filing As", or Verifier for a report. The same words the
+   *  filter offers, because a column and a menu that disagree make the menu untrustworthy. */
+  role: string;
   /** The person's name. A verifier who reports their own supervisor is named on the record, and
-   *  a member of the public is named if they gave one. Their own description of themselves, the
-   *  free text role, is a fallback rather than the first choice: the question the column asks is
-   *  who this was, not what they called themselves. */
+   *  a member of the public gives one on the form. */
   raisedBy: string;
   /** The school for a public complaint; the person, or the school, for a report. */
   about: string;
@@ -62,14 +68,14 @@ export type ComplaintFilterValues = {
   q: string;
   district: string;
   type: string;
-  source: string;
+  role: string;
 };
 
 export const EMPTY_COMPLAINT_FILTERS: ComplaintFilterValues = {
   q: '',
   district: '',
   type: '',
-  source: '',
+  role: '',
 };
 
 export type ComplaintsData = {
@@ -82,6 +88,8 @@ export type ComplaintsData = {
   categories: { name: string; count: number; inside: boolean }[];
   districts: string[];
   types: string[];
+  /** Roles that have actually filed something. */
+  roles: string[];
 };
 
 const ROW_LIMIT = 40;
@@ -99,13 +107,13 @@ export function filterComplaints(
       !r.about.toLowerCase().includes(q) &&
       !r.raisedBy.toLowerCase().includes(q) &&
       !r.type.toLowerCase().includes(q) &&
-      !SOURCE_LABEL[r.source].toLowerCase().includes(q)
+      !r.role.toLowerCase().includes(q)
     ) {
       return false;
     }
     if (isSet(filters.district) && r.district !== filters.district) return false;
     if (isSet(filters.type) && r.type !== filters.type) return false;
-    if (isSet(filters.source) && r.source !== filters.source) return false;
+    if (isSet(filters.role) && r.role !== filters.role) return false;
     return true;
   });
 }
@@ -183,9 +191,8 @@ export async function buildComplaints(
       id: t.id,
       href: `/app/sssa/disputes/${t.id}`,
       source: 'PUBLIC' as const,
-      // The name first. The role is free text the filer typed about themselves, so it stands in
-      // only when there is no name at all, and is never invented.
-      raisedBy: t.submitterName?.trim() || t.submitterRole?.trim() || 'Name not given',
+      role: t.submitterRole?.trim() || ROLE_NOT_GIVEN,
+      raisedBy: t.submitterName?.trim() || 'Name not given',
       about: t.school?.nameEn ?? '—',
       district: t.school?.district?.nameEn ?? '—',
       type: t.category?.nameEn ?? '—',
@@ -202,6 +209,7 @@ export async function buildComplaints(
       id: r.id,
       href: `/app/sssa/disputes/integrity/${r.id}`,
       source: 'VERIFIER' as const,
+      role: VERIFIER_ROLE,
       raisedBy: r.reportedBy.name ?? r.reportedBy.username,
       // The subject, or the school when the report names nobody.
       about: r.about ? (r.about.name ?? r.about.username) : (school?.nameEn ?? 'Nobody named'),
@@ -234,5 +242,10 @@ export async function buildComplaints(
       .sort((a, b) => b.count - a.count),
     districts: [...new Set(all.map((r) => r.district))].filter((d) => d !== '—').sort(),
     types: [...new Set(all.map((r) => r.type))].filter((t) => t !== '—').sort(),
+    // The form's own order, then Verifier, then the gap. Alphabetical would put Community
+    // Member above Parent, which is not the order anybody reads this list in.
+    roles: [...FILING_ROLES, VERIFIER_ROLE, ROLE_NOT_GIVEN].filter((role) =>
+      all.some((r) => r.role === role),
+    ),
   };
 }

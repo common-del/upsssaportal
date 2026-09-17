@@ -1,10 +1,5 @@
 import Link from 'next/link';
-import {
-  buildComplaints,
-  SOURCE_LABEL,
-  type ComplaintFilterValues,
-  type ComplaintRow,
-} from '@/lib/sssa/complaints';
+import { buildComplaints, type ComplaintFilterValues, type ComplaintRow } from '@/lib/sssa/complaints';
 import { prisma } from '@/lib/db';
 import { ensureEscalationUpToDate } from '@/lib/actions/dispute';
 import { RunEscalationsButton } from '@/components/tickets/RunEscalationsButton';
@@ -57,7 +52,7 @@ export default async function ComplaintsPage({
     q: one('q'),
     district: one('district'),
     type: one('type'),
-    source: one('source'),
+    role: one('role'),
   };
 
   const data = await buildComplaints(selected);
@@ -114,6 +109,7 @@ export default async function ComplaintsPage({
             selected={selected}
             districts={data.districts}
             types={data.types}
+            roles={data.roles}
             total={data.open}
             matched={data.matched}
           />
@@ -221,7 +217,7 @@ function Row({ row }: { row: ComplaintRow }) {
               : { backgroundColor: '#F3F4F6', color: '#4B5563' }
           }
         >
-          {SOURCE_LABEL[row.source]}
+          {row.role}
         </span>
       </td>
       <td className="px-4 py-3">

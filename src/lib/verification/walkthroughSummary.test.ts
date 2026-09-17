@@ -128,6 +128,16 @@ describe('a booked call', () => {
     expect(s.pressing).toBe(false);
   });
 
+  // A time is agreed, so until it comes there is nothing for the verifier to do about it,
+  // whatever the turnaround says.
+  it('stays unpressing when the case is overdue but the call is still ahead', () => {
+    const s = summarise(
+      facts({ sessionState: 'SCHEDULED', scheduledFor: daysAhead(2), overdue: true, dueBy: daysAgo(9) }),
+      NOW,
+    );
+    expect(s.pressing).toBe(false);
+  });
+
   it('reads as missed once the time has passed', () => {
     const s = summarise(
       facts({ sessionState: 'SCHEDULED', scheduledFor: daysAgo(1), overdue: true, dueBy: daysAgo(5) }),
@@ -147,8 +157,18 @@ describe('a case nobody has started', () => {
     expect(s.clockNote).toBe('left');
   });
 
-  it('turns pressing once the turnaround is blown', () => {
-    expect(summarise(facts({ overdue: true, dueBy: daysAgo(26) }), NOW).pressing).toBe(true);
+  // The rule that makes red mean something. This used to turn pressing on overdue alone, which
+  // on a backlog twenty days past the turnaround painted every row and every tab count red.
+  // Booking a call needs the school to agree a time, so an untouched case is not something the
+  // verifier settles today by wanting to. The deadline column still says 26d over, in red.
+  it('is not pressing however far past the turnaround it is', () => {
+    expect(summarise(facts({ overdue: true, dueBy: daysAgo(26) }), NOW).pressing).toBe(false);
+  });
+
+  it('still reports the overdue turnaround, which is where lateness belongs', () => {
+    const s = summarise(facts({ overdue: true, dueBy: daysAgo(26) }), NOW);
+    expect(s.clock).toBe('26d');
+    expect(s.clockNote).toBe('past the deadline');
   });
 
   it('treats an ended session the same way, since it should not be in this queue', () => {

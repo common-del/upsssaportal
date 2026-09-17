@@ -44,7 +44,16 @@ export type QueueSummary = {
   sentence: string;
   /** What the button offers to do about it. */
   action: string;
-  /** Needs attention today. Drives the red, and nothing else does. */
+  /**
+   * There is something to do about this case now. Drives the red, and nothing else does.
+   *
+   * Overdue is deliberately not enough. This was written as "overdue or worse", which on a
+   * backlog where every case is twenty days past the turnaround made every row and every tab
+   * count red, so red carried nothing. It now means only the four situations a verifier can act
+   * on this minute: a call running, a call the school missed, a filming window closed, and a
+   * filming window inside its last few hours. How late a case is keeps its own column, in red,
+   * where lateness is what the column is about.
+   */
   pressing: boolean;
   /**
    * Which band the row sorts into, lowest first. Ordered by whether the verifier can act rather
@@ -159,7 +168,8 @@ export function summarise(facts: QueueFacts, now: Date = new Date()): QueueSumma
       ...turnaround,
       sentence: `A call is booked for ${when}.`,
       action: 'Open the case',
-      pressing: facts.overdue,
+      // A booked call is somebody else's turn until the time comes, however late the case is.
+      pressing: false,
       rank: 4,
     };
   }
@@ -170,7 +180,10 @@ export function summarise(facts: QueueFacts, now: Date = new Date()): QueueSumma
     ...turnaround,
     sentence: 'Nothing has happened on this case yet.',
     action: 'Book a call',
-    pressing: facts.overdue,
+    // Never pressing, however overdue. Booking a call needs the school to agree a time, so an
+    // untouched case is not something a verifier settles today by wanting to, and marking the
+    // whole backlog red is how red stopped meaning anything. The deadline column says 26d over.
+    pressing: false,
     rank: 5,
   };
 }

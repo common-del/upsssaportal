@@ -1613,3 +1613,38 @@ not looking at announces where it is instead of reading as no result.
 module exists: which tab a case belongs to and which tab opens are rules about the state machine,
 not layout. One test asserts every one of the five session states lands in a tab, so a state added
 later cannot quietly fall through the page.
+
+## 46. Red on the walkthrough queue is narrowed to what can be acted on, 17 September 2026
+
+§43 said red would mean one thing, this needs you today, and named the screen it replaced for
+printing every overdue case in red on a backlog where six of nine were late. The code did not
+deliver that. `pressing` was set to `facts.overdue` for a case nobody had started and for a call
+booked ahead, and on a register where every case is twenty to twenty-seven days past the
+turnaround that is almost the whole list. The first screenshot of the tabbed build showed all
+three tab counts red and every visible row carrying a red edge: the fault named in §43, back,
+under a description claiming it had been fixed.
+
+The description was wrong about the code rather than the code wrong about the description, and
+the way to find that was to look at the screen against real data rather than to read the module.
+
+SSSA chose the narrow reading. `pressing` now covers four situations and no others:
+
+- a call running now, or one started and never closed;
+- a call the school missed and has not rebooked;
+- a filming window that has closed;
+- a filming window inside its last eight hours.
+
+Every one is something a verifier can act on this minute. A case nobody has started is not,
+however late it is, because booking a call needs the school to agree a time. A call booked for
+Thursday is not, because until Thursday it is the school's turn.
+
+Lateness has not been hidden. It keeps its own column, in red, in a column headed Deadline where
+lateness is what the column is about, and the sort still puts the longest wait first inside a
+band. What changed is that being late no longer competes with a call ringing.
+
+Two tests hold the line: an untouched case twenty-six days over is not pressing but still reports
+"26d past the deadline", and an overdue case with a call booked ahead stays unpressing.
+
+Worth being plain about what this does to the demo: it does not turn the tabs quiet. To schedule
+still reads red while it holds a missed call, and Recordings while it holds a closed window, both
+of which are correct. The change is that being overdue alone stops painting a row.

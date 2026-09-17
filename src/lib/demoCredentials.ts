@@ -54,13 +54,11 @@ export const DEMO_CREDENTIAL_SETS: Record<'official' | 'school' | 'verifier', De
       password: 'admin123',
       dot: '#1B2A6B',
     },
-    {
-      label: 'District Official',
-      detail: 'One district\'s monitoring and dispute resolution.',
-      username: 'district1',
-      password: 'district123',
-      dot: '#0E7A46',
-    },
+    // The district logins are retired. Monitoring and complaint handling are run from the
+    // SSSA admin, whose Monitoring and Complaints pages already cover every district, and the
+    // district accounts are deactivated by prisma/seedRetireDistrictLogins.ts. Deactivated
+    // rather than deleted, as the supervisor and audit accounts were, so anything they filed
+    // keeps its author and the decision is reversible.
   ],
   school: [
     {

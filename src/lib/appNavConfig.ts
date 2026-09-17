@@ -266,10 +266,17 @@ export function roleLabelForRole(role: string): RoleLabel {
   return 'OFFICIAL';
 }
 
+/**
+ * Where a role lands.
+ *
+ * The district roles are not listed. Their logins are retired, so no live account carries one;
+ * a stale session that still does falls through to the admin prefix, which middleware
+ * role-gates and bounces. That fails closed, which is the same way the retired supervisor and
+ * audit roles are handled.
+ */
 export function brandHrefForRole(role: string): string {
   if (role === 'SCHOOL' || role === 'SCHOOL_USER') return '/app/school';
   if (VERIFICATION_ROLES.has(role)) return '/app/verifier';
-  if (role === 'DISTRICT_OFFICIAL' || role === 'DISTRICT_ADMIN') return '/app/district';
   return '/app/sssa';
 }
 

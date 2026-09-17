@@ -1004,3 +1004,33 @@ and nearly empty when it is healthy, it has nowhere honest to put an unclaimed c
 seven day deadline against forty-eight hours of filming time most of what it ever draws is a
 pile at one edge. It would suit a supervisor's view of the whole cell, which is a different
 screen for a different person.
+
+## 34. The district logins are retired, 17 September 2026
+
+Monitoring and complaint handling are run from the SSSA admin, whose Monitoring and Complaints
+pages already cover every district, so a separate district sign-in was a second way into work one
+team does. The district credential row leaves the login page, the Official tab stops promising
+district officials a way in, and prisma/seedRetireDistrictLogins.ts deactivates every
+DISTRICT_OFFICIAL and DISTRICT_ADMIN account on each deploy.
+
+Deactivated rather than deleted, exactly as supervisor1, supervisor2 and audit1 were in the
+August consolidation. A district official may have answered a complaint, and deleting the user
+would take the author off those timeline entries. It is also reversible in one line if districts
+are staffed again.
+
+brandHrefForRole no longer lists the district roles, so a stale session that still carries one
+falls through to the admin prefix and middleware bounces it. That fails closed, which is the
+same treatment the retired oversight roles get.
+
+Two things this does not do, both stated rather than assumed. The /app/district routes still
+exist; no account can reach them, so they are unreachable rather than removed, and deleting them
+is a separate change. And DISTRICT_NAV_ITEMS and DISTRICT_ADMIN_DASHBOARD_NAV_ITEMS are now dead
+configuration.
+
+One consequence worth SSSA's attention. A complaint escalates on a timer through
+SCHOOL → BLOCK → DISTRICT → STATE, each rung waiting out its own SLA before the next. Nothing
+breaks when district logins go, because the escalation was never an action anybody took. But the
+DISTRICT rung is now a tier nobody can act on, so every complaint that reaches it simply waits
+out the clock before arriving at the SSSA. If districts are not coming back, that rung is delay
+without a purpose and the ladder should lose it. That is a programme decision, and the ladder is
+unchanged until it is taken.

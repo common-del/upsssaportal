@@ -32,7 +32,7 @@ const TABS = [
     label: 'Official',
     provider: DEMO_CREDENTIAL_PROVIDER_IDS.SSSA,
     fallbackUrl: '/app/sssa',
-    hint: 'For SSSA and district officials.',
+    hint: 'For SSSA officials.',
   },
   {
     id: 'school' as const,

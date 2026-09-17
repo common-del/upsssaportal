@@ -197,9 +197,10 @@ export function computeRisk(inputs: RiskInputs, rubric: Rubric): RiskResult {
  * Bands are presentational and the threshold is not.
  *
  * Only `aboveThreshold` decides where a school goes next, so these three labels can be retuned
- * for the Supervisor's drift monitor without changing a single school's route. Anchored to the
- * threshold rather than to fixed numbers so they cannot drift away from it when SSSA edits the
- * rubric.
+ * without changing a single school's route. Anchored to the threshold rather than to fixed
+ * numbers so they cannot come loose from it when SSSA edits the rubric. They were read by the
+ * risk drift monitor, which SSSA retired; the band is still stored on every score and is still
+ * the readable form of a number nobody wants to compare by eye.
  */
 export function bandFor(score: number, thresholdValue: number): RiskBand {
   if (score <= thresholdValue) return 'LOW';

@@ -9,7 +9,6 @@ import {
   evaluateDeEmpanelment,
   type DeEmpanelEvaluation,
 } from '@/lib/verification/deEmpanelment';
-import { driftReport, type DriftReport } from '@/lib/verification/drift';
 import { transitionRun } from '@/lib/verification/stateMachine';
 
 /**
@@ -528,21 +527,6 @@ export async function confirmDeEmpanelment(
   revalidatePath('/app/sssa/workforce');
   revalidatePath('/app/sssa/workforce');
   return { success: true };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Drift monitor
-// ─────────────────────────────────────────────────────────────────────────────
-
-export async function getDriftReport(): Promise<DriftReport | null> {
-  const scope = await supervisorScope();
-  if (!scope) return null;
-  const scores = await prisma.riskScore.findMany({
-    select: { score: true, aboveThreshold: true, computedAt: true },
-    orderBy: { computedAt: 'asc' },
-    take: 20000,
-  });
-  return driftReport(scores);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

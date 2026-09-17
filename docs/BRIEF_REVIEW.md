@@ -1319,3 +1319,48 @@ verifier.
 `previewCohort` returns nothing to a supervisor, and a panel reading "nothing is waiting" off a
 null would be a statement about the queue rather than about their permissions. The panel renders
 for SSSA_ADMIN only.
+
+## 41. The risk drift monitor is removed, and the brief requirement with it, 17 September 2026
+
+The brief asks for a "risk algorithm drift monitor: distribution of risk scores over time,
+flagging shifts for referral to the platform vendor" (BUILD_BRIEF section on the supervisor
+screens). It was built, and it is now gone: the page, the pure module, the server action, its
+tests and the sidebar entry.
+
+Recorded here at length because this is the first requirement in the brief the build
+deliberately does not meet. It is a decision, not an omission.
+
+### What was wrong with it
+
+Four faults, surfaced when SSSA asked what the tab did.
+
+**It truncated to the oldest data.** The query took 20,000 scores ordered by date ascending. At
+the brief's volume of 88,426 screenings a year that is under three months, and it never
+advanced: the page would have shown early 2026 for ever while the months anybody wanted were
+discarded.
+
+**It would have reported SSSA's own rubric changes as vendor drift.** Every score stores the
+rubric that produced it, precisely so a reweighting cannot silently move a decided number. The
+drift query ignored that column. Reweight the rubric and every later month legitimately shifts,
+and the page would have told the Authority to refer its own deliberate change to the vendor.
+
+**Its baseline went deaf.** Cumulative with no window, so the longer it ran the less a single
+month could move it. A detector that loses sensitivity with age is backwards.
+
+**One remedy for three causes.** A shift means the schools changed, the screeners changed, or
+the inputs changed. The page named the vendor for all three, and had no record of a flag having
+been seen, so a shift referred in March would still be shouting in December.
+
+### What was offered and what was chosen
+
+Three options were put to SSSA: move the detection into Monitoring as an exception group and fix
+it on the way; delete it outright; or keep the tab and repair it. SSSA chose to delete it
+outright.
+
+So nothing now watches the screening algorithm for drift. If the rubric's behaviour changes,
+whether because the schools changed, the screeners drifted or a UDISE+ feed changed shape,
+nobody is told. The risk score itself is untouched and still routes every case between the video
+walkthrough and the census queue; only the monitoring of its distribution is gone.
+
+`RiskScore.band` survives the removal. It was read by this screen, and it remains the readable
+form of a number nobody wants to compare by eye.

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { compareAuditToPrimary, drawAuditSample, drawGroupedSample } from './auditSample';
-import { bucketScores, driftReport, monthKeyIST, type ScorePoint } from './drift';
 
 beforeEach(() => {
   process.env.AUTH_SECRET = 'test-secret-for-audit-sampling';
@@ -87,69 +86,5 @@ describe('comparing an audit with the primary record', () => {
     ]);
     const primary = new Map([['p1', 1]]);
     expect(compareAuditToPrimary(audit, primary)).toEqual({ findingCount: 1, contradictionCount: 1 });
-  });
-});
-
-describe('the drift monitor', () => {
-  const point = (score: number, above: boolean, iso: string): ScorePoint => ({
-    score,
-    aboveThreshold: above,
-    computedAt: new Date(iso),
-  });
-
-  it('buckets by the IST calendar month, not the UTC one', () => {
-    // 19:30 UTC on 31 July is 01:00 IST on 1 August.
-    expect(monthKeyIST(new Date('2026-07-31T19:30:00Z'))).toBe('2026-08');
-    expect(monthKeyIST(new Date('2026-07-31T18:29:00Z'))).toBe('2026-07');
-  });
-
-  it('flags a mean shift against the running baseline', () => {
-    const points = [
-      ...Array.from({ length: 30 }, (_, i) => point(30, false, `2026-05-${String((i % 28) + 1).padStart(2, '0')}T06:00:00Z`)),
-      ...Array.from({ length: 30 }, (_, i) => point(45, false, `2026-06-${String((i % 28) + 1).padStart(2, '0')}T06:00:00Z`)),
-    ];
-    const report = driftReport(points);
-    expect(report.flags.some((f) => f.kind === 'MEAN_SHIFT' && f.bucketKey === '2026-06')).toBe(true);
-  });
-
-  it('flags a shift in the above-threshold share', () => {
-    const points = [
-      ...Array.from({ length: 40 }, (_, i) => point(50, i < 4, `2026-05-10T0${i % 10}:00:00Z`)),
-      ...Array.from({ length: 40 }, (_, i) => point(50, i < 20, `2026-06-10T0${i % 10}:00:00Z`)),
-    ];
-    const report = driftReport(points);
-    expect(
-      report.flags.some((f) => f.kind === 'THRESHOLD_SHARE_SHIFT' && f.bucketKey === '2026-06'),
-    ).toBe(true);
-  });
-
-  it('stays quiet when the distribution is stable', () => {
-    const points = [
-      ...Array.from({ length: 30 }, () => point(42, false, '2026-05-10T06:00:00Z')),
-      ...Array.from({ length: 30 }, () => point(44, false, '2026-06-10T06:00:00Z')),
-    ];
-    expect(driftReport(points).flags).toEqual([]);
-  });
-
-  // A quiet month of twelve screenings is not a distribution, and flagging it would teach
-  // people to ignore the monitor.
-  it('does not flag months below the minimum size', () => {
-    const points = [
-      ...Array.from({ length: 30 }, () => point(30, false, '2026-05-10T06:00:00Z')),
-      ...Array.from({ length: 5 }, () => point(80, true, '2026-06-10T06:00:00Z')),
-    ];
-    expect(driftReport(points).flags).toEqual([]);
-  });
-
-  it('reports buckets in calendar order with their sizes', () => {
-    const points = [
-      point(10, false, '2026-06-10T06:00:00Z'),
-      point(20, false, '2026-05-10T06:00:00Z'),
-      point(30, false, '2026-05-11T06:00:00Z'),
-    ];
-    const buckets = bucketScores(points);
-    expect(buckets.map((b) => b.key)).toEqual(['2026-05', '2026-06']);
-    expect(buckets[0]!.count).toBe(2);
-    expect(buckets[0]!.meanScore).toBe(25);
   });
 });

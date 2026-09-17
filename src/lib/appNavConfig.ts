@@ -86,7 +86,6 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
         label: 'Workforce',
         also: ['/app/sssa/quality', '/app/sssa/de-empanelment', '/app/sssa/cohort', '/app/sssa/year'],
       },
-      { href: '/app/sssa/drift', label: 'Risk Drift' },
       { href: '/app/sssa/audit', label: 'Audit' },
       { href: '/app/sssa/integrity', label: 'Integrity Reports' },
     ],

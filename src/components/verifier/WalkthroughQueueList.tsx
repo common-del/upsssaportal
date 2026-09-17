@@ -50,13 +50,6 @@ const GOLD = '#BF9000';
 const RED = '#96271E';
 const RULE = '#E5E9F0';
 
-/** Enough of the code to tell nine cases apart at a glance. The whole code is on the cell's
- *  tooltip and inside the console, and search still matches it in full. */
-function shortCode(maskedCode: string): string {
-  const body = maskedCode.startsWith('SC-') ? maskedCode.slice(3) : maskedCode;
-  return body.length <= 6 ? maskedCode : `SC-${body.slice(0, 4)}…`;
-}
-
 type Prepared = {
   row: WalkthroughQueueRow;
   summary: QueueSummary;
@@ -67,10 +60,18 @@ type Prepared = {
 
 const DAY = 86_400_000;
 
+/**
+ * The whole code, not a truncation.
+ *
+ * The list this replaced abbreviated it, because there the code led each row and nine hex
+ * strings in a column of prose was the thing that made the screen unreadable. A table cell is a
+ * fixed position under a heading that says what it is, so the full code costs nothing to scan
+ * and can be read out on a call or pasted into a search without opening the case first.
+ */
 function Code({ maskedCode }: { maskedCode: string }) {
   return (
-    <span className="font-mono text-[13px] font-bold" title={maskedCode} style={{ color: NAVY_DEEP }}>
-      {shortCode(maskedCode)}
+    <span className="whitespace-nowrap font-mono text-[13px] font-bold" style={{ color: NAVY_DEEP }}>
+      {maskedCode}
     </span>
   );
 }
@@ -107,13 +108,25 @@ function Action({ p }: { p: Prepared }) {
   );
 }
 
-function Th({ children, align }: { children: React.ReactNode; align?: 'right' }) {
+/** The Case column is given a width because the code is the widest fixed-length thing in every
+ *  table, and letting it size itself made the three tabs disagree about where column two starts. */
+const CASE_WIDTH = 176;
+
+function Th({
+  children,
+  align,
+  width,
+}: {
+  children: React.ReactNode;
+  align?: 'right';
+  width?: number;
+}) {
   return (
     <th
       className={`px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wider ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
-      style={{ color: '#8A97AC' }}
+      style={{ color: '#8A97AC', width }}
     >
       {children}
     </th>
@@ -154,7 +167,7 @@ function ToScheduleTable({ rows }: { rows: Prepared[] }) {
     <table className="w-full">
       <thead>
         <tr>
-          <Th>Case</Th>
+          <Th width={CASE_WIDTH}>Case</Th>
           <Th>In dispute</Th>
           <Th>Waiting</Th>
           <Th>Deadline</Th>
@@ -205,7 +218,7 @@ function BookedTable({ rows }: { rows: Prepared[] }) {
     <table className="w-full">
       <thead>
         <tr>
-          <Th>Case</Th>
+          <Th width={CASE_WIDTH}>Case</Th>
           <Th>Call</Th>
           <Th>In dispute</Th>
           <Th>Deadline</Th>
@@ -267,7 +280,7 @@ function RecordingsTable({ rows }: { rows: Prepared[] }) {
     <table className="w-full">
       <thead>
         <tr>
-          <Th>Case</Th>
+          <Th width={CASE_WIDTH}>Case</Th>
           <Th>Clips in</Th>
           <Th>Window</Th>
           <Th>Settled</Th>

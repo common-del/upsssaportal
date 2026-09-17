@@ -347,7 +347,7 @@ export async function buildCohort(
   const publishing = await publishRemainingCensusQueue(loaded.cycleId, { actorUserId: actor.userId });
 
   revalidatePath('/app/sssa/cohort');
-  revalidatePath('/app/sssa/year');
+  revalidatePath('/app/sssa/workforce');
   return {
     success: true,
     visitsCreated,
@@ -501,6 +501,6 @@ export async function declareConflict(
   if (!hasConflict) return { success: true, recused: false };
 
   const placement = await placeReplacement(visit.runId);
-  revalidatePath('/app/sssa/year');
+  revalidatePath('/app/sssa/workforce');
   return { success: true, recused: true, reallocated: placement.placed };
 }

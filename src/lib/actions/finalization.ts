@@ -374,7 +374,7 @@ export async function computeAndStoreResult(cycleId: string, schoolUdise: string
     update: { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode },
   });
 
-  revalidatePath('/app/sssa/year');
+  revalidatePath('/app/sssa/workforce');
   return { selfScorePercent, verifierScorePercent, finalScorePercent, gradeBandCode };
 }
 
@@ -398,7 +398,7 @@ export async function finalizeAllResults(cycleId: string) {
     computed++;
   }
 
-  revalidatePath('/app/sssa/year');
+  revalidatePath('/app/sssa/workforce');
   return { success: true, computed };
 }
 

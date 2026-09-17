@@ -385,7 +385,7 @@ export async function recordQualityCheck(
     create: { runId, subjectProfileId, verdict, note: trimmed || null, byUserId: scope.actor.userId },
     update: { verdict, note: trimmed || null, byUserId: scope.actor.userId },
   });
-  revalidatePath('/app/sssa/quality');
+  revalidatePath('/app/sssa/workforce');
   return { success: true };
 }
 
@@ -525,7 +525,7 @@ export async function confirmDeEmpanelment(
     }),
   ]);
 
-  revalidatePath('/app/sssa/de-empanelment');
+  revalidatePath('/app/sssa/workforce');
   revalidatePath('/app/sssa/workforce');
   return { success: true };
 }

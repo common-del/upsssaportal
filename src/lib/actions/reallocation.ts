@@ -137,7 +137,7 @@ export async function reallocateSchool(
 
   const placement = await placeReplacement(runId, profileId ? { profileId } : {});
 
-  revalidatePath('/app/sssa/year');
+  revalidatePath('/app/sssa/workforce');
   revalidatePath('/app/verifier/assignments');
 
   if (placement.placed) return { success: true, outsideWindow: placement.outsideWindow };

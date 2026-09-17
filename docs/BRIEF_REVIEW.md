@@ -1034,3 +1034,35 @@ DISTRICT rung is now a tier nobody can act on, so every complaint that reaches i
 out the clock before arriving at the SSSA. If districts are not coming back, that rung is delay
 without a purpose and the ladder should lose it. That is a programme decision, and the ladder is
 unchanged until it is taken.
+
+## 35. Compliance folds into the register, 17 September 2026
+
+Compliance was the register a second time. It queried all 32,579 schools, paginated them,
+filtered them by district and management, and printed School, District, Block and Management
+before its own column, which is the same four columns Schools already prints. Two pages, two
+filter bars and two paginated queries, to show one extra fact.
+
+The fact it showed was a profile status built from four parts: address, public contact number,
+fee disclosure, and mandatory documents. SSSA's objection was that most of a profile arrives
+from existing data sources rather than from the school, and that is right about two of the four.
+Address and phone come from the UDISE+ extract. Once that import lands, "not started" is a
+status no school can stay in, so a register-wide profile status would be measuring the import
+rather than the school.
+
+The question an official actually reads a register for is whether the school has filed its
+SQAAF, and the register was already carrying the answer as an unexplained dash in the self
+assessment column. That column is now headed SQAAF and says "Not submitted" where nothing was
+filed; the verified column says "Not verified" on the same principle. A dash was doing two jobs,
+"no score" and "never submitted", and only the second is a fact about the school.
+
+Fee disclosure keeps the column it already had on the register. Mandatory documents are no
+longer reported across the register: SSSA was asked where they should go, given that they are
+the one compliance fact no external source can supply, and chose to drop them. They stay visible
+on a school's own record, so the cost is that nobody can ask which schools hold no fire safety
+certificate without opening them one at a time. Recorded because it is a real loss and a
+deliberate one.
+
+/app/sssa/compliance redirects to the register, for the same reason /app/sssa/escalations and
+/app/verifier/recording-tasks still redirect. src/lib/sssa/compliance.ts is deleted rather than
+left unreferenced; the school's own profileStatus.ts keeps the four-part rule and its comment no
+longer points at a file that has gone.

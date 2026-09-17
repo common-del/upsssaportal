@@ -2,13 +2,14 @@ import { prisma } from '@/lib/db';
 import { isGovernmentSchool, mandatoryDocTypesForSchool } from '@/lib/school/helpers';
 
 /**
- * Whether one school has completed its profile — the same question the officials'
- * Compliance page asks about all of them.
+ * Whether one school has completed its profile: its address, a public contact number, its
+ * fee disclosure where it applies, and its mandatory documents.
  *
- * Deliberately the same four parts and the same rules as `sssa/compliance.ts`, so a
- * school reading "Pending" here and an officer reading "Pending" there are reading one
- * fact. Two definitions of complete would be worse than none: the school would fix
- * what its own page asked for and stay in breach on the officer's.
+ * This is now the only place that question is asked. The officials' Compliance page asked it
+ * of all 32,579 schools and was retired on 17 September 2026: two of the four parts come from
+ * the UDISE+ extract rather than from a school, so a register-wide status built on them
+ * measured the import rather than the school. What an official needs from a register is
+ * whether the school has filed its SQAAF, and the Schools page carries that.
  *
  * Government schools are not asked to disclose fees — the school-side page is hidden
  * for them — so their profile is three parts, not four.

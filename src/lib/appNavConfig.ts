@@ -59,11 +59,13 @@ export const ADMIN_SIDEBAR_SECTIONS: NavSection[] = [
     items: [
       { href: '/app/sssa', label: 'Dashboard', exact: true },
       { href: '/app/sssa/decisions', label: 'Decisions' },
-      { href: '/app/sssa/schools', label: 'Schools' },
+      // Compliance folded in here: it was the same register with one extra column, and the
+      // question it asked about address and phone is answered by the UDISE+ extract rather
+      // than by a school. Whether a school has filed its SQAAF is on the register itself.
+      { href: '/app/sssa/schools', label: 'Schools', also: ['/app/sssa/compliance'] },
       // Exception-first self assessment monitoring: built, working, and in no sidebar
       // until now.
       { href: '/app/sssa/monitoring', label: 'Monitoring' },
-      { href: '/app/sssa/compliance', label: 'Compliance' },
       { href: '/app/sssa/cohort', label: 'Field Cohort' },
       { href: '/app/sssa/reporting', label: 'Reporting' },
     ],

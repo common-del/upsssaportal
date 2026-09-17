@@ -25,8 +25,24 @@ const PAGE_SIZE = 20;
  * typed into this file. Two hardcoded copies of the cutoffs is how the portal came
  * to grade the same school Uday on the public site and Satisfactory to an officer.
  */
-function ScoreCell({ score, band }: { score: number | null; band: string | null }) {
-  if (score == null) return <span className="text-gray-300">—</span>;
+function ScoreCell({
+  score,
+  band,
+  absent = '—',
+}: {
+  score: number | null;
+  band: string | null;
+  /** What to print in place of a score. The self assessment column names the fact —
+   *  a school that has not submitted — rather than leaving a dash to be interpreted. */
+  absent?: string;
+}) {
+  if (score == null) {
+    return (
+      <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600">
+        {absent}
+      </span>
+    );
+  }
   return (
     <span className="flex flex-col items-end leading-tight">
       <span className="font-bold tabular-nums text-gray-900">{score.toFixed(1)}</span>
@@ -286,7 +302,7 @@ export default async function SssaSchoolDirectoryPage(props: {
                 <th className="px-4 py-3">Block</th>
                 <th className="px-4 py-3">Management</th>
                 <th className="px-4 py-3">Fee</th>
-                <th className="px-4 py-3 text-right">Self assessed</th>
+                <th className="px-4 py-3 text-right">SQAAF</th>
                 <th className="px-4 py-3 text-right">Verified</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -329,11 +345,15 @@ export default async function SssaSchoolDirectoryPage(props: {
                   {/* Accreditation is gone: it read SQAAF Verified or Pending, which
                       is the same fact the Verified score now carries — a score means a
                       verifier has been, a dash means they have not. */}
+                  {/* Whether a school has filled its SQAAF is the compliance question worth
+                      asking, and this column already held the answer as an unexplained dash.
+                      It now says so. The retired Compliance page asked a different question,
+                      about address and phone, which UDISE+ supplies for every school. */}
                   <td className="px-4 py-3 text-right">
-                    <ScoreCell score={r.selfScore} band={r.selfBand} />
+                    <ScoreCell score={r.selfScore} band={r.selfBand} absent="Not submitted" />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <ScoreCell score={r.verifiedScore} band={r.verifiedBand} />
+                    <ScoreCell score={r.verifiedScore} band={r.verifiedBand} absent="Not verified" />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <Link

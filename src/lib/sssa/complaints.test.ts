@@ -22,6 +22,7 @@ function ticket(over: Partial<ComplaintRow> = {}): ComplaintRow {
     level: 'SCHOOL',
     overdueDays: null,
     acknowledged: null,
+    acknowledgedAt: null,
     ...over,
   };
 }
@@ -40,6 +41,7 @@ function report(over: Partial<ComplaintRow> = {}): ComplaintRow {
     level: null,
     overdueDays: null,
     acknowledged: true,
+    acknowledgedAt: '2026-09-05T00:00:00Z',
     ...over,
   };
 }

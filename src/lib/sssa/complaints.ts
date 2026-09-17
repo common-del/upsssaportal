@@ -10,9 +10,11 @@ import { prisma } from '@/lib/db';
  * Authority has acknowledged it. They used to be two tabs, and SSSA asked for one.
  *
  * What makes one table work is treating inducement as a complaint type like any other. The type
- * filter and the category bars then cover both kinds with no special case, and the only place
- * the difference shows is the status cell, where one reads as an escalation level and the other
- * reads as acknowledged or not.
+ * filter and the category bars then cover both kinds with no special case.
+ *
+ * The status cell asks two questions of every row, the same two: who has it now, and how is it
+ * doing. A report has no stored handler level because the Authority is the only level that can
+ * act on one, so it reads as being with SSSA, which is what that absence means in practice.
  *
  * A school disputing its own verification is still not here. That is an Appeal: one per school
  * per cycle, argued indicator by indicator, decided only by SSSA, no ladder and no clock. What a
@@ -60,8 +62,9 @@ export type ComplaintRow = {
   /** Tickets only: which level is handling it, and how far past its deadline it is. */
   level: string | null;
   overdueDays: number | null;
-  /** Reports only. */
+  /** Reports only: whether the Authority has read it, and when. */
   acknowledged: boolean | null;
+  acknowledgedAt: string | null;
 };
 
 export type ComplaintFilterValues = {
@@ -200,6 +203,7 @@ export async function buildComplaints(
       level: t.handlerLevel,
       overdueDays: overdueMs != null && overdueMs > 0 ? Math.floor(overdueMs / 86_400_000) : null,
       acknowledged: null,
+      acknowledgedAt: null,
     };
   });
 
@@ -216,9 +220,13 @@ export async function buildComplaints(
       district: school?.district.nameEn ?? '—',
       type: INDUCEMENT_TYPE,
       ageDays: daysSince(r.createdAt, now),
+      // No handler level is stored: the Authority is the only level that can act on a report,
+      // so there is no ladder for it to climb. The list shows it as being with SSSA, which is
+      // what "no level stored" means in practice.
       level: null,
       overdueDays: null,
       acknowledged: r.auditAcknowledgedAt !== null,
+      acknowledgedAt: r.auditAcknowledgedAt?.toISOString() ?? null,
     };
   });
 

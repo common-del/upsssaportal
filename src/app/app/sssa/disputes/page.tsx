@@ -190,17 +190,31 @@ export default async function ComplaintsPage({
   );
 }
 
+/**
+ * One row's status, answering the same two questions for every kind of complaint: who has it
+ * now, and how is it doing.
+ *
+ * The chip used to answer "which level has it" on a public complaint and "has anyone read it" on
+ * a report, in the same position, which made the column mean two things at once. A report is
+ * always with SSSA, because the Authority is the only level that can acknowledge one, so that is
+ * what the chip says. Its progress line reads acknowledged or not, where a complaint's reads on
+ * time or overdue. Neither row says "no deadline" any more: that was true and useless, a shrug
+ * where the other rows carry a state.
+ */
 function Row({ row }: { row: ComplaintRow }) {
   const inside = row.source === 'VERIFIER';
   const waiting = row.acknowledged === false;
-  const chip = inside
+  const level = row.level ?? 'SSSA';
+  const chip = { text: level, ...(LEVEL_STYLE[level] ?? { bg: '#F3F4F6', ink: '#4B5563' }) };
+
+  const progress = inside
     ? waiting
-      ? { text: 'Not acknowledged', bg: '#96271E', ink: '#FFFFFF' }
-      : { text: 'Acknowledged', bg: '#E3F0E8', ink: '#1E6344' }
-    : {
-        text: row.level ?? '—',
-        ...(LEVEL_STYLE[row.level ?? ''] ?? { bg: '#F3F4F6', ink: '#4B5563' }),
-      };
+      ? 'not acknowledged'
+      : `acknowledged ${row.acknowledgedAt ? new Date(row.acknowledgedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}`.trim()
+    : row.overdueDays != null
+      ? `${row.overdueDays}d overdue`
+      : 'on time';
+  const pressing = waiting || row.overdueDays != null;
 
   return (
     <tr
@@ -237,9 +251,9 @@ function Row({ row }: { row: ComplaintRow }) {
         </span>
         <span
           className="mt-0.5 block text-[11.5px]"
-          style={{ color: row.overdueDays != null ? RED : '#9AA2B4' }}
+          style={{ color: pressing ? RED : '#9AA2B4', fontWeight: pressing ? 600 : 400 }}
         >
-          {inside ? 'no deadline' : row.overdueDays != null ? `${row.overdueDays}d overdue` : 'on time'}
+          {progress}
         </span>
       </td>
     </tr>

@@ -40,6 +40,25 @@ describe('the four counts', () => {
     expect(s.notStarted).toBe(0);
   });
 
+  // The register this runs on holds 32,440 schools whose results were backfilled out of
+  // responses, with no submission row of their own. Deriving notStarted from draft and submitted
+  // alone counted every one of them twice, once as verified and once as never having begun, and
+  // the four counts came to twice the register.
+  it('counts a verified school once when it has no submission row', () => {
+    const s = standingFrom({ totalSchools: 32_579, draft: 0, submitted: 0, verified: 32_440 });
+    expect(s.verified).toBe(32_440);
+    expect(s.notStarted).toBe(139);
+    expect(s.notStarted + s.draft + s.awaitingVerification + s.verified).toBe(32_579);
+  });
+
+  // A school cannot be verified without having been assessed, so it has finished whatever the
+  // submission table says. Reading that table alone made the banner report nought finished
+  // beside a card reporting 32,440 verified.
+  it('treats a verified school as having finished its self assessment', () => {
+    const s = standingFrom({ totalSchools: 32_579, draft: 0, submitted: 0, verified: 32_440 });
+    expect(s.finishedSelfAssessment).toBe(32_440);
+  });
+
   it('reads as nothing started on an empty cycle', () => {
     const s = standingFrom({ totalSchools: 32_579, draft: 0, submitted: 0, verified: 0 });
     expect(s.notStarted).toBe(32_579);

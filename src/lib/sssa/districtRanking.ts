@@ -42,9 +42,20 @@ export const round1 = (n: number) => Math.round(n * 10) / 10;
 /**
  * The four counts, mutually exclusive and summing to the register.
  *
- * Every subtraction is clamped at zero, because a school that never submitted can still reach a
- * verified Result through a field visit. Without the clamps that case drives a count negative,
- * which reads as a bug on the page and hides the real one.
+ * `notStarted` is what is left after the other three rather than a subtraction of its own, which
+ * is the only arrangement that always sums to the register. Deriving it from draft and submitted
+ * alone breaks the moment a school reaches a verified Result without a submission row of its
+ * own: the register the portal runs on holds 32,440 such schools, from results backfilled out of
+ * responses, and the page counted every one of them twice, once as verified and once as not
+ * started.
+ *
+ * `finishedSelfAssessment` counts a verified school whether or not a submission row exists,
+ * because a school cannot be verified without having been assessed. Reading the submission table
+ * alone made the banner say nought of 32,579 finished while the card beside it said 32,440
+ * verified.
+ *
+ * The clamps stay for the same reason they were added: a non-submitter can reach a Result through
+ * a field visit, and a negative count reads as a rendering fault rather than the data it is.
  */
 export function standingFrom(input: {
   totalSchools: number;
@@ -53,13 +64,15 @@ export function standingFrom(input: {
   verified: number;
 }): Standing {
   const { totalSchools, draft, submitted, verified } = input;
+  const awaitingVerification = Math.max(0, submitted - verified);
+  const finishedSelfAssessment = awaitingVerification + verified;
   return {
     totalSchools,
-    notStarted: Math.max(0, totalSchools - draft - submitted),
+    notStarted: Math.max(0, totalSchools - draft - finishedSelfAssessment),
     draft,
-    awaitingVerification: Math.max(0, submitted - verified),
+    awaitingVerification,
     verified,
-    finishedSelfAssessment: submitted,
+    finishedSelfAssessment,
   };
 }
 

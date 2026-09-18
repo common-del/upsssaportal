@@ -146,40 +146,71 @@ function Card({ heading, children }: { heading: string; children: React.ReactNod
   );
 }
 
+/**
+ * One colour per management type, and a bar of how much of the verified register each one is.
+ *
+ * The card was three lines of navy text on white and read as a list of nothing. The colour is not
+ * decoration: the three averages sit 0.3 points apart, so the only figure on this card that
+ * genuinely varies is how many schools each type accounts for, and that is what the bar shows.
+ */
+const MANAGEMENT_COLOUR: Record<string, string> = {
+  GOVERNMENT: '#1B2A6B',
+  AIDED: '#B8791A',
+  PRIVATE: '#1C7A4A',
+};
+
 function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated: boolean }) {
   const spread =
     rows.length > 1 ? Math.round((rows[0].score - rows[rows.length - 1].score) * 10) / 10 : 0;
+  const widest = Math.max(1, ...rows.map((r) => r.schools));
   return (
     <Card heading="School management type">
       {unpopulated ? (
         <p className="px-4 py-3 text-[13px] leading-relaxed text-gray-500">Not yet imported.</p>
       ) : (
         <>
-          {rows.map((m, i) => (
-            <div
-              key={m.code}
-              className={`flex items-start gap-3 px-4 py-3 ${i ? 'border-t border-gray-100' : ''}`}
-            >
-              <span className="mt-0.5 w-7 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-center text-[10px] font-extrabold text-gray-500">
-                {i + 1}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
-                  {m.label}
+          {rows.map((m, i) => {
+            const colour = MANAGEMENT_COLOUR[m.code] ?? NAVY;
+            return (
+              <div
+                key={m.code}
+                className={`flex items-center gap-3 px-4 py-3 ${i ? 'border-t border-gray-100' : ''}`}
+              >
+                <span
+                  className="w-7 shrink-0 rounded px-1.5 py-0.5 text-center text-[10px] font-extrabold text-white"
+                  style={{ backgroundColor: colour }}
+                >
+                  {i + 1}
                 </span>
-                <span className="mt-0.5 block text-xs tabular-nums text-gray-500">
-                  {m.score}% · {inr(m.schools)} verified
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="truncate text-[15px] font-bold leading-snug" style={{ color: colour }}>
+                      {m.label}
+                    </span>
+                    <span className="shrink-0 text-[15px] font-bold tabular-nums" style={{ color: colour }}>
+                      {m.score}%
+                    </span>
+                  </span>
+                  <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-gray-100">
+                    <span
+                      className="block h-1.5 rounded-full"
+                      style={{ width: `${(m.schools / widest) * 100}%`, backgroundColor: colour, opacity: 0.55 }}
+                    />
+                  </span>
+                  <span className="mt-1 block text-xs tabular-nums text-gray-500">
+                    {inr(m.schools)} verified
+                  </span>
                 </span>
-              </span>
-            </div>
-          ))}
+              </div>
+            );
+          })}
           {/* A numbered list reads as a gap. Across 32,000 schools there is not one, and saying
               so is cheaper than letting the ranking imply otherwise. */}
           {rows.length > 1 && (
             <p className="mt-auto border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
               {spread === 0
-                ? 'First and third are level.'
-                : `${spread} points separate first from third.`}
+                ? 'First and third are level. The bars show how many schools each type is.'
+                : `${spread} points separate first from third. The bars show how many schools each type is.`}
             </p>
           )}
         </>
@@ -188,23 +219,49 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
   );
 }
 
-function GradeDoor({ title, band, divider }: { title: string; band: BandLink; divider?: boolean }) {
+/**
+ * A door into the register, coloured by which end of the scale it opens.
+ *
+ * The grade pill takes the register's own band colours, so a reader arriving at the filtered list
+ * sees the same green or gold they clicked. The tinted left edge is what stops the card reading
+ * as two grey rows, and it carries meaning rather than decoration: green is the top of the scale,
+ * gold the bottom, which is the portal's existing pairing for these two grades.
+ */
+function GradeDoor({
+  title,
+  band,
+  tone,
+  divider,
+}: {
+  title: string;
+  band: BandLink;
+  tone: 'top' | 'bottom';
+  divider?: boolean;
+}) {
+  const edge = tone === 'top' ? '#1C7A4A' : '#B8791A';
+  const pill = tone === 'top' ? 'bg-[#E7F5EE] text-[#14603A]' : 'bg-[#FBF1DE] text-[#7A5209]';
   return (
     <Link
       href={`/app/sssa/schools?sqaaf=${encodeURIComponent(band.label)}`}
-      className={`flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 ${
+      className={`flex items-center gap-3.5 px-4 py-4 hover:bg-gray-50 ${
         divider ? 'border-t border-gray-100' : ''
       }`}
+      style={{ boxShadow: `inset 4px 0 0 ${edge}` }}
     >
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
           {title}
         </span>
-        <span className="mt-0.5 block text-xs tabular-nums text-gray-500">
-          {band.label} · {inr(band.schools)} {band.schools === 1 ? 'school' : 'schools'}
+        <span className="mt-1.5 flex items-center gap-2">
+          <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${pill}`}>
+            {band.label}
+          </span>
+          <span className="text-xs tabular-nums text-gray-500">
+            {inr(band.schools)} {band.schools === 1 ? 'school' : 'schools'}
+          </span>
         </span>
       </span>
-      <span aria-hidden className="shrink-0 text-lg text-gray-300">
+      <span aria-hidden className="shrink-0 text-lg" style={{ color: edge }}>
         ›
       </span>
     </Link>
@@ -342,8 +399,10 @@ export function StateDashboard({ data }: { data: Data }) {
             </tbody>
           </Table>
           <p className="mt-3 text-xs">
+            {/* Counted, never hardcoded. This read "all 75 districts" beside a bottom row
+                ranked 80, because the register holds five districts twice over. */}
             <Link href="/app/sssa/schools" className="font-bold" style={{ color: NAVY }}>
-              See all 75 districts in the register →
+              See all {inr(data.districtsRanked)} districts in the register →
             </Link>
           </p>
         </Section>
@@ -355,8 +414,13 @@ export function StateDashboard({ data }: { data: Data }) {
         <Card heading="Schools">
           {data.topBand && data.bottomBand ? (
             <>
-              <GradeDoor title="Top schools in the state" band={data.topBand} />
-              <GradeDoor title="Bottom schools in the state" band={data.bottomBand} divider />
+              <GradeDoor title="Top schools in the state" band={data.topBand} tone="top" />
+              <GradeDoor
+                title="Bottom schools in the state"
+                band={data.bottomBand}
+                tone="bottom"
+                divider
+              />
               <p className="mt-auto border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
                 Each opens the register filtered to that SQAAF grade, rather than naming one school
                 here.

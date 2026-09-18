@@ -120,17 +120,27 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
     // Grouped in the database rather than by pulling 32,579 school rows and 26,000 submission
     // rows back to count them here. Prisma's groupBy cannot reach across the relation to the
     // district, so this is the one place the file drops to SQL.
+    //
+    // A school counts as finished on either evidence: a submitted self assessment, or a verified
+    // result. The second half matters more than it sounds. On the register the portal runs on,
+    // results were backfilled from responses without submission rows, so counting submissions
+    // alone printed 0.0% against every district in the state while the same rows carried an
+    // average score. Both joins are on unique keys, so neither multiplies the school count.
     prisma.$queryRaw<{ code: string; name: string; schools: number; finished: number }[]>`
       SELECT s."districtCode" AS code,
              d."nameEn"       AS name,
              COUNT(*)::int    AS schools,
-             COUNT(sub.id)::int AS finished
+             COUNT(*) FILTER (WHERE sub.id IS NOT NULL OR res.id IS NOT NULL)::int AS finished
       FROM "School" s
       JOIN "District" d ON d.code = s."districtCode"
       LEFT JOIN "SelfAssessmentSubmission" sub
         ON sub."schoolUdise" = s.udise
        AND sub."cycleId" = ${cycle.id}
        AND sub.status = 'SUBMITTED'
+      LEFT JOIN "Result" res
+        ON res."schoolUdise" = s.udise
+       AND res."cycleId" = ${cycle.id}
+       AND res."finalScorePercent" IS NOT NULL
       GROUP BY s."districtCode", d."nameEn"
     `,
   ]);

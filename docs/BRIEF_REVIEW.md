@@ -1774,3 +1774,54 @@ and the count underneath, which is SSSA's wording.
 where that word means something narrower than it does here. Renaming it to "Awaiting verification"
 would settle it, and it touches Monitoring and the School Directory, so it was raised rather than
 done.
+
+## 49. Three faults the first live screenshot of the dashboard showed, 18 September 2026
+
+A rank of 80 under a line reading "all 75 districts" was the visible one. Looking at why turned up
+two more, both worse.
+
+### The register holds five districts twice
+
+`prisma/seed-dummy.ts` creates its own five districts, coded LKO, VNS, PRG, KNP and GKP, for
+Lucknow, Varanasi, Prayagraj, Kanpur Nagar and Gorakhpur. All five already exist in
+`DISTRICT_SEED` under their D0xx codes. Seventy-five plus five is the eighty the page printed, and
+schools hang off both sets.
+
+That seed is not in the build chain, so this is the residue of a manual run against the demo
+database at some point. The page was reporting the register accurately; the register is wrong.
+Nothing has been deleted, because folding the duplicates back means moving schools and their
+blocks between districts and the schools carry results, submissions and tickets. It is recorded
+here for a decision rather than fixed on the way past.
+
+What is fixed is the label. It read "all 75 districts" because the number was typed into the
+component. It now counts what it is showing, so the page cannot disagree with itself again
+whatever the data does.
+
+### The four counts summed to twice the register
+
+`notStarted` was derived as total minus draft minus submitted. On this register 32,440 schools
+carry a result backfilled out of their responses with no submission row of their own, so every one
+of them was counted twice: once as verified, once as never having begun. The four counts came to
+65,019 against a register of 32,579.
+
+`notStarted` is now what is left after the other three, which is the only arrangement that always
+sums. Two tests hold it.
+
+### The banner reported nothing finished beside 32,440 verified
+
+`finishedSelfAssessment` read the submission table alone, which on the same register is nearly
+empty. A school cannot be verified without having been assessed, so it now counts as finished
+whether or not a submission row exists.
+
+The district ranking had the same fault for the same reason and printed 0.0% against every
+district in the state while the row beside it carried an average score. Its query now counts a
+school as finished on either evidence, a submitted self assessment or a verified result. Both
+joins are on unique keys, so neither multiplies the school count.
+
+### Colour on the two cards at the foot
+
+Both were lines of navy text on white. The management card now carries one colour per type and a
+bar of how many schools each accounts for, which is the only figure on that card that genuinely
+varies: the three averages sit 0.3 points apart, the school counts run 19,372 against 4,854. The
+two doors take the register's own grade colours, green for the top of the scale and gold for the
+bottom, so a reader arriving at the filtered list sees the colour they clicked.

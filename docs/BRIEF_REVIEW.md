@@ -1648,3 +1648,80 @@ Two tests hold the line: an untouched case twenty-six days over is not pressing 
 Worth being plain about what this does to the demo: it does not turn the tabs quiet. To schedule
 still reads red while it holds a missed call, and Recordings while it holds a closed window, both
 of which are correct. The change is that being overdue alone stops painting a row.
+
+## 47. The state dashboard leads on completion, and districts rank on it, 18 September 2026
+
+### How this was arrived at
+
+Eleven mock-ups were rejected before the brief became clear, which is the useful part of the
+record. The first six varied the concept (operations console, three questions, repaired
+scorecard, a time-led status screen, the verification pipeline, a district league table) and all
+six were wrong. Asking which axis was wrong produced the answer in one exchange: the look did not
+match the portal, the information was wrong, and the one thing the page is for is how far the
+cycle has got.
+
+The lesson worth keeping: the mock-ups were built in an invented visual language rather than the
+portal's own tokens, which made every one of them read as somebody else's product. Reading
+`globals.css` and `StateDashboard.tsx` for the real values should have been the first step, not
+the seventh.
+
+### What the page carries now
+
+In the order SSSA gave it: schools that have finished their self assessment, then the state
+average score, then the four counts, then districts ranked, then management type, then a way
+through to the highest and lowest scoring schools.
+
+**The banner leads on completion.** The score is roughly stable week to week; completion is what
+the Authority is asked about. Both sit in the same navy strip, so neither needs its own furniture.
+
+**The four counts sum to the register.** `verified` is Result rows carrying a final score, which
+is deliberately the same set the average is computed from. A page that averaged one population
+and counted another would contradict itself twice over. `buildCycleCounts`, which Monitoring and
+the Schools funnel use, counts VerificationSubmission instead; the two agree in normal running,
+and this definition is the right one here because of what sits beside it.
+
+**Districts rank on self assessment finished, not on score.** A district that has not finished is
+a district somebody has to chase; a district's average is not something the Authority acts on
+directly. The score stays as a column so the ranking can be read against it. Top ten and the
+bottom one, so the range shows without 75 rows.
+
+### Three decisions inside that ranking
+
+Districts with fewer than five schools are not ranked. This matters more on a completion ranking
+than it did on a score one: two schools, both finished, would otherwise sit above every district
+in the state at a permanent 100% while representing nothing.
+
+Ties are broken by the larger district first. Finishing 431 of 438 is a bigger piece of work than
+finishing 20 of 20, and a ranking that put the small one above it would send the Authority to the
+wrong place. A remaining tie breaks on name, so the order is stable between requests rather than
+shifting with whatever the database returned first.
+
+One cell carries the ranking: the share finished, the fraction underneath, and a bar. The first
+draft had Schools, Finished and a bar as three separate columns, which SSSA read as three
+finished columns, correctly: they were the same fact three times across the row.
+
+### The two things that were wrong on the old page
+
+**Coverage read 100% at 99.6%.** 32,440 of 32,579 rounded up, so the page reported the job
+finished while 139 schools were outstanding. Coverage is now stated as a count and a percentage
+to one decimal.
+
+**The single highest and lowest scoring school are gone.** One row at each end of 32,440 is
+almost always a data artefact rather than a school anybody would act on: the old page printed one
+at 100 out of 100 and one at 0. The card is now two doors into the register, filtered to the top
+and bottom bands, which answers the same question with a population rather than an outlier.
+
+**The management ranking stays**, at SSSA's explicit instruction after it was raised twice. It
+now prints the spread underneath: a numbered list reads as a gap and across 32,000 schools there
+is not one, so the card says "0.3 points separate first from third" rather than letting the
+ranking imply otherwise.
+
+### Known behaviour worth stating
+
+The district ranking only does work while districts are unfinished. On a register where every
+school has finished, it is a 75 way tie at 100% and the four counts read 0, 0, and the remainder.
+The table earns its place for most of a cycle and goes flat at the end. That was put to SSSA with
+the mock-up and accepted.
+
+Ranking rules live in `src/lib/sssa/districtRanking.ts` with fourteen tests, because the minimum
+size, the tie-break and the clamping on the four counts are decisions rather than arithmetic.

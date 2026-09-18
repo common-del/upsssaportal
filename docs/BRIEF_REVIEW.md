@@ -1929,3 +1929,21 @@ The three views are client state, unlike the district scope above them: the scop
 figure on the page and belongs in the URL, this changes only which rows of one table are on
 screen, and a round trip for that would cost more than it fetches. Seventy-five rows scroll inside
 their own box with the heading pinned, rather than pushing the two cards below off the page.
+
+## 54. A serial number beside the rank, 18 September 2026
+
+Rank travelling on the row is what makes the alphabetical view honest, and it is also what makes
+the table hard to hold your place in: down 75 rows the first column reads 34, 12, 61, 7, and
+nothing on screen says whether you are a third of the way through or two thirds.
+
+So there is a serial number in front of it. It counts the rows on screen, resets per view, and is
+plain grey against the rank's chip so the eye reads standing first and takes the serial number as
+the margin note it is.
+
+The two columns show the same number in the Top 10 view and disagree everywhere else. That
+redundancy in one of three views is the whole cost, and it buys a column you can point at in a
+meeting.
+
+The header row moved from a string array with a hardcoded right-aligned index to a list of
+columns carrying their own alignment. The old form aligned by position, so inserting a column
+would have right-aligned the wrong one silently, which is the kind of fault that ships.

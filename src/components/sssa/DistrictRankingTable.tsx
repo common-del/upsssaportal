@@ -14,6 +14,12 @@ import type { DistrictRow } from '@/lib/sssa/stateDashboard';
  * Rank travels on the row rather than being its position, so it still reads 1 to 75 when the
  * table is alphabetical. A position is not a rank once the order changes.
  *
+ * That leaves nothing saying where you are in the list, so a serial number sits beside the rank.
+ * In the alphabetical view the ranks are scattered and the serial number is the only column that
+ * counts in order, which is what you read off when you are halfway down the state and want to say
+ * which row. The two columns agree in the top ten view and nowhere else. That is the price of
+ * having both, and it is cheap against losing your place.
+ *
  * The three views are client state rather than a search parameter: unlike the district scope
  * above, which changes every figure on the page, this changes only which rows of one table are on
  * screen, and a round trip to the server for that would be slower than the thing it fetches.
@@ -30,6 +36,17 @@ const VIEWS: { key: View; label: string }[] = [
   { key: 'all', label: 'All districts' },
   { key: 'top', label: `Top ${ENDS}` },
   { key: 'bottom', label: `Bottom ${ENDS}` },
+];
+
+// Held as data rather than as a literal in the markup, because the alignment used to be a
+// hardcoded column index and adding a column silently right-aligned the wrong one.
+const COLUMNS: { label: string; align: 'left' | 'right' }[] = [
+  { label: 'S. No.', align: 'left' },
+  { label: 'Rank', align: 'left' },
+  { label: 'District', align: 'left' },
+  { label: 'Self assessments finished', align: 'left' },
+  { label: 'Average score', align: 'right' },
+  { label: 'SQAAF grade', align: 'left' },
 ];
 
 function Finished({ d }: { d: DistrictRow }) {
@@ -99,26 +116,29 @@ export function DistrictRankingTable({ districts }: { districts: DistrictRow[] }
         className="overflow-x-auto overflow-y-auto rounded-2xl border border-gray-200 bg-white"
         style={{ maxHeight: view === 'all' ? 520 : undefined }}
       >
-        <table className="w-full text-[13px]" style={{ minWidth: 760 }}>
+        <table className="w-full text-[13px]" style={{ minWidth: 820 }}>
           <thead className="sticky top-0 z-10">
             <tr>
-              {['Rank', 'District', 'Self assessments finished', 'Average score', 'SQAAF grade'].map(
-                (h, i) => (
-                  <th
-                    key={h}
-                    className={`border-b border-gray-100 bg-gray-50 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-500 ${
-                      i === 3 ? 'text-right' : 'text-left'
-                    }`}
-                  >
-                    {h}
-                  </th>
-                ),
-              )}
+              {COLUMNS.map((c) => (
+                <th
+                  key={c.label}
+                  className={`border-b border-gray-100 bg-gray-50 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-500 ${
+                    c.align === 'right' ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {c.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((d) => (
+            {rows.map((d, i) => (
               <tr key={d.code} className="border-t border-gray-100">
+                {/* Plain and grey against the rank's chip, so the eye reads standing first and
+                    treats the serial number as the margin note it is. */}
+                <td className="py-3 pl-4 pr-2 align-middle text-xs tabular-nums text-gray-400">
+                  {i + 1}
+                </td>
                 <td className="px-4 py-3 align-middle">
                   <span
                     className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-extrabold ${

@@ -1825,3 +1825,39 @@ bar of how many schools each accounts for, which is the only figure on that card
 varies: the three averages sit 0.3 points apart, the school counts run 19,372 against 4,854. The
 two doors take the register's own grade colours, green for the top of the scale and gold for the
 bottom, so a reader arriving at the filtered list sees the colour they clicked.
+
+## 50. The duplicate districts are folded back, 18 September 2026
+
+Section 49 recorded five districts existing twice and left them, because folding them meant moving
+schools between districts. SSSA asked for it done, so it is done, as a backfill rather than by
+hand: a database somebody repaired by hand is one nobody can rebuild.
+
+`prisma/backfillDuplicateDistricts.ts` runs in the build chain. Which row survives is not a
+judgement call: `DISTRICT_SEED` is the authoritative list of the 75, so a district whose code is in
+it stays and a same-named district whose code is not is folded into it. Where a name has duplicates
+and neither code is seeded, nothing is touched and the pair is printed, because guessing which of
+two unknown rows is real is how a register loses schools.
+
+The part worth remembering is what had to move. Two tables hold a real foreign key to District,
+Block and School. Five more carry the code as a plain string with no constraint to catch them:
+User, Ticket, VerifierDistrict, VerifierExclusion and FieldVisit. A delete would have succeeded
+with all five left dangling and nothing would have complained. `VerifierDistrict` is unique on
+(verifier, district), so a verifier already holding the surviving district has the duplicate claim
+dropped rather than moved, which would otherwise fail on the constraint.
+
+Blocks move before schools, so a school and its block are never in different districts even
+part-way through.
+
+## 51. Two card faults from the same screenshot
+
+**The management card ranked on score and showed a bar of something else.** The bar was each
+type's share of the largest type, so Government schools filled it and the card read as a ranking by
+size while the numbers beside it ranked by score. The bar is now coverage, verified over total for
+that type, and the row states it: "19,372 of 24,015 verified". That needed a count of all schools
+per management type, not only the verified ones, so the builder now groups the register by
+management as well as averaging the results.
+
+**The schools card was two thin rows in a card stretched to match three management rows**, which
+left it two thirds empty. Each door now carries the grade pill, the count at reading size and its
+share of the verified register, with a bar. The two cards come out level, and the share is the
+context that makes 19,676 mean something.

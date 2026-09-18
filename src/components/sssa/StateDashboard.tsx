@@ -162,7 +162,6 @@ const MANAGEMENT_COLOUR: Record<string, string> = {
 function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated: boolean }) {
   const spread =
     rows.length > 1 ? Math.round((rows[0].score - rows[rows.length - 1].score) * 10) / 10 : 0;
-  const widest = Math.max(1, ...rows.map((r) => r.schools));
   return (
     <Card heading="School management type">
       {unpopulated ? (
@@ -171,6 +170,7 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
         <>
           {rows.map((m, i) => {
             const colour = MANAGEMENT_COLOUR[m.code] ?? NAVY;
+            const covered = m.total > 0 ? (m.verified / m.total) * 100 : 0;
             return (
               <div
                 key={m.code}
@@ -194,11 +194,11 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
                   <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-gray-100">
                     <span
                       className="block h-1.5 rounded-full"
-                      style={{ width: `${(m.schools / widest) * 100}%`, backgroundColor: colour, opacity: 0.55 }}
+                      style={{ width: `${covered}%`, backgroundColor: colour, opacity: 0.55 }}
                     />
                   </span>
                   <span className="mt-1 block text-xs tabular-nums text-gray-500">
-                    {inr(m.schools)} verified
+                    {inr(m.verified)} of {inr(m.total)} verified
                   </span>
                 </span>
               </div>
@@ -208,9 +208,8 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
               so is cheaper than letting the ranking imply otherwise. */}
           {rows.length > 1 && (
             <p className="mt-auto border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
-              {spread === 0
-                ? 'First and third are level. The bars show how many schools each type is.'
-                : `${spread} points separate first from third. The bars show how many schools each type is.`}
+              Ranked on score. {spread === 0 ? 'First and third are level.' : `${spread} points separate first from third.`}{' '}
+              The bar is how much of each type has been verified.
             </p>
           )}
         </>
@@ -220,45 +219,62 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
 }
 
 /**
- * A door into the register, coloured by which end of the scale it opens.
+ * A door into the register, sized to carry its own figures rather than to be a link.
+ *
+ * Two thin rows left the card two thirds empty beside a management card of three, which is what
+ * made the pair look lopsided. Each door now holds the grade, the count at reading size and its
+ * share of the verified register, which is the context that makes 19,676 mean something, and the
+ * two cards come out level.
  *
  * The grade pill takes the register's own band colours, so a reader arriving at the filtered list
- * sees the same green or gold they clicked. The tinted left edge is what stops the card reading
- * as two grey rows, and it carries meaning rather than decoration: green is the top of the scale,
- * gold the bottom, which is the portal's existing pairing for these two grades.
+ * sees the colour they clicked, and the tinted edge says which end of the scale it opens.
  */
 function GradeDoor({
   title,
   band,
   tone,
+  ofVerified,
   divider,
 }: {
   title: string;
   band: BandLink;
   tone: 'top' | 'bottom';
+  ofVerified: number;
   divider?: boolean;
 }) {
   const edge = tone === 'top' ? '#1C7A4A' : '#B8791A';
   const pill = tone === 'top' ? 'bg-[#E7F5EE] text-[#14603A]' : 'bg-[#FBF1DE] text-[#7A5209]';
+  const share = ofVerified > 0 ? Math.round((band.schools / ofVerified) * 1000) / 10 : 0;
   return (
     <Link
       href={`/app/sssa/schools?sqaaf=${encodeURIComponent(band.label)}`}
-      className={`flex items-center gap-3.5 px-4 py-4 hover:bg-gray-50 ${
+      className={`flex flex-1 items-center gap-3.5 px-4 py-4 hover:bg-gray-50 ${
         divider ? 'border-t border-gray-100' : ''
       }`}
       style={{ boxShadow: `inset 4px 0 0 ${edge}` }}
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
-          {title}
-        </span>
-        <span className="mt-1.5 flex items-center gap-2">
+        <span className="flex items-center gap-2.5">
+          <span className="text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
+            {title}
+          </span>
           <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${pill}`}>
             {band.label}
           </span>
-          <span className="text-xs tabular-nums text-gray-500">
-            {inr(band.schools)} {band.schools === 1 ? 'school' : 'schools'}
+        </span>
+        <span className="mt-2 flex items-baseline gap-2.5">
+          <span className="text-2xl font-bold leading-none tabular-nums" style={{ color: edge }}>
+            {inr(band.schools)}
           </span>
+          <span className="text-xs tabular-nums text-gray-500">
+            {band.schools === 1 ? 'school' : 'schools'}, {share}% of those verified
+          </span>
+        </span>
+        <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-gray-100">
+          <span
+            className="block h-1.5 rounded-full"
+            style={{ width: `${Math.min(100, share)}%`, backgroundColor: edge, opacity: 0.55 }}
+          />
         </span>
       </span>
       <span aria-hidden className="shrink-0 text-lg" style={{ color: edge }}>
@@ -414,14 +430,20 @@ export function StateDashboard({ data }: { data: Data }) {
         <Card heading="Schools">
           {data.topBand && data.bottomBand ? (
             <>
-              <GradeDoor title="Top schools in the state" band={data.topBand} tone="top" />
+              <GradeDoor
+                title="Top schools in the state"
+                band={data.topBand}
+                tone="top"
+                ofVerified={standing.verified}
+              />
               <GradeDoor
                 title="Bottom schools in the state"
                 band={data.bottomBand}
                 tone="bottom"
+                ofVerified={standing.verified}
                 divider
               />
-              <p className="mt-auto border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
+              <p className="border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
                 Each opens the register filtered to that SQAAF grade, rather than naming one school
                 here.
               </p>

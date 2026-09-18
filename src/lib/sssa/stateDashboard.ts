@@ -33,7 +33,16 @@ import {
  * column so the ranking can be read against it.
  */
 
-export type ManagementRow = { code: ManagementCode; label: string; score: number; schools: number };
+export type ManagementRow = {
+  code: ManagementCode;
+  label: string;
+  score: number;
+  /** Schools of this type carrying a verified score. */
+  verified: number;
+  /** Schools of this type on the register, verified or not. The row reads one over the other,
+   *  because 19,372 means little without the 24,015 it came out of. */
+  total: number;
+};
 
 /** Where every school stands. The four counts sum to the register. */
 export type CycleStanding = Standing;
@@ -107,7 +116,7 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
   // cheaper than issuing an average per district, and it keeps the district and management
   // figures consistent with the state average by construction — they are the same numbers
   // grouped three ways.
-  const [results, draftCount, submittedCount, districtTotals] = await Promise.all([
+  const [results, draftCount, submittedCount, managementTotals, districtTotals] = await Promise.all([
     prisma.result.findMany({
       where: { cycleId: cycle.id, finalScorePercent: { not: null } },
       select: {
@@ -117,6 +126,9 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
     }),
     prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'DRAFT' } }),
     prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
+    // Every school of each type, not only the verified ones, so the card can say how far each
+    // type has been covered rather than only how many of it happen to be done.
+    prisma.school.groupBy({ by: ['management'], _count: { _all: true } }),
     // Grouped in the database rather than by pulling 32,579 school rows and 26,000 submission
     // rows back to count them here. Prisma's groupBy cannot reach across the relation to the
     // district, so this is the one place the file drops to SQL.
@@ -200,12 +212,20 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
     (score) => bandFor(score, bands),
   );
 
+  const totalByMgmt = new Map<string, number>(
+    managementTotals.map((m) => [m.management ?? '', m._count._all]),
+  );
+
+  // Ranked on score, which is what the card is about. The bar beside each row is coverage,
+  // verified over total, because the three scores sit a third of a point apart and the only
+  // figure on the card that genuinely moves is how much of each type has been reached.
   const management: ManagementRow[] = [...byMgmt.entries()]
     .map(([code, v]) => ({
       code,
       label: MANAGEMENT_LABELS[code],
       score: round1(v.total / v.n),
-      schools: v.n,
+      verified: v.n,
+      total: Math.max(v.n, totalByMgmt.get(code) ?? 0),
     }))
     .sort((a, b) => b.score - a.score);
 

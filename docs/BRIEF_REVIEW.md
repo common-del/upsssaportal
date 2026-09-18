@@ -1861,3 +1861,27 @@ management as well as averaging the results.
 left it two thirds empty. Each door now carries the grade pill, the count at reading size and its
 share of the verified register, with a bar. The two cards come out level, and the share is the
 context that makes 19,676 mean something.
+
+## 52. The register learns to order, so the dashboard's two doors land somewhere, 18 September 2026
+
+The dashboard's "Top schools in the state" and "Bottom schools in the state" linked to the register
+filtered to the top and bottom SQAAF grades. The filter arrived pre-filled and the table was
+correct, and the link still did not keep its promise: the register orders by name and nothing else,
+so the door marked "top" opened a list of Utkarsh schools in alphabetical order. That shows a
+grade, not the schools at either end of it.
+
+The register now takes an order. It sits below the filter row rather than among the menus, because
+it is not a filter: a filter changes which schools are on the page and the count beside it, an
+order changes only which end you read first. It is outside the "Clear filters" count for the same
+reason.
+
+The ordering runs after the filter and before the page slice, so page one really is the top of the
+whole match set rather than the top of whichever twenty rows came back first.
+
+A school with no score sits at the end of both orders. It is not the lowest scoring school in the
+state, it is one nobody has scored, and sorting it to the bottom of "lowest first" would put
+unscored schools in front of the ones the Authority came to see.
+
+Worth noting for the next reader: the comment at the top of the register's filtering block already
+said "the filter and sort below run over the whole match set" when there was no sort. A comment
+describing behaviour that does not exist is how a gap like this stays invisible.

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 /**
- * The school register's filter bar: a search box and five menus, above the table.
+ * The school register's filter bar: a search box, five menus and an order, above the table.
  *
  * One control per column the register can answer a question about, in the order the columns
  * appear, so the bar reads as a key to the table rather than as a separate machine. Fee has a
@@ -19,6 +19,12 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
  * navigate at once, because a menu is one decision. Every filter is a search parameter, which
  * keeps the page server-rendered, keeps a filtered view shareable, and lets Back step through
  * the filters the way people expect.
+ *
+ * Order sits below the filters rather than among them, because it is not one. A filter changes
+ * which schools are on the page and the count beside it; an order changes only which end you
+ * read first, and it is deliberately outside the "Clear filters" count for the same reason.
+ * It exists because the dashboard's top and bottom doors need somewhere to land: filtering to a
+ * grade and listing it alphabetically shows you a grade, not the schools at either end of it.
  */
 
 type Option = { value: string; label: string };
@@ -32,7 +38,14 @@ export type RegisterFilterValues = {
   management: string;
   sqaaf: string;
   status: string;
+  /** '', 'score_desc' or 'score_asc'. Empty is the register's own order, by name. */
+  sort: string;
 };
+
+export const SORT_OPTIONS: Option[] = [
+  { value: 'score_desc', label: 'Highest score first' },
+  { value: 'score_asc', label: 'Lowest score first' },
+];
 
 /** Empty means "no filter", so a select showing its placeholder is not a value. */
 const isSet = (v: string) => v.trim() !== '';
@@ -214,22 +227,45 @@ export function RegisterFilters({
 
       {/* A filtered register that still reports the full total is a page lying about what is
           on screen, so the count names both numbers and offers one way out of all of them. */}
-      <p className="flex flex-wrap items-baseline gap-2 text-[12.5px] text-gray-600">
-        <span>
-          <b className="text-gray-900">{matched.toLocaleString('en-IN')}</b>
-          {anyFilter && <> of {total.toLocaleString('en-IN')}</>} {matched === 1 ? 'school' : 'schools'}
-        </span>
-        {anyFilter && (
-          <button
-            type="button"
-            onClick={() => router.push(pathname)}
-            className="font-semibold underline"
-            style={{ color: NAVY }}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <p className="flex flex-wrap items-baseline gap-2 text-[12.5px] text-gray-600">
+          <span>
+            <b className="text-gray-900">{matched.toLocaleString('en-IN')}</b>
+            {anyFilter && <> of {total.toLocaleString('en-IN')}</>}{' '}
+            {matched === 1 ? 'school' : 'schools'}
+          </span>
+          {anyFilter && (
+            <button
+              type="button"
+              onClick={() => router.push(pathname)}
+              className="font-semibold underline"
+              style={{ color: NAVY }}
+            >
+              Clear filters
+            </button>
+          )}
+        </p>
+
+        <span className="flex items-center gap-2">
+          <label htmlFor="reg-sort" className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            Order
+          </label>
+          <select
+            id="reg-sort"
+            value={selected.sort}
+            onChange={(e) => navigate({ sort: e.target.value })}
+            className="rounded-lg border px-3 py-1.5 text-[12.5px] focus:outline-none focus:ring-1"
+            style={{ borderColor: isSet(selected.sort) ? NAVY : '#D6DCE7', color: '#3C4A61' }}
           >
-            Clear filters
-          </button>
-        )}
-      </p>
+            <option value="">Name, A to Z</option>
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </span>
+      </div>
     </div>
   );
 }

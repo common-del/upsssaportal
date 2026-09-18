@@ -123,6 +123,7 @@ export default async function SssaSchoolDirectoryPage(props: {
   const management = (searchParams.management as string) || '';
   const sqaaf = (searchParams.sqaaf as string) || '';
   const status = (searchParams.status as string) || '';
+  const sort = (searchParams.sort as string) || '';
   const q = (searchParams.q as string) || '';
   const page = Math.max(1, parseInt((searchParams.page as string) || '1', 10));
 
@@ -270,9 +271,25 @@ export default async function SssaSchoolDirectoryPage(props: {
     return true;
   });
 
-  const total = filtered.length;
+  // Order runs after the filter and before the slice, so page 1 really is the top of the whole
+  // match set rather than the top of whatever twenty rows came back first.
+  //
+  // A school with no score sits at the end of both orders. It is not the lowest scoring school
+  // in the state, it is one nobody has scored, and sorting it to the bottom of "lowest first"
+  // would put unscored schools in front of the ones the Authority is looking for.
+  const ordered =
+    sort === 'score_desc' || sort === 'score_asc'
+      ? [...filtered].sort((a, b) => {
+          if (a.score === null && b.score === null) return a.nameEn.localeCompare(b.nameEn);
+          if (a.score === null) return 1;
+          if (b.score === null) return -1;
+          return sort === 'score_desc' ? b.score - a.score : a.score - b.score;
+        })
+      : filtered;
+
+  const total = ordered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageRows = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function pageHref(p: number) {
     const params = new URLSearchParams();
@@ -284,6 +301,7 @@ export default async function SssaSchoolDirectoryPage(props: {
     if (management) params.set('management', management);
     if (sqaaf) params.set('sqaaf', sqaaf);
     if (status) params.set('status', status);
+    if (sort) params.set('sort', sort);
     if (q) params.set('q', q);
     if (p > 1) params.set('page', String(p));
     const qs = params.toString();
@@ -313,7 +331,7 @@ export default async function SssaSchoolDirectoryPage(props: {
             column and no menu: it is worth seeing on a row and is not a question anyone asks of
             all 32,579. */}
         <RegisterFilters
-          selected={{ q, district, block, management, sqaaf, status }}
+          selected={{ q, district, block, management, sqaaf, status, sort }}
           districts={districts.map((d) => ({ value: d.code, label: d.nameEn }))}
           blocks={blocks.map((b) => ({ value: b.code, label: b.nameEn }))}
           managements={MANAGEMENT_CODES.map((c) => ({ value: c, label: MANAGEMENT_LABELS_SHORT[c] }))}

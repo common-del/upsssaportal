@@ -245,9 +245,13 @@ function GradeDoor({
   const edge = tone === 'top' ? '#1C7A4A' : '#B8791A';
   const pill = tone === 'top' ? 'bg-[#E7F5EE] text-[#14603A]' : 'bg-[#FBF1DE] text-[#7A5209]';
   const share = ofVerified > 0 ? Math.round((band.schools / ofVerified) * 1000) / 10 : 0;
+  // Both parameters, because the grade alone is not the answer. Filtering to Utkarsh and
+  // listing it by name shows a grade; the door promises the schools at one end of the state,
+  // so it carries the order that puts them at the top of page one.
+  const sort = tone === 'top' ? 'score_desc' : 'score_asc';
   return (
     <Link
-      href={`/app/sssa/schools?sqaaf=${encodeURIComponent(band.label)}`}
+      href={`/app/sssa/schools?sqaaf=${encodeURIComponent(band.label)}&sort=${sort}`}
       className={`flex flex-1 items-center gap-3.5 px-4 py-4 hover:bg-gray-50 ${
         divider ? 'border-t border-gray-100' : ''
       }`}
@@ -444,8 +448,8 @@ export function StateDashboard({ data }: { data: Data }) {
                 divider
               />
               <p className="border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
-                Each opens the register filtered to that SQAAF grade, rather than naming one school
-                here.
+                Each opens the register filtered to that SQAAF grade and ordered by score, rather
+                than naming one school here.
               </p>
             </>
           ) : (

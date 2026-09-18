@@ -1725,3 +1725,52 @@ the mock-up and accepted.
 
 Ranking rules live in `src/lib/sssa/districtRanking.ts` with fourteen tests, because the minimum
 size, the tie-break and the clamping on the four counts are decisions rather than arithmetic.
+
+## 48. The banner becomes a ring, and the page gets one vocabulary, 18 September 2026
+
+### The banner
+
+Four treatments were put up. SSSA chose the ring.
+
+What was wrong with what it replaces: two figures at 46px side by side, which means neither is the
+headline, and no indication of proportion at all. Completion is a share of a whole, and 26,563
+says nothing without 32,579 beside it. A reader should not have to divide.
+
+The ring carries the share, the count sits beside it at 40px, and the average score drops to 36px
+on the right of a rule. The two numbers now have an order rather than competing. It is also the
+only one of the four that does not grow when the figures get longer, which matters on a page whose
+numbers run to five digits.
+
+### The vocabulary, which was the worse fault
+
+The first build of this page used four vocabularies, and one of them collided with the rest of the
+portal on meaning rather than on wording.
+
+**"Finished" named two different populations.** `CycleFunnel`, on Monitoring and the School
+Directory, uses it for schools that have sent a self assessment and not yet been verified. The
+dashboard banner used it for schools that have sent one at all, verified included. One word, two
+sets, two pages.
+
+**The schools card carried two vocabularies inside one card**, four rows tall: the chips read
+Highest and Lowest, the rows read Utkarsh and Uday.
+
+**A grade band was "Band" here and "SQAAF" on the register's own filter.** Same thing, two names,
+and the register is where a reader goes next.
+
+**"Avg score" against "State average score"**, and **"scored" against "verified"** for the same
+set of schools.
+
+Settled, and the page now holds to it: *finished* means a self assessment has been sent, whether
+or not anybody has checked it. The bucket for sent-but-unchecked is *awaiting verification* and
+never *finished*. A grade band is a *SQAAF grade*. A school carrying a verified score is
+*verified*, never *scored*. Nothing is abbreviated in one place and spelled out in another.
+
+The two doors read "Top schools in the state" and "Bottom schools in the state", with the grade
+and the count underneath, which is SSSA's wording.
+
+### Still outstanding
+
+`CycleFunnel` still calls its third bucket "Finished", which is now the one place in the portal
+where that word means something narrower than it does here. Renaming it to "Awaiting verification"
+would settle it, and it touches Monitoring and the School Directory, so it was raised rather than
+done.

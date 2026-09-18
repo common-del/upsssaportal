@@ -8,50 +8,96 @@ import type {
 import { PageHeader, Section, StatCard, StatGrid, Table, Td, Th } from '@/components/sssa/ui';
 
 /**
- * The SSSA landing page, rebuilt on what SSSA asked it to carry.
+ * The SSSA landing page.
  *
- * In order: how many schools have finished their self assessment, then the state average score,
- * then the four counts, then districts ranked on self assessment finished, then management type,
- * then two doors into the register for the highest and lowest scoring schools.
+ * In the order SSSA gave it: how many schools have finished their self assessment, the state
+ * average score, the four counts, districts ranked on self assessments finished, management type,
+ * then the top and bottom schools in the state.
  *
  * The banner leads on completion rather than on the score because the score is roughly stable
- * week to week and completion is what the Authority is asked about. Both sit in the same navy
- * strip, so neither needs its own furniture.
+ * week to week and completion is what the Authority is asked about. The ring carries the
+ * proportion, which a number alone cannot: 26,563 means nothing without 32,579 beside it, and a
+ * reader should not have to divide. The score sits to its right at a smaller size, so the two
+ * figures have an order rather than competing at 46px each.
+ *
+ * One vocabulary, because the first build of this page had four. "Finished" means a self
+ * assessment has been sent, whether or not anybody has checked it; the bucket for sent-but-
+ * unchecked is "Awaiting verification" and never "Finished"; a grade band is a "SQAAF grade",
+ * which is what the register's own filter calls it; and the word for a school carrying a
+ * verified score is "verified", not "scored".
  *
  * The schools card is two links rather than two names. It used to print the single highest and
  * single lowest scoring school in the state, which on 32,440 results is one row at each end and
- * almost always a data artefact rather than a school anybody would act on. Filtering the register
- * to the top and bottom bands gives the same question a population-sized answer.
+ * almost always a data artefact rather than a school anybody would act on: the old page showed
+ * one at 100 out of 100 and one at 0. Filtering the register to the top and bottom grades answers
+ * the same question with a population.
  */
 
 const NAVY = '#1B2A6B';
 const GOLD = '#F5B731';
 const inr = (n: number) => n.toLocaleString('en-IN');
-const pct = (n: number) => `${n.toFixed(1)}%`;
+const pct1 = (n: number) => `${n.toFixed(1)}%`;
 
-/** The one cell that carries the ranking: the share finished, the fraction it came from, and a
- *  bar so the spread between first and last is readable without parsing numbers. */
+/** The completion ring. r=44 gives a circumference of 276.46, which the dash array divides. */
+const RING_RADIUS = 44;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+function CompletionRing({ percent }: { percent: number }) {
+  const filled = (Math.min(100, Math.max(0, percent)) / 100) * RING_CIRCUMFERENCE;
+  return (
+    <svg
+      width="104"
+      height="104"
+      viewBox="0 0 104 104"
+      role="img"
+      aria-label={`${percent}% of self assessments finished`}
+      className="shrink-0"
+    >
+      <circle cx="52" cy="52" r={RING_RADIUS} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="13" />
+      <circle
+        cx="52"
+        cy="52"
+        r={RING_RADIUS}
+        fill="none"
+        stroke={GOLD}
+        strokeWidth="13"
+        strokeLinecap="round"
+        strokeDasharray={`${filled} ${RING_CIRCUMFERENCE}`}
+        transform="rotate(-90 52 52)"
+      />
+      <text
+        x="52"
+        y="58"
+        textAnchor="middle"
+        fill="#FFFFFF"
+        fontSize="21"
+        fontWeight="700"
+        fontFamily="system-ui, sans-serif"
+      >
+        {percent}%
+      </text>
+    </svg>
+  );
+}
+
+/** The one cell that carries the ranking: the share finished, a bar, and the fraction it came
+ *  from. Three separate columns said the same thing three times across the row. */
 function Finished({ d }: { d: DistrictRow }) {
   const complete = d.finishedPct >= 95;
+  const ink = complete ? '#1C7A4A' : '#B8791A';
   return (
-    <span className="block">
-      <span
-        className="block text-[15px] font-bold leading-tight tabular-nums"
-        style={{ color: complete ? '#1C7A4A' : '#B8791A' }}
-      >
-        {pct(d.finishedPct)}
-      </span>
-      <span className="mt-px block text-xs tabular-nums text-gray-500">
-        {inr(d.finished)} of {inr(d.schools)} schools
-      </span>
-      <span className="mt-1.5 block h-1.5 w-[168px] overflow-hidden rounded-full bg-gray-100">
+    <span className="flex items-center gap-3">
+      <span className="inline-block h-2 w-[120px] shrink-0 overflow-hidden rounded-full bg-gray-100">
         <span
-          className="block h-1.5 rounded-full"
-          style={{
-            width: `${Math.min(100, d.finishedPct)}%`,
-            backgroundColor: complete ? '#1C7A4A' : '#B8791A',
-          }}
+          className="block h-2 rounded-full"
+          style={{ width: `${Math.min(100, d.finishedPct)}%`, backgroundColor: ink }}
         />
+      </span>
+      <span className="text-[13px] font-bold tabular-nums" style={{ color: ink }}>
+        {pct1(d.finishedPct)}
+      </span>
+      <span className="text-xs tabular-nums text-gray-500">
+        {inr(d.finished)} of {inr(d.schools)}
       </span>
     </span>
   );
@@ -74,7 +120,7 @@ function DistrictRowCells({ d, rank }: { d: DistrictRow; rank: number }) {
         <Finished d={d} />
       </Td>
       <Td align="right" bold>
-        {d.averageScore === null ? '—' : pct(d.averageScore)}
+        {d.averageScore === null ? '—' : pct1(d.averageScore)}
       </Td>
       <Td>
         {d.band ? (
@@ -82,7 +128,7 @@ function DistrictRowCells({ d, rank }: { d: DistrictRow; rank: number }) {
             {d.band}
           </span>
         ) : (
-          <span className="text-xs text-gray-400">Not scored yet</span>
+          <span className="text-xs text-gray-400">Not verified yet</span>
         )}
       </Td>
     </tr>
@@ -122,7 +168,7 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
                   {m.label}
                 </span>
                 <span className="mt-0.5 block text-xs tabular-nums text-gray-500">
-                  {m.score}% · {inr(m.schools)} scored
+                  {m.score}% · {inr(m.schools)} verified
                 </span>
               </span>
             </div>
@@ -142,37 +188,20 @@ function Management({ rows, unpopulated }: { rows: ManagementRow[]; unpopulated:
   );
 }
 
-function BandDoor({
-  tone,
-  label,
-  band,
-  divider,
-}: {
-  tone: 'top' | 'bottom';
-  label: string;
-  band: BandLink;
-  divider?: boolean;
-}) {
+function GradeDoor({ title, band, divider }: { title: string; band: BandLink; divider?: boolean }) {
   return (
     <Link
       href={`/app/sssa/schools?sqaaf=${encodeURIComponent(band.label)}`}
-      className={`flex items-center gap-3 px-4 py-4 hover:bg-gray-50 ${
+      className={`flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 ${
         divider ? 'border-t border-gray-100' : ''
       }`}
     >
-      <span
-        className={`w-14 shrink-0 rounded px-1.5 py-1 text-center text-[10px] font-extrabold tracking-wide ${
-          tone === 'top' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-        }`}
-      >
-        {label}
-      </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-bold leading-snug" style={{ color: NAVY }}>
-          {band.label}
+          {title}
         </span>
         <span className="mt-0.5 block text-xs tabular-nums text-gray-500">
-          {inr(band.schools)} {band.schools === 1 ? 'school' : 'schools'}
+          {band.label} · {inr(band.schools)} {band.schools === 1 ? 'school' : 'schools'}
         </span>
       </span>
       <span aria-hidden className="shrink-0 text-lg text-gray-300">
@@ -197,48 +226,49 @@ export function StateDashboard({ data }: { data: Data }) {
       <PageHeader title="Uttar Pradesh" subtitle={subtitle} />
 
       <div
-        className="flex flex-wrap items-end gap-x-7 gap-y-4 rounded-2xl px-6 py-5 text-white"
+        className="flex flex-wrap items-center gap-x-7 gap-y-5 rounded-2xl px-6 py-5 text-white"
         style={{ background: NAVY }}
       >
+        <CompletionRing percent={finishedPct} />
+
         <div>
           <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-            Finished self assessment
+            Self assessments finished
           </div>
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-5xl font-bold leading-none tracking-tight tabular-nums">
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-[40px] font-bold leading-none tracking-tight tabular-nums">
               {inr(standing.finishedSelfAssessment)}
             </span>
-            <span className="text-[15px] font-semibold tabular-nums text-white/75">
-              of {inr(standing.totalSchools)} · {finishedPct}%
+            <span className="text-sm font-semibold tabular-nums text-white/75">
+              of {inr(standing.totalSchools)} schools
             </span>
+          </div>
+          <div className="mt-1.5 text-[12.5px] tabular-nums text-white/70">
+            {inr(standing.verified)} verified · {inr(standing.awaitingVerification)} awaiting
+            verification
           </div>
         </div>
 
-        <div aria-hidden className="hidden h-14 w-px bg-white/20 sm:block" />
-
-        <div>
+        <div className="ml-auto border-l border-white/20 pl-7 text-right">
           <div className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-            State average score
+            Average score
           </div>
-          <div className="mt-2 flex items-center gap-3">
-            <span className="text-5xl font-bold leading-none tracking-tight tabular-nums">
+          <div className="mt-1.5 flex items-center justify-end gap-2.5">
+            <span className="text-4xl font-bold leading-none tracking-tight tabular-nums">
               {data.averageScore === null ? '—' : `${data.averageScore}%`}
             </span>
             {data.band && (
               <span
-                className="rounded-full px-4 py-1.5 text-[15px] font-bold"
+                className="rounded-full px-3.5 py-1 text-[13px] font-bold"
                 style={{ backgroundColor: GOLD, color: NAVY }}
               >
                 {data.band}
               </span>
             )}
           </div>
-        </div>
-
-        <div className="ml-auto text-right text-xs leading-relaxed tabular-nums text-white/70">
-          {inr(standing.verified)} verified and scored
-          <br />
-          {inr(standing.awaitingVerification)} awaiting verification
+          <div className="mt-1.5 text-[12.5px] tabular-nums text-white/70">
+            across the {inr(standing.verified)} verified
+          </div>
         </div>
       </div>
 
@@ -249,7 +279,7 @@ export function StateDashboard({ data }: { data: Data }) {
       )}
 
       <Section
-        title="Self assessment"
+        title="Where every school stands"
         note="Four counts that add up to the register, so each one is a set you could go and list."
       >
         <StatGrid>
@@ -282,16 +312,16 @@ export function StateDashboard({ data }: { data: Data }) {
       {data.districts.length > 0 && (
         <Section
           title="District ranking"
-          note={`Ranked on how many schools have finished their self assessment. Districts with fewer than 5 schools are not ranked.`}
+          note="On self assessments finished. Districts with fewer than 5 schools are not ranked."
         >
-          <Table minWidth={720}>
+          <Table minWidth={760}>
             <thead>
               <tr>
                 <Th>Rank</Th>
                 <Th>District</Th>
-                <Th>Self assessment finished</Th>
-                <Th align="right">Avg score</Th>
-                <Th>Band</Th>
+                <Th>Self assessments finished</Th>
+                <Th align="right">Average score</Th>
+                <Th>SQAAF grade</Th>
               </tr>
             </thead>
             <tbody>
@@ -311,9 +341,9 @@ export function StateDashboard({ data }: { data: Data }) {
               )}
             </tbody>
           </Table>
-          <p className="mt-3 text-xs text-gray-500">
+          <p className="mt-3 text-xs">
             <Link href="/app/sssa/schools" className="font-bold" style={{ color: NAVY }}>
-              Open the register →
+              See all 75 districts in the register →
             </Link>
           </p>
         </Section>
@@ -322,18 +352,19 @@ export function StateDashboard({ data }: { data: Data }) {
       <div className="grid gap-3 md:grid-cols-2">
         <Management rows={data.management} unpopulated={data.managementUnpopulated} />
 
-        <Card heading="School">
+        <Card heading="Schools">
           {data.topBand && data.bottomBand ? (
             <>
-              <BandDoor tone="top" label="Highest" band={data.topBand} />
-              <BandDoor tone="bottom" label="Lowest" band={data.bottomBand} divider />
+              <GradeDoor title="Top schools in the state" band={data.topBand} />
+              <GradeDoor title="Bottom schools in the state" band={data.bottomBand} divider />
               <p className="mt-auto border-t border-gray-100 px-4 py-2.5 text-[11.5px] text-gray-400">
-                Opens the register filtered to that band, rather than naming one school here.
+                Each opens the register filtered to that SQAAF grade, rather than naming one school
+                here.
               </p>
             </>
           ) : (
             <p className="px-4 py-3 text-[13px] leading-relaxed text-gray-500">
-              No grade bands are set on this cycle&apos;s framework.
+              No SQAAF grades are set on this cycle&apos;s framework.
             </p>
           )}
         </Card>

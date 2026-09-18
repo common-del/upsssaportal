@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Lock, Paperclip } from 'lucide-react';
+import { CheckCircle2, Lock, Paperclip } from 'lucide-react';
 import { saveAppealDraft, submitAppeal } from '@/lib/actions/finalization';
 import EvidenceUploader, { type EvidenceFile } from '@/components/evidence/EvidenceUploader';
 

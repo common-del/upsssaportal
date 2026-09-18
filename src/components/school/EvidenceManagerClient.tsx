@@ -6,7 +6,6 @@ import { upload } from '@vercel/blob/client';
 import { Trash2, RefreshCw, Search, Paperclip, Loader2, ChevronDown, ChevronRight, FileText, Image as ImageIcon } from 'lucide-react';
 import { createEvidence, deleteEvidence } from '@/lib/actions/evidence';
 
-const NAVY = '#1B2A6B';
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 const ALLOWED_EXT = '.pdf,.jpg,.jpeg,.png';
 const MAX_SIZE = 10 * 1024 * 1024;

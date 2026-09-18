@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { requireRole } from '@/lib/authz';
-import type { DeskDecision, QualityVerdict, VerifierCell } from '@prisma/client';
+import type { QualityVerdict, VerifierCell } from '@prisma/client';
 import { seededPick } from '@/lib/verification/auditSample';
 import {
   evaluateDeEmpanelment,

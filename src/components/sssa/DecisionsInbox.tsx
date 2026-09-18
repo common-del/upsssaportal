@@ -1,9 +1,7 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import type { DeskDecision } from '@prisma/client';
 import type {
   DecisionRow,
   DecisionsInboxData,
@@ -79,8 +77,6 @@ function discrepancyQuote(row: DiscrepancyDecision): string {
 /** One skeleton for every decision: kind line, waiting clock, the big fact, a
  *  who-line, the substance quoted, one action. Nothing floats, nothing is missing. */
 function DecisionCard({ row, showWait = true }: { row: DecisionRow; showWait?: boolean }) {
-  const [ruling, setRuling] = useState(false);
-
   const spec =
     row.kind === 'APPEAL'
       ? { edge: APPEAL, ink: APPEAL, kind: 'Filed by the school · an upheld appeal changes the published score' }

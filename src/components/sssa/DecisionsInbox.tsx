@@ -277,7 +277,11 @@ function Overview({ data, openTab }: { data: DecisionsInboxData; openTab: (tab: 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Three tiles, three columns. This asked for four, left over from when escalations were a
+          fourth rung, so the row stopped a quarter short of the panels beneath it and left a hole
+          on the right. A count of columns that does not match the count of tiles is a thing to
+          check whenever one of these rows loses a member. */}
+      <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-3.5">
           <p className="text-[26px] font-extrabold leading-tight tabular-nums text-gray-900">{inr(counts.total)}</p>
           <p className="text-[10.5px] font-extrabold uppercase tracking-wider text-gray-400">Waiting on you</p>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MIN_SCHOOLS_FOR_DISTRICT_RANK,
+  districtsBelowMinimum,
   rankDistricts,
   standingFrom,
   type DistrictTotals,
@@ -129,5 +130,44 @@ describe('the district ranking', () => {
 
   it('returns nothing when no district is big enough', () => {
     expect(rankDistricts([d('Tiny', 2, 2)], noScore, noBand)).toEqual([]);
+  });
+
+  // The table is shown alphabetically as often as it is shown in rank order, so a row has to
+  // carry its rank rather than take it from where it happens to sit.
+  it('stamps the rank on the row, so it survives being re-sorted', () => {
+    const rows = rankDistricts(
+      [d('Zebra', 100, 100), d('Alpha', 100, 50), d('Middle', 100, 75)],
+      noScore,
+      noBand,
+    );
+    expect(rows.map((r) => [r.name, r.rank])).toEqual([
+      ['Zebra', 1],
+      ['Middle', 2],
+      ['Alpha', 3],
+    ]);
+    const alphabetical = [...rows].sort((a, b) => a.name.localeCompare(b.name));
+    expect(alphabetical.map((r) => [r.name, r.rank])).toEqual([
+      ['Alpha', 3],
+      ['Middle', 2],
+      ['Zebra', 1],
+    ]);
+  });
+});
+
+describe('how many districts the size rule leaves out', () => {
+  // The page states the rule only when it actually excluded something. On the live register no
+  // district is under five schools, so a standing note about it was a sentence about nothing.
+  it('is nought when every district is big enough', () => {
+    expect(districtsBelowMinimum([d('Lucknow', 562, 544), d('Etah', 347, 300)])).toBe(0);
+  });
+
+  it('counts the ones below the minimum', () => {
+    expect(
+      districtsBelowMinimum([
+        d('Lucknow', 562, 544),
+        d('Tiny', MIN_SCHOOLS_FOR_DISTRICT_RANK - 1, 1),
+        d('Smaller', 1, 1),
+      ]),
+    ).toBe(2);
   });
 });

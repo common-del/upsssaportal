@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { MANAGEMENT_CODES, MANAGEMENT_LABELS, type ManagementCode } from '@/lib/schoolManagement';
 import {
   MIN_SCHOOLS_FOR_DISTRICT_RANK,
+  districtsBelowMinimum,
   rankDistricts,
   round1,
   standingFrom,
@@ -31,6 +32,12 @@ import {
  * that matters: a district that has not finished is a district somebody has to chase, and a
  * district's average score is not something the Authority acts on directly. The score stays as a
  * column so the ranking can be read against it.
+ *
+ * A district can be selected, and everything on the page narrows to it except the ranking itself.
+ * The ranking is the one block that is about the districts rather than about a population of
+ * schools, so narrowing it to one district would leave a table of one row. Everything else, the
+ * banner, the four counts, management type and the two grade doors, is a question about a set of
+ * schools and answers it for whichever set is chosen.
  */
 
 export type ManagementRow = {
@@ -54,15 +61,24 @@ export { MIN_SCHOOLS_FOR_DISTRICT_RANK };
 /** A grade band and how many schools are in it, for the links out to the register. */
 export type BandLink = { label: string; schools: number };
 
+/** One entry in the district menu above the banner. */
+export type DistrictOption = { code: string; name: string };
+
 export type StateDashboard = {
   cycleName: string;
   averageScore: number | null;
   band: string | null;
   standing: CycleStanding;
-  /** The top ten, and the one at the bottom, so the page shows the range without 75 rows. */
+  /** Every ranked district, in rank order, each carrying its own rank. The table shows them all
+   *  and switches between rank order and alphabetical on the client. */
   districts: DistrictRow[];
-  districtBottom: DistrictRow | null;
   districtsRanked: number;
+  /** How many the minimum-size rule left out, so the page states the rule only when it bit. */
+  districtsExcluded: number;
+  /** The menu, and what is chosen. Null is the whole state. */
+  districtOptions: DistrictOption[];
+  selectedDistrict: string | null;
+  selectedDistrictName: string | null;
   management: ManagementRow[];
   /** True when no school has a management value yet, so the card can say so instead of
    *  rendering an empty list that looks like a bug. */
@@ -70,8 +86,6 @@ export type StateDashboard = {
   topBand: BandLink | null;
   bottomBand: BandLink | null;
 };
-
-const TOP_DISTRICTS = 10;
 
 function bandFor(score: number, bands: { key: string; label: string; min: number }[]): string | null {
   // Bands are ordered high to low, so the first one the score clears is its band.
@@ -83,11 +97,23 @@ function emptyStanding(totalSchools: number): CycleStanding {
   return standingFrom({ totalSchools, draft: 0, submitted: 0, verified: 0 });
 }
 
-export async function buildStateDashboard(): Promise<StateDashboard> {
+export async function buildStateDashboard(districtCode?: string): Promise<StateDashboard> {
   const cycle = await prisma.cycle.findFirst({ where: { isActive: true } });
 
+  // Every narrowing on this page is the same clause, written once. A code that matches no
+  // district falls through as the whole state rather than as an empty page, because a stale
+  // bookmark should show the state rather than look broken.
+  const districts = await prisma.district.findMany({
+    orderBy: { nameEn: 'asc' },
+    select: { code: true, nameEn: true },
+  });
+  const chosen = districts.find((d) => d.code === districtCode) ?? null;
+  const schoolWhere = chosen ? { districtCode: chosen.code } : {};
+  const viaSchool = chosen ? { school: { districtCode: chosen.code } } : {};
+  const districtOptions: DistrictOption[] = districts.map((d) => ({ code: d.code, name: d.nameEn }));
+
   const [totalSchools, gradeBands] = await Promise.all([
-    prisma.school.count(),
+    prisma.school.count({ where: schoolWhere }),
     cycle
       ? prisma.gradeBand.findMany({
           where: { framework: { cycleId: cycle.id } },
@@ -103,8 +129,11 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
     band: null,
     standing: emptyStanding(totalSchools),
     districts: [],
-    districtBottom: null,
     districtsRanked: 0,
+    districtsExcluded: 0,
+    districtOptions,
+    selectedDistrict: chosen?.code ?? null,
+    selectedDistrictName: chosen?.nameEn ?? null,
     management: [],
     managementUnpopulated: true,
     topBand: null,
@@ -118,17 +147,25 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
   // grouped three ways.
   const [results, draftCount, submittedCount, managementTotals, districtTotals] = await Promise.all([
     prisma.result.findMany({
-      where: { cycleId: cycle.id, finalScorePercent: { not: null } },
+      where: { cycleId: cycle.id, finalScorePercent: { not: null }, ...viaSchool },
       select: {
         finalScorePercent: true,
         school: { select: { management: true, districtCode: true } },
       },
     }),
-    prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'DRAFT' } }),
-    prisma.selfAssessmentSubmission.count({ where: { cycleId: cycle.id, status: 'SUBMITTED' } }),
+    prisma.selfAssessmentSubmission.count({
+      where: { cycleId: cycle.id, status: 'DRAFT', ...viaSchool },
+    }),
+    prisma.selfAssessmentSubmission.count({
+      where: { cycleId: cycle.id, status: 'SUBMITTED', ...viaSchool },
+    }),
     // Every school of each type, not only the verified ones, so the card can say how far each
     // type has been covered rather than only how many of it happen to be done.
-    prisma.school.groupBy({ by: ['management'], _count: { _all: true } }),
+    prisma.school.groupBy({
+      by: ['management'],
+      where: chosen ? schoolWhere : undefined,
+      _count: { _all: true },
+    }),
     // Grouped in the database rather than by pulling 32,579 school rows and 26,000 submission
     // rows back to count them here. Prisma's groupBy cannot reach across the relation to the
     // district, so this is the one place the file drops to SQL.
@@ -237,11 +274,12 @@ export async function buildStateDashboard(): Promise<StateDashboard> {
     averageScore,
     band: bandFor(averageScore, bands),
     standing,
-    districts: ranked.slice(0, TOP_DISTRICTS),
-    // Only when there is something below the ten already shown, so the last row is never a
-    // repeat of the tenth.
-    districtBottom: ranked.length > TOP_DISTRICTS ? ranked[ranked.length - 1] : null,
+    districts: ranked,
     districtsRanked: ranked.length,
+    districtsExcluded: districtsBelowMinimum(districtTotals),
+    districtOptions,
+    selectedDistrict: chosen?.code ?? null,
+    selectedDistrictName: chosen?.nameEn ?? null,
     management,
     managementUnpopulated: management.length === 0,
     topBand: highest ? { label: highest.label, schools: byBand.get(highest.label) ?? 0 } : null,

@@ -1885,3 +1885,47 @@ unscored schools in front of the ones the Authority came to see.
 Worth noting for the next reader: the comment at the top of the register's filtering block already
 said "the filter and sort below run over the whole match set" when there was no sort. A comment
 describing behaviour that does not exist is how a gap like this stays invisible.
+
+## 53. The dashboard narrows to a district, and the ranking shows all 75, 18 September 2026
+
+### The sentence about nothing
+
+"Districts with fewer than 5 schools are not ranked" sat under the ranking on a register where no
+district is under five schools. The rule is still right and still in the code, because a two school
+district at a permanent 100% would otherwise sit above the state. The sentence now appears only
+when the rule actually excluded something, and says how many.
+
+A standing note about a rule that never fires is worse than no note: it spends a line of the page
+teaching the reader a caveat that does not apply to anything in front of them.
+
+### A district can be selected
+
+A menu beside the page title narrows the banner, the four counts, management type and the two
+grade doors to one district. It is a search parameter rather than component state, so a narrowed
+view is shareable, survives a refresh and steps back out, and every figure is recomputed on the
+server from one clause rather than filtered in the browser.
+
+The ranking does not narrow, and that is deliberate: it is the one block on the page about the
+districts rather than about a population of schools, and narrowing it to one district leaves a
+table of one row.
+
+A district code that matches nothing falls through to the whole state rather than to an empty
+page, because a stale bookmark should show something.
+
+### The ranking shows all 75
+
+It showed the top ten and then the single bottom row, which answered "who is ahead" and left "who
+is behind" as one name with no context around it.
+
+All of them are there now, alphabetical by default, with Top 10 and Bottom 10 as views. Alphabetical
+is the default because it is the order somebody uses when they came to look up a particular
+district rather than to see who is winning, and the two ends are a click away for when they did.
+
+Rank travels on the row rather than being its position in the list, so it still reads 1 to 75 in
+the alphabetical view. A position is not a rank once the order changes, and computing it twice in
+two places is how the two eventually disagree.
+
+The three views are client state, unlike the district scope above them: the scope changes every
+figure on the page and belongs in the URL, this changes only which rows of one table are on
+screen, and a round trip for that would cost more than it fetches. Seventy-five rows scroll inside
+their own box with the heading pinned, rather than pushing the two cards below off the page.

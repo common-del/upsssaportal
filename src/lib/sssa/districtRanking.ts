@@ -13,8 +13,11 @@ export type DistrictTotals = {
 };
 
 export type RankedDistrict = DistrictTotals & {
-  /** 0 to 100, one decimal. What the table is sorted on. */
+  /** 0 to 100, one decimal. What the ranking is computed on. */
   finishedPct: number;
+  /** 1 upwards, fixed at the moment of ranking. The table can then be shown alphabetically
+   *  without the rank meaning something different in each view. */
+  rank: number;
   averageScore: number | null;
   band: string | null;
 };
@@ -103,5 +106,14 @@ export function rankDistricts(
     .sort(
       (a, b) =>
         b.finishedPct - a.finishedPct || b.schools - a.schools || a.name.localeCompare(b.name),
-    );
+    )
+    // Rank is stamped on here rather than taken from the row's position, because the table is
+    // shown alphabetically as often as it is shown in rank order and a position is not a rank
+    // once the order changes.
+    .map((d, i) => ({ ...d, rank: i + 1 }));
+}
+
+/** Districts the minimum-size rule left out, so the page can say so only when it happened. */
+export function districtsBelowMinimum(totals: DistrictTotals[]): number {
+  return totals.filter((d) => d.schools < MIN_SCHOOLS_FOR_DISTRICT_RANK).length;
 }

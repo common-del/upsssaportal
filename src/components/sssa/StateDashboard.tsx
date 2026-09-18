@@ -1,11 +1,8 @@
 import Link from 'next/link';
-import type {
-  BandLink,
-  DistrictRow,
-  ManagementRow,
-  StateDashboard as Data,
-} from '@/lib/sssa/stateDashboard';
-import { PageHeader, Section, StatCard, StatGrid, Table, Td, Th } from '@/components/sssa/ui';
+import type { BandLink, ManagementRow, StateDashboard as Data } from '@/lib/sssa/stateDashboard';
+import { PageHeader, Section, StatCard, StatGrid } from '@/components/sssa/ui';
+import { DashboardScopePicker } from '@/components/sssa/DashboardScopePicker';
+import { DistrictRankingTable } from '@/components/sssa/DistrictRankingTable';
 
 /**
  * The SSSA landing page.
@@ -36,7 +33,6 @@ import { PageHeader, Section, StatCard, StatGrid, Table, Td, Th } from '@/compon
 const NAVY = '#1B2A6B';
 const GOLD = '#F5B731';
 const inr = (n: number) => n.toLocaleString('en-IN');
-const pct1 = (n: number) => `${n.toFixed(1)}%`;
 
 /** The completion ring. r=44 gives a circumference of 276.46, which the dash array divides. */
 const RING_RADIUS = 44;
@@ -77,61 +73,6 @@ function CompletionRing({ percent }: { percent: number }) {
         {percent}%
       </text>
     </svg>
-  );
-}
-
-/** The one cell that carries the ranking: the share finished, a bar, and the fraction it came
- *  from. Three separate columns said the same thing three times across the row. */
-function Finished({ d }: { d: DistrictRow }) {
-  const complete = d.finishedPct >= 95;
-  const ink = complete ? '#1C7A4A' : '#B8791A';
-  return (
-    <span className="flex items-center gap-3">
-      <span className="inline-block h-2 w-[120px] shrink-0 overflow-hidden rounded-full bg-gray-100">
-        <span
-          className="block h-2 rounded-full"
-          style={{ width: `${Math.min(100, d.finishedPct)}%`, backgroundColor: ink }}
-        />
-      </span>
-      <span className="text-[13px] font-bold tabular-nums" style={{ color: ink }}>
-        {pct1(d.finishedPct)}
-      </span>
-      <span className="text-xs tabular-nums text-gray-500">
-        {inr(d.finished)} of {inr(d.schools)}
-      </span>
-    </span>
-  );
-}
-
-function DistrictRowCells({ d, rank }: { d: DistrictRow; rank: number }) {
-  return (
-    <tr className="border-t border-gray-100">
-      <Td>
-        <span
-          className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
-            rank === 1 ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-          }`}
-        >
-          {rank}
-        </span>
-      </Td>
-      <Td strong>{d.name}</Td>
-      <Td>
-        <Finished d={d} />
-      </Td>
-      <Td align="right" bold>
-        {d.averageScore === null ? '—' : pct1(d.averageScore)}
-      </Td>
-      <Td>
-        {d.band ? (
-          <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">
-            {d.band}
-          </span>
-        ) : (
-          <span className="text-xs text-gray-400">Not verified yet</span>
-        )}
-      </Td>
-    </tr>
   );
 }
 
@@ -300,7 +241,10 @@ export function StateDashboard({ data }: { data: Data }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Uttar Pradesh" subtitle={subtitle} />
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <PageHeader title={data.selectedDistrictName ?? 'Uttar Pradesh'} subtitle={subtitle} />
+        <DashboardScopePicker districts={data.districtOptions} selected={data.selectedDistrict} />
+      </div>
 
       <div
         className="flex flex-wrap items-center gap-x-7 gap-y-5 rounded-2xl px-6 py-5 text-white"
@@ -357,7 +301,11 @@ export function StateDashboard({ data }: { data: Data }) {
 
       <Section
         title="Where every school stands"
-        note="Four counts that add up to the register, so each one is a set you could go and list."
+        note={
+          data.selectedDistrictName
+            ? `Four counts that add up to the ${data.selectedDistrictName} schools on the register.`
+            : 'Four counts that add up to the register, so each one is a set you could go and list.'
+        }
       >
         <StatGrid>
           <StatCard
@@ -389,42 +337,15 @@ export function StateDashboard({ data }: { data: Data }) {
       {data.districts.length > 0 && (
         <Section
           title="District ranking"
-          note="On self assessments finished. Districts with fewer than 5 schools are not ranked."
+          note={
+            data.districtsExcluded > 0
+              ? `On self assessments finished. ${data.districtsExcluded} ${
+                  data.districtsExcluded === 1 ? 'district is' : 'districts are'
+                } too small to rank.`
+              : 'On self assessments finished, whichever district is selected above.'
+          }
         >
-          <Table minWidth={760}>
-            <thead>
-              <tr>
-                <Th>Rank</Th>
-                <Th>District</Th>
-                <Th>Self assessments finished</Th>
-                <Th align="right">Average score</Th>
-                <Th>SQAAF grade</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.districts.map((d, i) => (
-                <DistrictRowCells key={d.code} d={d} rank={i + 1} />
-              ))}
-              {data.districtBottom && (
-                <>
-                  <tr className="border-t border-gray-100 bg-gray-50/60">
-                    <td colSpan={5} className="px-4 py-2 text-xs text-gray-400">
-                      {inr(Math.max(0, data.districtsRanked - data.districts.length - 1))} districts
-                      between
-                    </td>
-                  </tr>
-                  <DistrictRowCells d={data.districtBottom} rank={data.districtsRanked} />
-                </>
-              )}
-            </tbody>
-          </Table>
-          <p className="mt-3 text-xs">
-            {/* Counted, never hardcoded. This read "all 75 districts" beside a bottom row
-                ranked 80, because the register holds five districts twice over. */}
-            <Link href="/app/sssa/schools" className="font-bold" style={{ color: NAVY }}>
-              See all {inr(data.districtsRanked)} districts in the register →
-            </Link>
-          </p>
+          <DistrictRankingTable districts={data.districts} />
         </Section>
       )}
 
